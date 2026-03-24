@@ -321,59 +321,9 @@ function Login({ setToken }) {
   return (
     <div className="login-container">
       <div className="login-card">
-        {/* Connection Status */}
-        <div className="connection-status">
-          <span className={`status-indicator ${backendStatus}`}>
-            {backendStatus === "connected" ? "●" : backendStatus === "checking" ? "⏳" : "○"}
-          </span>
-          <span className="status-text">
-            {backendStatus === "connected" 
-              ? `Connected to backend server (${API_URL})` 
-              : backendStatus === "checking"
-              ? "Checking backend connection..."
-              : "Disconnected from backend server"}
-          </span>
-        </div>
+      
 
-        {/* Backend Connection Alert */}
-        {backendStatus === "error" && (
-          <div className="connection-alert">
-            <div className="alert-header">
-              <span className="alert-icon">⚠️</span>
-              <strong>Backend Connection Error</strong>
-            </div>
-            <p>Cannot connect to backend server at {API_URL}</p>
-            <div className="alert-tips">
-              <small>• Make sure backend server is running</small>
-              <small>• Check if backend is deployed on Render</small>
-              <small>• Verify network connection</small>
-            </div>
-            <div className="alert-actions">
-              <button 
-                className="retry-btn"
-                onClick={handleRetryConnection}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="mini-spinner"></span>
-                    Retrying...
-                  </>
-                ) : (
-                  <>
-                    🔄 Retry Connection
-                  </>
-                )}
-              </button>
-              <button 
-                className="help-btn"
-                onClick={() => window.open(API_URL, "_blank")}
-              >
-                🌐 Open Backend
-              </button>
-            </div>
-          </div>
-        )}
+      
 
         {/* Restaurant Info Preview */}
         <div className="restaurant-info-preview">
@@ -389,74 +339,14 @@ function Login({ setToken }) {
           )}
         </div>
 
-        {/* Server Error Display */}
-        {serverError && !serverError.includes("Backend Connection") && (
-          <div className="server-error">
-            <div className="error-header">
-              <span className="error-icon">❌</span>
-              <strong>Login Failed</strong>
-            </div>
-            <p className="error-message">{serverError}</p>
-            <div className="error-tips">
-              <small>• Check your username and password</small>
-              <small>• Make sure you're using the correct role</small>
-              <small>• Contact admin if issues persist</small>
-            </div>
-            {serverError.includes("Retry Connection") && (
-              <button 
-                className="inline-retry-btn"
-                onClick={handleRetryConnection}
-              >
-                🔄 Retry Connection
-              </button>
-            )}
-          </div>
-        )}
+    
 
-        {/* Quick Demo Login */}
-        <div className="demo-login-section">
-          <h4>Quick Login</h4>
-          <div className="demo-buttons">
-            <button 
-              className="demo-btn owner-demo"
-              onClick={() => handleQuickLogin({
-                username: "",
-                password: "",
-                role: "owner"
-              })}
-              disabled={isSubmitting || backendStatus === "error"}
-            >
-              👑 Owner Demo
-            </button>
-            <button 
-              className="demo-btn billing-demo"
-              onClick={() => handleQuickLogin({
-                username: "",
-                password: "",
-                role: "billing"
-              })}
-              disabled={isSubmitting || backendStatus === "error"}
-            >
-              💰 Billing Demo
-            </button>
-            <button 
-              className="demo-btn kitchen-demo"
-              onClick={() => handleQuickLogin({
-                username: "",
-                password: "",
-                role: "kitchen"
-              })}
-              disabled={isSubmitting || backendStatus === "error"}
-            >
-              👨‍🍳 Kitchen Demo
-            </button>
-          </div>
-        </div>
+     
 
         <form onSubmit={handleSubmit} className="login-form">
           {/* Role Selection */}
           <div className="form-group">
-            <label className="form-label">Select Role</label>
+            <label className="form-label text-center">Select Role</label>
             <div className="role-selection">
               <div 
                 className={`role-card ${form.role === 'owner' ? 'active' : ''}`}
@@ -497,7 +387,7 @@ function Login({ setToken }) {
           <div className="form-group">
             <label className="form-label">
               {form.role === 'owner' ? 'Email or Mobile Number' : 'Username'} 
-              <span className="required">*</span>
+             
             </label>
             <input
               className={`form-input ${errors.username ? 'error' : ''}`}
@@ -525,7 +415,7 @@ function Login({ setToken }) {
           {/* Password Field */}
           <div className="form-group">
             <label className="form-label">
-              Password <span className="required">*</span>
+              Password 
               <span className="password-strength">
                 {form.password.length > 0 && (
                   form.password.length < 6 ? 'Weak' :
@@ -608,10 +498,7 @@ function Login({ setToken }) {
               </>
             ) : (
               <>
-                <span className="btn-icon">
-                  {form.role === 'kitchen' ? '👨‍🍳' : 
-                   form.role === 'owner' ? '👑' : '💰'}
-                </span>
+              
                 Login as {form.role.charAt(0).toUpperCase() + form.role.slice(1)}
                 <span className="btn-hint">
                   {form.role === 'kitchen' ? '→ Korder Page' :
