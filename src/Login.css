@@ -214,69 +214,60 @@
 .form-footer { margin-top: 1.5rem; text-align: center; font-size: 0.9rem; }
 .switch-link { color: var(--primary-color); font-weight: 700; cursor: pointer; }
 
-/* Responsive Design for Mobile and Tablets */
+/* Better Responsive Design for Mobile */
 @media (max-width: 480px) {
   .login-container {
-    padding: 0; /* Remove padding to use full screen space */
-    background: #ffffff; /* Optional: solid white background on mobile */
-    align-items: flex-start; /* Start from top on small screens */
+    padding: 0;
+    /* ✅ Keeps the gradient background so the white card pops out */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+    align-items: center; /* Centers it nicely on mobile screens */
+    height: auto;
+    min-height: 100vh;
   }
 
   .login-card {
-    max-width: 100%;
-    min-height: 100vh; /* Full height mobile view */
-    border-radius: 0;
+    max-width: 92%; /* Gives a tiny bit of breathing room on the edges */
+    min-height: auto; /* Keeps it as a neat floating card */
+    border-radius: 16px; /* Smooth corners */
     padding: 1.5rem;
-    box-shadow: none;
+    background: #ffffff; /* Solid white background for the form itself */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Soft shadow so it doesn't look flat */
+    margin: 20px auto; /* Keeps it separated from phone top/bottom notches */
   }
 
   .role-selection {
-    grid-template-columns: 1fr; /* Stack roles vertically on very small screens */
+    grid-template-columns: 1fr; /* Stacks the roles for easy thumb tapping */
     gap: 8px;
   }
 
   .role-card {
-    flex-direction: row; /* Horizontal layout for roles on mobile */
+    flex-direction: row; 
     justify-content: flex-start;
     gap: 15px;
-    padding: 15px;
+    padding: 14px;
   }
 
   .role-icon {
     margin-bottom: 0;
-    font-size: 1.2rem;
+    font-size: 1.3rem;
   }
 
+  /* 📱 Stops iOS/Android from forcing standard text scrolling inside forms */
   .form-input {
-    font-size: 16px; /* Prevents iOS zoom on focus */
+    font-size: 16px; 
     padding: 14px;
+    background-color: #f8fafc; /* Subtle input background contrast */
+  }
+
+  .form-options {
+    flex-direction: row; /* Keeps remember checkbox & forgot password side-by-side */
+    justify-content: space-between;
+    font-size: 0.8rem;
   }
 
   .submit-btn {
     padding: 16px;
-    position: sticky;
-    bottom: 20px;
-  }
-
-  .demo-buttons {
-    flex-wrap: wrap; /* Allow demo buttons to wrap */
-  }
-
-  .demo-btn {
-    flex: 1 1 45%; /* Two buttons per row */
-  }
-
-  .form-options {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-}
-
-/* Tablet view */
-@media (min-width: 481px) and (max-width: 768px) {
-  .login-card {
-    max-width: 90%;
-    padding: 2rem;
+    font-size: 1rem;
+    border-radius: 12px;
   }
 }
