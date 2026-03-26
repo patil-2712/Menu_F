@@ -46,7 +46,6 @@ function Login({ setToken }) {
       console.log("🔍 Checking backend connection...");
       setBackendStatus("checking");
       
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/test`, { 
         timeout: 3000,
         headers: {
@@ -141,7 +140,6 @@ function Login({ setToken }) {
       
       document.body.style.cursor = 'wait';
       
-      // CHANGED: Use full URL with API_URL
       const response = await axios.post(
         `${API_URL}/api/restaurant/login`,
         dataToSend,
@@ -305,224 +303,272 @@ function Login({ setToken }) {
     navigate("/forgot-password");
   };
 
-  const handleRoleSelect = (role) => {
-    setForm({...form, role: role});
-    setErrors({});
-    setServerError("");
+  const getRoleIcon = (role) => {
+    switch(role) {
+      case 'owner': return '👑';
+      case 'kitchen': return '👨‍🍳';
+      case 'billing': return '💰';
+      default: return '👤';
+    }
   };
 
-  const handleQuickLogin = (credentials) => {
-    setForm(credentials);
-    setTimeout(() => {
-      document.querySelector('.submit-btn').focus();
-    }, 100);
+  const getRoleDescription = (role) => {
+    switch(role) {
+      case 'owner': return 'Full access to restaurant management';
+      case 'kitchen': return 'View and manage orders';
+      case 'billing': return 'Process payments and invoices';
+      default: return '';
+    }
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-      
+    <div className="login-wrapper">
+      <div className="login-container">
+        {/* Left Side - Branding */}
+        <div className="login-branding">
+          <div className="branding-content">
+            <div className="brand-logo">
+              <div className="logo-icon">🍽️</div>
+              <h1 className="brand-name">Menu</h1>
+            </div>
+            <div className="brand-tagline">
+              <p>Streamline your restaurant operations with our all-in-one management solution</p>
+            </div>
+            <div className="brand-features">
+              <div className="feature-item">
+                <span className="feature-icon">📊</span>
+                <span>Real-time Analytics</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">🔄</span>
+                <span>Order Management</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">💳</span>
+                <span>Smart Billing</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">🔒</span>
+                <span>Secure Access</span>
+              </div>
+            </div>
+            <div className="brand-quote">
+              <p>"Efficient, reliable, and user-friendly — the perfect solution for modern restaurants."</p>
+            </div>
+          </div>
+        </div>
 
-      
+        {/* Right Side - Login Form */}
+        <div className="login-form-container">
+          <div className="form-header">
+            <h2>Welcome Back</h2>
+            <p>Login to access your dashboard</p>
+          </div>
 
-        {/* Restaurant Info Preview */}
-        <div className="restaurant-info-preview">
+          {/* Backend Status Indicator */}
+          <div className={`backend-status ${backendStatus}`}>
+            {backendStatus === "connected" && (
+              <span className="status-connected">✅ Backend Connected</span>
+            )}
+            {backendStatus === "checking" && (
+              <span className="status-checking">🔄 Checking Connection...</span>
+            )}
+            {backendStatus === "error" && (
+              <div className="status-error">
+                <span>⚠️ Backend Connection Error</span>
+                <button onClick={handleRetryConnection} className="retry-btn">
+                  Retry
+                </button>
+              </div>
+            )}
+          </div>
+
+          {serverError && (
+            <div className="server-error">
+              <span className="error-icon">⚠️</span>
+              <span className="error-message">{serverError}</span>
+            </div>
+          )}
+
+          {/* Restaurant Info Preview */}
           {localStorage.getItem('restaurantName') && (
-            <div className="restaurant-badge">
-              <span className="badge-icon">🏢</span>
-              <div className="badge-content">
-                <strong>Last Restaurant:</strong>
-                <span className="restaurant-name">{localStorage.getItem('restaurantName')}</span>
-                <small className="restaurant-slug">{localStorage.getItem('restaurantSlug')}</small>
+            <div className="restaurant-preview">
+              <div className="preview-card">
+                <span className="preview-icon">🏢</span>
+                <div className="preview-details">
+                  <span className="preview-label">Last Login:</span>
+                  <strong className="preview-name">{localStorage.getItem('restaurantName')}</strong>
+                  <small className="preview-slug">{localStorage.getItem('restaurantSlug')}</small>
+                </div>
               </div>
             </div>
           )}
-        </div>
 
-    
-
-     
-
-        <form onSubmit={handleSubmit} className="login-form">
-          {/* Role Selection */}
-          <div className="form-group">
-            <label className="form-label text-center">Select Role</label>
-            <div className="role-selection">
-              <div 
-                className={`role-card ${form.role === 'owner' ? 'active' : ''}`}
-                onClick={() => handleRoleSelect('owner')}
-              >
-                <span className="role-icon">👑</span>
-                <span className="role-name">Owner</span>
-                <div className="role-check">
-                  {form.role === 'owner' && '✓'}
-                </div>
+          <form onSubmit={handleSubmit} className="login-form">
+            {/* Role Selection Dropdown */}
+            <div className="form-group">
+              <label className="form-label">
+                Select Role
+                <span className="required-star">*</span>
+              </label>
+              <div className="select-wrapper">
+                <span className="select-icon">
+                  {getRoleIcon(form.role)}
+                </span>
+                <select
+                  className={`form-select ${errors.role ? 'error' : ''}`}
+                  name="role"
+                  value={form.role}
+                  onChange={handleChange}
+                  disabled={isSubmitting || backendStatus === "error"}
+                >
+                  <option value="owner">👑 Owner - Full Access</option>
+                  <option value="kitchen">👨‍🍳 Kitchen - Order Management</option>
+                  <option value="billing">💰 Billing - Payment Processing</option>
+                </select>
+                <span className="select-arrow">▼</span>
               </div>
-              
-              <div 
-                className={`role-card ${form.role === 'kitchen' ? 'active' : ''}`}
-                onClick={() => handleRoleSelect('kitchen')}
-              >
-                <span className="role-icon">👨‍🍳</span>
-                <span className="role-name">Kitchen</span>
-                <div className="role-check">
-                  {form.role === 'kitchen' && '✓'}
-                </div>
-              </div>
-              
-              <div 
-                className={`role-card ${form.role === 'billing' ? 'active' : ''}`}
-                onClick={() => handleRoleSelect('billing')}
-              >
-                <span className="role-icon">💰</span>
-                <span className="role-name">Billing</span>
-                <div className="role-check">
-                  {form.role === 'billing' && '✓'}
-                </div>
-              </div>
+              {getRoleDescription(form.role) && (
+                <span className="role-description-hint">
+                  {getRoleDescription(form.role)}
+                </span>
+              )}
             </div>
-          </div>
 
-          {/* Username Field */}
-          <div className="form-group">
-            <label className="form-label">
-              {form.role === 'owner' ? 'Email or Mobile Number' : 'Username'} 
-             
-            </label>
-            <input
-              className={`form-input ${errors.username ? 'error' : ''}`}
-              name="username"
-              placeholder={
-                form.role === 'owner' 
-                  ? "Enter email (owner@example.com) or 10-digit mobile" 
-                  : `Enter your ${form.role} username`
-              }
-              value={form.username}
-              onChange={handleChange}
-              disabled={isSubmitting || backendStatus === "error"}
-              autoComplete="username"
-            />
-            {errors.username && (
-              <span className="error-text">{errors.username}</span>
-            )}
-            {form.role === 'owner' && form.username && !errors.username && (
-              <span className="input-hint">
-                {form.username.includes('@') ? '✓ Valid email format' : '✓ Mobile number'}
-              </span>
-            )}
-          </div>
+            {/* Username Field */}
+            <div className="form-group">
+              <label className="form-label">
+                {form.role === 'owner' ? 'Email or Mobile Number' : 'Username'}
+                <span className="required-star">*</span>
+              </label>
+              <div className="input-wrapper">
+               
+                <input
+                  className={`form-input ${errors.username ? 'error' : ''}`}
+                  name="username"
+                  placeholder={
+                    form.role === 'owner' 
+                      ? "Enter email or 10-digit mobile number" 
+                      : `Enter your ${form.role} username`
+                  }
+                  value={form.username}
+                  onChange={handleChange}
+                  disabled={isSubmitting || backendStatus === "error"}
+                  autoComplete="username"
+                />
+              </div>
+              {errors.username && (
+                <span className="error-text">{errors.username}</span>
+              )}
+              {form.role === 'owner' && form.username && !errors.username && (
+                <span className="input-hint success">
+                  {form.username.includes('@') ? '✓ Valid email format' : '✓ Valid mobile number format'}
+                </span>
+              )}
+            </div>
 
-          {/* Password Field */}
-          <div className="form-group">
-            <label className="form-label">
-              Password 
-              <span className="password-strength">
+            {/* Password Field */}
+            <div className="form-group">
+              <label className="form-label">
+                Password
+                <span className="required-star">*</span>
                 {form.password.length > 0 && (
-                  form.password.length < 6 ? 'Weak' :
-                  form.password.length < 10 ? 'Good' : 'Strong'
+                  <span className={`password-strength ${form.password.length < 6 ? 'weak' : form.password.length < 10 ? 'good' : 'strong'}`}>
+                    {form.password.length < 6 ? 'Weak' : form.password.length < 10 ? 'Good' : 'Strong'}
+                  </span>
                 )}
-              </span>
-            </label>
-            <div className="password-input-group">
-              <input
-                className={`form-input ${errors.password ? 'error' : ''}`}
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder={
-                  form.role === 'owner' 
-                    ? "Enter owner password (min 6 characters)" 
-                    : `Enter ${form.role} password (min 6 characters)`
-                }
-                value={form.password}
-                onChange={handleChange}
-                disabled={isSubmitting || backendStatus === "error"}
-                autoComplete="current-password"
-              />
+              </label>
+              <div className="input-wrapper">
+                <span className="input-icon"></span>
+                <input
+                  className={`form-input ${errors.password ? 'error' : ''}`}
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Enter your password"
+                  value={form.password}
+                  onChange={handleChange}
+                  disabled={isSubmitting || backendStatus === "error"}
+                  autoComplete="current-password"
+                />
+                <button 
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isSubmitting || backendStatus === "error"}
+                >
+                  {showPassword ? "🙈" : "👁️"}
+                </button>
+              </div>
+              {errors.password && (
+                <span className="error-text">{errors.password}</span>
+              )}
+              {form.password.length > 0 && !errors.password && (
+                <div className="password-meter">
+                  <div 
+                    className={`meter-fill ${form.password.length < 6 ? 'weak' : form.password.length < 10 ? 'good' : 'strong'}`}
+                    style={{width: `${Math.min(form.password.length * 10, 100)}%`}}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Form Options */}
+            <div className="form-options">
+              <label className="checkbox-container">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="checkbox-input"
+                  disabled={isSubmitting || backendStatus === "error"}
+                />
+                <span className="checkbox-label">Remember me</span>
+              </label>
+              
               <button 
-                type="button"
-                className="toggle-password-btn"
-                onClick={() => setShowPassword(!showPassword)}
+                type="button" 
+                className="forgot-password-link"
+                onClick={handleForgotPassword}
                 disabled={isSubmitting || backendStatus === "error"}
-                title={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? "👁️" : "👁️‍🗨️"}
+                Forgot Password?
               </button>
             </div>
-            {errors.password && (
-              <span className="error-text">{errors.password}</span>
-            )}
-            {form.password.length > 0 && !errors.password && (
-              <div className="password-meter">
-                <div 
-                  className={`meter-bar ${form.password.length < 6 ? 'weak' : form.password.length < 10 ? 'good' : 'strong'}`}
-                  style={{width: `${Math.min(form.password.length * 10, 100)}%`}}
-                ></div>
-              </div>
-            )}
-          </div>
 
-          {/* Form Options */}
-          <div className="form-options">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="checkbox-input"
-                disabled={isSubmitting || backendStatus === "error"}
-              />
-              <span className="checkbox-text">Remember username & role</span>
-            </label>
-            
+            {/* Submit Button */}
             <button 
-              type="button" 
-              className="forgot-password-btn"
-              onClick={handleForgotPassword}
+              type="submit" 
+              className="login-submit-btn"
               disabled={isSubmitting || backendStatus === "error"}
             >
-              Forgot Password?
+              {isSubmitting ? (
+                <>
+                  <div className="spinner"></div>
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Login as {form.role.charAt(0).toUpperCase() + form.role.slice(1)}</span>
+                  <span className="btn-arrow">→</span>
+                </>
+              )}
             </button>
-          </div>
-
-          {/* Submit Button */}
-          <button 
-            type="submit" 
-            className="submit-btn"
-            disabled={isSubmitting || backendStatus === "error"}
-          >
-            {isSubmitting ? (
-              <>
-                <span className="spinner"></span>
-                Logging in...
-                <span className="login-progress">Please wait</span>
-              </>
-            ) : (
-              <>
-              
-                Login as {form.role.charAt(0).toUpperCase() + form.role.slice(1)}
-                <span className="btn-hint">
-                  {form.role === 'kitchen' ? '→ Korder Page' :
-                   form.role === 'owner' ? '→ Admin Page' : '→ Border Page'}
-                </span>
-              </>
-            )}
-          </button>
-          
-          {/* Form Footer */}
-          <div className="form-footer">
-            <p className="switch-text">
-              Don't have a restaurant account?{" "}
-              <span 
-                className="switch-link"
-                onClick={() => navigate("/register")}
-                role="button"
-                tabIndex={0}
-              >
-                Register Now
-              </span>
-            </p>
-          </div>
-        </form>
+            
+            {/* Form Footer */}
+            <div className="form-footer">
+              <p className="register-prompt">
+                Don't have an account?{" "}
+                <button 
+                  type="button"
+                  className="register-link"
+                  onClick={() => navigate("/register")}
+                >
+                  Register Now
+                </button>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

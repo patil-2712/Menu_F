@@ -1,273 +1,1048 @@
-:root {
-  --primary-color: #4f46e5;
-  --primary-hover: #4338ca;
-  --owner-color: #f59e0b;
-  --kitchen-color: #10b981;
-  --billing-color: #3b82f6;
-  --error-bg: #fef2f2;
-  --error-text: #dc2626;
-  --glass-bg: rgba(255, 255, 255, 0.95);
-  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-}
+/* Login.css - Enhanced Styling with Mobile Optimization */
 
-.login-container {
+/* Wrapper */
+.login-wrapper {
   min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-.login-card {
-  background: var(--glass-bg);
-  width: 100%;
-  max-width: 450px;
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: var(--shadow);
-}
-
-/* Connection Status */
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 1.5rem;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-radius: 50px;
-  font-size: 0.8rem;
-}
-
-.status-indicator.connected { color: #10b981; animation: pulse 2s infinite; }
-.status-indicator.error { color: #ef4444; }
-.status-indicator.checking { animation: spin 1s infinite linear; }
-
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
-}
-
-/* Role Selection */
-.role-selection {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 0.5rem;
-}
-
-.role-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  overflow-y: auto;
   position: relative;
 }
 
-.role-card:hover { border-color: #cbd5e1; background: #f1f5f9; }
-
-.role-card.active {
-  border-color: var(--primary-color);
-  background: #eff6ff;
+/* Main Container */
+.login-container {
+  display: flex;
+  max-width: 1200px;
+  width: 100%;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: slideUp 0.5s ease-out;
+  position: relative;
 }
 
-.role-icon { font-size: 1.5rem; margin-bottom: 4px; }
-.role-name { font-size: 0.85rem; font-weight: 600; color: #475569; }
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-.role-check {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  background: var(--primary-color);
+/* Left Side - Branding */
+.login-branding {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 48px 40px;
   color: white;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
 }
 
-/* Inputs */
-.form-group { margin-bottom: 1.25rem; }
-.form-label { display: block; font-weight: 600; font-size: 0.9rem; color: #1e293b; margin-bottom: 6px; }
+.branding-content {
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.logo-icon {
+  font-size: 48px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.brand-name {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.brand-name span {
+  font-weight: 300;
+  opacity: 0.9;
+}
+
+.brand-tagline {
+  font-size: 18px;
+  line-height: 1.5;
+  margin-bottom: 32px;
+  opacity: 0.95;
+}
+
+.brand-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.feature-icon {
+  font-size: 18px;
+}
+
+.brand-quote {
+  font-style: italic;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.brand-quote p {
+  font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* Right Side - Login Form */
+.login-form-container {
+  flex: 1;
+  padding: 48px 40px;
+  background: white;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+.form-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.form-header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px 0;
+}
+
+.form-header p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+/* Backend Status */
+.backend-status {
+  margin-bottom: 20px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.backend-status.connected {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.backend-status.checking {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.backend-status.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.retry-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+}
+
+/* Server Error */
+.server-error {
+  background: #fef2f2;
+  border-left: 4px solid #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.error-icon {
+  font-size: 18px;
+}
+
+.error-message {
+  flex: 1;
+  font-size: 13px;
+  color: #991b1b;
+  line-height: 1.5;
+}
+
+/* Restaurant Preview */
+.restaurant-preview {
+  margin-bottom: 24px;
+}
+
+.preview-card {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s;
+}
+
+.preview-icon {
+  font-size: 24px;
+}
+
+.preview-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preview-label {
+  font-size: 11px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preview-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+}
+
+.preview-slug {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+/* Form Sections */
+.form-section {
+  margin-bottom: 24px;
+}
+
+.section-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+/* Role Grid */
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.role-card {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.role-card:hover {
+  transform: translateY(-2px);
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.role-card.active {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8edff 100%);
+}
+
+.role-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.role-icon {
+  font-size: 24px;
+}
+
+.role-info {
+  width: 100%;
+}
+
+.role-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 4px 0;
+}
+
+.role-description {
+  font-size: 10px;
+  color: #6c757d;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.role-checkmark {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: #667eea;
+  border-radius: 50%;
+  color: white;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+
+/* Form Groups */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.required-star {
+  color: #dc2626;
+  margin-left: 4px;
+}
+
+.password-strength {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.password-strength.weak {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.password-strength.good {
+  color: #f59e0b;
+  background: #fef3c7;
+}
+
+.password-strength.strong {
+  color: #10b981;
+  background: #d1fae5;
+}
+
+/* Input Wrapper */
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 16px;
+  color: #9ca3af;
+  pointer-events: none;
+}
 
 .form-input {
   width: 100%;
-  padding: 12px 16px;
-  border: 1.5px solid #e2e8f0;
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #e5e7eb;
   border-radius: 10px;
-  font-size: 1rem;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
+  font-size: 14px;
+  transition: all 0.3s;
+  background: white;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.form-input.error { border-color: var(--error-text); }
+.form-input.error {
+  border-color: #dc2626;
+}
 
-/* Password Group */
-.password-input-group { position: relative; }
-.toggle-password-btn {
+.form-input:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+
+.toggle-password {
   position: absolute;
   right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
   background: none;
   border: none;
+  font-size: 18px;
   cursor: pointer;
-  font-size: 1.2rem;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
-/* Submit Button */
-.submit-btn {
+.toggle-password:hover {
+  background: #f3f4f6;
+}
+
+/* Input Hints */
+.input-hint {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.input-hint.success {
+  color: #10b981;
+}
+
+.error-text {
+  display: block;
+  font-size: 11px;
+  color: #dc2626;
+  margin-top: 4px;
+}
+
+/* Password Meter */
+.password-meter {
+  height: 3px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+.meter-fill.weak {
+  background: #dc2626;
+  width: 33%;
+}
+
+.meter-fill.good {
+  background: #f59e0b;
+  width: 66%;
+}
+
+.meter-fill.strong {
+  background: #10b981;
   width: 100%;
-  padding: 14px;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.1s, background 0.2s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
-.submit-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
-.submit-btn:active { transform: translateY(0); }
-.submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
-
-.btn-hint { font-size: 0.7rem; opacity: 0.8; font-weight: 400; }
-
-/* Alerts & Errors */
-.server-error, .connection-alert {
-  background: var(--error-bg);
-  border-left: 4px solid var(--error-text);
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-}
-
-.error-message { font-size: 0.85rem; color: var(--error-text); margin: 4px 0; }
-
-/* Quick Demo Section */
-.demo-login-section {
-  margin-bottom: 1.5rem;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 12px;
-}
-
-.demo-login-section h4 { margin: 0 0 10px 0; font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
-
-.demo-buttons { display: flex; gap: 8px; }
-.demo-btn {
-  flex: 1;
-  padding: 6px;
-  font-size: 0.75rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: white;
-  cursor: pointer;
-}
-
-.demo-btn:hover { background: #f1f5f9; }
-
-/* Spinner */
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 3px solid rgba(255,255,255,0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s infinite linear;
-  margin-bottom: 5px;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
+/* Form Options */
 .form-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  font-size: 0.85rem;
+  margin-bottom: 24px;
 }
 
-.checkbox-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-.forgot-password-btn { background: none; border: none; color: var(--primary-color); cursor: pointer; font-weight: 600; }
-.form-footer { margin-top: 1.5rem; text-align: center; font-size: 0.9rem; }
-.switch-link { color: var(--primary-color); font-weight: 700; cursor: pointer; }
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: #6c757d;
+}
 
-/* Better Responsive Design for Mobile */
-@media (max-width: 480px) {
+.checkbox-input {
+  margin-right: 8px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.checkbox-label {
+  user-select: none;
+}
+
+.forgot-password-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.forgot-password-link:hover {
+  color: #5a67d8;
+  text-decoration: underline;
+}
+
+/* Submit Button */
+.login-submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.login-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-arrow {
+  transition: transform 0.3s;
+}
+
+.login-submit-btn:hover .btn-arrow {
+  transform: translateX(4px);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Form Footer */
+.form-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.register-prompt {
+  font-size: 13px;
+  color: #6c757d;
+  margin: 0;
+}
+
+.register-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+
+.register-link:hover {
+  color: #5a67d8;
+  text-decoration: underline;
+}
+
+/* ============================================ */
+/* MOBILE OPTIMIZATIONS - SCROLLABLE FIX */
+/* ============================================ */
+
+/* For tablets and smaller screens */
+@media (max-width: 968px) {
   .login-container {
-    padding: 0;
-    /* ✅ Keeps the gradient background so the white card pops out */
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-    align-items: center; /* Centers it nicely on mobile screens */
-    height: auto;
-    min-height: 100vh;
+    flex-direction: column;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
   }
-
-  .login-card {
-    max-width: 92%; /* Gives a tiny bit of breathing room on the edges */
-    min-height: auto; /* Keeps it as a neat floating card */
-    border-radius: 16px; /* Smooth corners */
-    padding: 1.5rem;
-    background: #ffffff; /* Solid white background for the form itself */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* Soft shadow so it doesn't look flat */
-    margin: 20px auto; /* Keeps it separated from phone top/bottom notches */
+  
+  .login-branding {
+    display: none;
   }
-
-  .role-selection {
-    grid-template-columns: 1fr; /* Stacks the roles for easy thumb tapping */
-    gap: 8px;
+  
+  .login-form-container {
+    padding: 32px 24px;
+    overflow-y: visible;
+    max-height: none;
   }
+  
+  .login-wrapper {
+    align-items: flex-start;
+    padding: 20px;
+  }
+}
 
+/* For mobile phones */
+@media (max-width: 768px) {
+  .login-wrapper {
+    padding: 12px;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+  
+  .login-container {
+    max-width: 100%;
+    max-height: none;
+    border-radius: 20px;
+    overflow: visible;
+  }
+  
+  .login-form-container {
+    padding: 24px 20px;
+    overflow-y: visible;
+  }
+  
+  /* Reduce spacing for mobile */
+  .form-header {
+    margin-bottom: 24px;
+  }
+  
+  .form-header h2 {
+    font-size: 24px;
+  }
+  
+  .form-header p {
+    font-size: 13px;
+  }
+  
+  /* Role grid becomes vertical on very small screens */
+  .role-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
   .role-card {
-    flex-direction: row; 
-    justify-content: flex-start;
-    gap: 15px;
-    padding: 14px;
+    flex-direction: row;
+    text-align: left;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
   }
-
-  .role-icon {
+  
+  .role-icon-wrapper {
     margin-bottom: 0;
-    font-size: 1.3rem;
+    width: 40px;
+    height: 40px;
   }
-
-  /* 📱 Stops iOS/Android from forcing standard text scrolling inside forms */
-  .form-input {
-    font-size: 16px; 
-    padding: 14px;
-    background-color: #f8fafc; /* Subtle input background contrast */
+  
+  .role-icon {
+    font-size: 20px;
   }
-
+  
+  .role-info {
+    text-align: left;
+    flex: 1;
+  }
+  
+  .role-name {
+    font-size: 13px;
+    margin-bottom: 2px;
+  }
+  
+  .role-description {
+    font-size: 10px;
+  }
+  
+  .role-checkmark {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  
+  /* Form options stack on mobile */
   .form-options {
-    flex-direction: row; /* Keeps remember checkbox & forgot password side-by-side */
-    justify-content: space-between;
-    font-size: 0.8rem;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
   }
+  
+  /* Input fields optimized for mobile */
+  .form-input {
+    padding: 12px 12px 12px 38px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .input-icon {
+    left: 12px;
+    font-size: 16px;
+  }
+  
+  .toggle-password {
+    right: 12px;
+    font-size: 18px;
+  }
+  
+  /* Button padding for better touch target */
+  .login-submit-btn {
+    padding: 14px;
+    font-size: 15px;
+  }
+  
+  .retry-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  /* Reduce spacing between sections */
+  .form-section {
+    margin-bottom: 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 18px;
+  }
+  
+  .section-label {
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  
+  /* Restaurant preview card on mobile */
+  .restaurant-preview {
+    margin-bottom: 20px;
+  }
+  
+  .preview-card {
+    padding: 10px 12px;
+  }
+  
+  .preview-icon {
+    font-size: 20px;
+  }
+  
+  /* Error messages and status */
+  .backend-status,
+  .server-error {
+    margin-bottom: 16px;
+    padding: 10px 12px;
+  }
+  
+  .error-message {
+    font-size: 12px;
+  }
+}
 
-  .submit-btn {
-    padding: 16px;
-    font-size: 1rem;
-    border-radius: 12px;
+/* For very small phones (iPhone SE, etc.) */
+@media (max-width: 480px) {
+  .login-wrapper {
+    padding: 8px;
   }
+  
+  .login-form-container {
+    padding: 20px 16px;
+  }
+  
+  .form-header {
+    margin-bottom: 20px;
+  }
+  
+  .form-header h2 {
+    font-size: 22px;
+  }
+  
+  .role-card {
+    padding: 8px 12px;
+  }
+  
+  .role-icon-wrapper {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .role-icon {
+    font-size: 18px;
+  }
+  
+  .role-name {
+    font-size: 12px;
+  }
+  
+  .role-description {
+    font-size: 9px;
+  }
+  
+  .form-input {
+    padding: 10px 10px 10px 36px;
+    font-size: 15px;
+  }
+  
+  .input-icon {
+    left: 10px;
+    font-size: 14px;
+  }
+  
+  .toggle-password {
+    right: 10px;
+    font-size: 16px;
+  }
+  
+  .login-submit-btn {
+    padding: 12px;
+    font-size: 14px;
+  }
+  
+  .checkbox-container,
+  .forgot-password-link {
+    font-size: 12px;
+  }
+  
+  .register-prompt {
+    font-size: 12px;
+  }
+  
+  .register-link {
+    font-size: 12px;
+  }
+}
+
+/* Ensure smooth scrolling on iOS */
+@supports (-webkit-touch-callout: none) {
+  .login-wrapper {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .login-form-container {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Prevent content from being hidden behind keyboard on mobile */
+@media (max-height: 700px) {
+  .login-wrapper {
+    align-items: flex-start;
+  }
+  
+  .login-container {
+    margin: 0 auto;
+  }
+  
+  .login-form-container {
+    padding: 20px 24px;
+  }
+  
+  .form-header {
+    margin-bottom: 16px;
+  }
+  
+  .form-section {
+    margin-bottom: 16px;
+  }
+  
+  .form-group {
+    margin-bottom: 14px;
+  }
+}
+/* Add this to your existing Login.css file */
+
+/* Select Dropdown Styling */
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.select-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+  color: #9ca3af;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.form-select {
+  width: 100%;
+  padding: 12px 12px 12px 44px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  transition: all 0.3s;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-select.error {
+  border-color: #dc2626;
+}
+
+.form-select:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  font-size: 12px;
+  color: #9ca3af;
+  pointer-events: none;
+  transition: transform 0.2s;
+}
+
+.form-select:focus + .select-arrow {
+  transform: rotate(180deg);
+}
+
+.role-description-hint {
+  display: block;
+  font-size: 11px;
+  color: #6c757d;
+  margin-top: 6px;
+  padding-left: 8px;
+  border-left: 2px solid #667eea;
+}
+
+/* Mobile Optimization for Dropdown */
+@media (max-width: 768px) {
+  .form-select {
+    padding: 12px 12px 12px 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .select-icon {
+    left: 12px;
+    font-size: 16px;
+  }
+  
+  .select-arrow {
+    right: 12px;
+    font-size: 12px;
+  }
+  
+  .role-description-hint {
+    font-size: 10px;
+    margin-top: 4px;
+  }
+}
+
+/* For very small phones */
+@media (max-width: 480px) {
+  .form-select {
+    padding: 10px 10px 10px 40px;
+    font-size: 15px;
+  }
+  
+  .select-icon {
+    left: 10px;
+    font-size: 14px;
+  }
+  
+  .select-arrow {
+    right: 10px;
+    font-size: 10px;
+  }
+}
+
+/* Dropdown options styling */
+.form-select option {
+  padding: 10px;
+  font-size: 14px;
+}
+
+/* Remove default focus outline for better custom styling */
+.form-select:focus-visible {
+  outline: none;
 }
