@@ -406,15 +406,10 @@ const Korder = () => {
 
   // Navigation items for mobile - Complete with all pages
   const navItems = [
-    { icon: FaTachometerAlt, label: 'Admin', action: handleNavigateToAdmin },
-    { icon: FaChartLine, label: 'Analytics', action: handleNavigateToAnalytics },
-    { icon: FaDatabase, label: 'Records', action: handleNavigateToRecords },
-    { icon: FaStar, label: 'Feedback', action: handleNavigateToFeedback },
-    { icon: FaUtensils, label: 'Set Menu', action: handleNavigateToSetMenu },
-    { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
-    { icon: FaWallet, label: 'Border', action: handleNavigateToBorder },
-    { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill },
-    { icon: FaHome, label: 'Dashboard', action: handleNavigateToDashboard }
+     { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
+    { icon: FaUtensils, label: 'Set Menu', action: handleNavigateToSetMenu }
+   
+    
   ];
 
   const today = new Date();
