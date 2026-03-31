@@ -31,14 +31,17 @@ import {
   FaCheckCircle,
   FaHourglassHalf,
   FaBan,
-  FaEye
+  FaEye,
+  FaBars,
+  FaTimesCircle,
+  FaSpinner
 } from 'react-icons/fa';
 import "./Analytics.css";
 
 const Analytics = () => {
   const { restaurantSlug } = useParams();
+  const navigate = useNavigate();
   
-  // Get backend URL from environment variable or use Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   console.log('🔧 Analytics using backend:', API_URL);
@@ -49,18 +52,17 @@ const Analytics = () => {
   const [timeRange, setTimeRange] = useState("daily");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [restaurantName, setRestaurantName] = useState("");
+  const [restaurantData, setRestaurantData] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState('');
   const [userName, setUserName] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     summary: true,
     charts: true,
     items: true,
     table: true
   });
-  
-  const navigate = useNavigate();
 
   // Authentication check
   useEffect(() => {
@@ -86,21 +88,19 @@ const Analytics = () => {
         return;
       }
 
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(
-        `${API_URL}/api/order/verify/${restaurantSlug}`,
+        `${API_URL}/api/restaurant/by-slug/${restaurantSlug}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      if (response.data.success) {
+      if (response.data) {
         setIsAuthenticated(true);
-        setRestaurantName(response.data.restaurant.name);
-        localStorage.setItem("restaurantName", response.data.restaurant.name);
-        localStorage.setItem("restaurantCode", response.data.restaurant.code);
-        localStorage.setItem("restaurantSlug", response.data.restaurant.slug);
-        fetchRestaurantOrders(token, response.data.restaurant.code);
+        setRestaurantData(response.data);
+        localStorage.setItem("restaurantName", response.data.restaurantName);
+        localStorage.setItem("restaurantCode", response.data.restaurantCode);
+        fetchRestaurantOrders(token);
       } else {
         setError("Access denied to this restaurant");
         setLoading(false);
@@ -111,12 +111,11 @@ const Analytics = () => {
     }
   };
 
-  const fetchRestaurantOrders = async (token, restaurantCode) => {
+  const fetchRestaurantOrders = async (token) => {
     try {
       setLoading(true);
       setError(null);
 
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(
         `${API_URL}/api/order/restaurant/${restaurantSlug}/analytics`,
         {
@@ -166,7 +165,7 @@ const Analytics = () => {
         localStorage.clear();
         setTimeout(() => navigate("/"), 2000);
       } else if (err.response.status === 404) {
-        errorMessage = `No orders found for ${restaurantName || restaurantSlug}`;
+        errorMessage = `No orders found for ${restaurantData?.restaurantName || restaurantSlug}`;
         setOrders([]);
       } else {
         errorMessage += `Server error: ${err.response.status}`;
@@ -310,10 +309,31 @@ const Analytics = () => {
     navigate("/");
   };
 
+  const handleBackToDashboard = () => {
+    navigate(`/${restaurantSlug}/dashboard`);
+  };
+
+  const handleNavigateToAdmin = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/admin`);
+  };
+
+  const handleNavigateToRecords = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/records`);
+  };
+
+  const handleNavigateToFeedback = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/feedback`);
+  };
+
+ 
+
   const handleRefresh = () => {
     const token = localStorage.getItem("token");
     if (token) {
-      fetchRestaurantOrders(token, localStorage.getItem("restaurantCode"));
+      fetchRestaurantOrders(token);
     }
   };
 
@@ -369,7 +389,15 @@ const Analytics = () => {
     return value.toLocaleString();
   };
 
-  if (!isAuthenticated) {
+  const navItems = [
+    { icon: FaTachometerAlt, label: 'Admin Dashboard', action: handleNavigateToAdmin },
+    { icon: FaChartLine, label: 'Analytics', action: handleRefresh },
+    { icon: FaDatabase, label: 'Records', action: handleNavigateToRecords },
+    { icon: FaEye, label: 'Feedback', action: handleNavigateToFeedback },
+  
+  ];
+
+  if (!isAuthenticated && loading) {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
@@ -382,65 +410,75 @@ const Analytics = () => {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <p>Loading analytics for {restaurantName}...</p>
+        <p>Loading analytics for {restaurantData?.restaurantName || restaurantSlug}...</p>
       </div>
     );
   }
 
   return (
-    <div className="analytics-container full-width">
-      {/* Header with Logout */}
+    <div className="analytics-container">
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        {mobileMenuOpen ? <FaTimesCircle /> : <FaBars />}
+      </button>
+
+      {/* Mobile Navigation Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-nav-header">
+              <h3>Menu</h3>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            {navItems.map((item, index) => (
+              <button 
+                key={index}
+                className="mobile-nav-item"
+                onClick={item.action}
+              >
+                <item.icon /> {item.label}
+              </button>
+            ))}
+            <button className="mobile-nav-item logout" onClick={handleLogout}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="analytics-header">
         <div className="header-content">
           <h1>
-            <FaChartLine /> Sales Analytics Dashboard
-            {restaurantName && <span className="restaurant-name"> - {restaurantName}</span>}
+            <FaChartLine /> Sales Analytics
           </h1>
-          <p className="subtitle">Comprehensive sales insights and performance metrics</p>
+          <p className="subtitle">
+            {restaurantData?.restaurantName} • {restaurantData?.restaurantCode}
+          </p>
         </div>
-        <div className="header-right">
-          <button className="refresh-button" onClick={handleRefresh} disabled={loading}>
-            <FaChartLine /> Refresh
-          </button>
+        <div className="header-right desktop-only">
           <button className="logout-button" onClick={handleLogout}>
             <FaSignOutAlt /> Logout
           </button>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="navigation-tabs">
-        <button 
-          className="nav-tab" 
-          onClick={() => navigate(`/${restaurantSlug}/admin`)}
-          title="Go to Admin Dashboard"
-        >
-          <FaTachometerAlt /> Admin Dashboard
-        </button>
-        
-        <button 
-          className="nav-tab active-tab" 
-          onClick={() => navigate(`/${restaurantSlug}/analytics`)}
-          title="Go to Analytics"
-        >
-          <FaChartLine /> Analytics
-        </button>
-        
-        <button 
-          className="nav-tab" 
-          onClick={() => navigate(`/${restaurantSlug}/records`)}
-          title="Go to Records"
-        >
-          <FaDatabase /> Records
-        </button>
-        
-        <button 
-          className="nav-tab" 
-          onClick={() => navigate(`/${restaurantSlug}/feedback`)}
-          title="Go to Feedback"
-        >
-          <FaEye /> Feedback
-        </button>
+      {/* Desktop Navigation Tabs */}
+      <div className="navigation-tabs desktop-only">
+        {navItems.map((item, index) => (
+          <button 
+            key={index}
+            className={`nav-tab ${item.label === 'Analytics' ? 'active' : ''}`}
+            onClick={item.action}
+          >
+            <item.icon /> {item.label}
+          </button>
+        ))}
       </div>
 
       {/* Error Display */}
@@ -468,7 +506,7 @@ const Analytics = () => {
             </select>
           </div>
 
-          {(timeRange === "monthly" || timeRange === "weekly") && (
+          {(timeRange === "monthly" || timeRange === "weekly") && availableYears.length > 0 && (
             <div className="filter-group">
               <label>Year:</label>
               <select 
@@ -500,8 +538,9 @@ const Analytics = () => {
             </div>
           )}
 
-          <button className="export-btn">
-            <FaDownload /> Export Report
+          <button className="refresh-btn" onClick={handleRefresh} disabled={loading}>
+            {loading ? <FaSpinner className="spinner" /> : <FaChartLine />}
+            Refresh
           </button>
         </div>
       </div>
@@ -517,15 +556,15 @@ const Analytics = () => {
         
         {expandedSections.summary && (
           <div className="summary-cards">
-            <div className="stat-card total-orders">
+            <div className="stat-card">
               <div className="stat-icon">📊</div>
               <div className="stat-content">
                 <h3>Total Orders</h3>
-                <p className="stat-number">{filteredOrders.length}</p>
+                <p className="stat-number">{formatNumber(filteredOrders.length)}</p>
               </div>
             </div>
             
-            <div className="stat-card total-revenue">
+            <div className="stat-card">
               <div className="stat-icon">💰</div>
               <div className="stat-content">
                 <h3>Total Revenue</h3>
@@ -533,7 +572,7 @@ const Analytics = () => {
               </div>
             </div>
             
-            <div className="stat-card avg-order">
+            <div className="stat-card">
               <div className="stat-icon">📈</div>
               <div className="stat-content">
                 <h3>Avg Order Value</h3>
@@ -541,7 +580,7 @@ const Analytics = () => {
               </div>
             </div>
             
-            <div className="stat-card total-gst">
+            <div className="stat-card">
               <div className="stat-icon">🧾</div>
               <div className="stat-content">
                 <h3>Total GST</h3>
@@ -552,7 +591,7 @@ const Analytics = () => {
         )}
       </div>
 
-      {/* Status Summary Cards */}
+      {/* Order Status Section */}
       <div className="summary-section">
         <div className="section-header" onClick={() => toggleSection('charts')}>
           <h2><FaClipboardList /> Order Status Overview</h2>
@@ -564,35 +603,35 @@ const Analytics = () => {
         {expandedSections.charts && (
           <>
             <div className="status-cards">
-              <div className="stat-card pending" style={{borderLeftColor: STATUS_COLORS.pending}}>
-                <div className="stat-icon"><FaHourglassHalf /></div>
-                <div className="stat-content">
-                  <h3>Pending Orders</h3>
-                  <p className="stat-number">{statusCounts.pending}</p>
+              <div className="status-card pending">
+                <FaHourglassHalf className="status-icon" />
+                <div className="status-info">
+                  <h4>Pending</h4>
+                  <p className="status-count">{statusCounts.pending}</p>
                 </div>
               </div>
               
-              <div className="stat-card preparing" style={{borderLeftColor: STATUS_COLORS.preparing}}>
-                <div className="stat-icon"><FaClock /></div>
-                <div className="stat-content">
-                  <h3>Preparing Orders</h3>
-                  <p className="stat-number">{statusCounts.preparing}</p>
+              <div className="status-card preparing">
+                <FaClock className="status-icon" />
+                <div className="status-info">
+                  <h4>Preparing</h4>
+                  <p className="status-count">{statusCounts.preparing}</p>
                 </div>
               </div>
               
-              <div className="stat-card completed" style={{borderLeftColor: STATUS_COLORS.completed}}>
-                <div className="stat-icon"><FaCheckCircle /></div>
-                <div className="stat-content">
-                  <h3>Completed Orders</h3>
-                  <p className="stat-number">{statusCounts.completed}</p>
+              <div className="status-card completed">
+                <FaCheckCircle className="status-icon" />
+                <div className="status-info">
+                  <h4>Completed</h4>
+                  <p className="status-count">{statusCounts.completed}</p>
                 </div>
               </div>
               
-              <div className="stat-card cancelled" style={{borderLeftColor: STATUS_COLORS.cancelled}}>
-                <div className="stat-icon"><FaBan /></div>
-                <div className="stat-content">
-                  <h3>Cancelled Orders</h3>
-                  <p className="stat-number">{statusCounts.cancelled}</p>
+              <div className="status-card cancelled">
+                <FaBan className="status-icon" />
+                <div className="status-info">
+                  <h4>Cancelled</h4>
+                  <p className="status-count">{statusCounts.cancelled}</p>
                 </div>
               </div>
             </div>
@@ -605,15 +644,15 @@ const Analytics = () => {
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="period" stroke="#6b7280" />
-                    <YAxis stroke="#6b7280" tickFormatter={(value) => `₹${value}`} />
+                    <XAxis dataKey="period" stroke="#6b7280" tick={{ fontSize: 12 }} />
+                    <YAxis stroke="#6b7280" tickFormatter={(value) => `₹${value}`} tick={{ fontSize: 12 }} />
                     <Tooltip 
                       formatter={(value) => [formatCurrency(value), "Amount"]}
                       contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                     />
                     <Legend />
-                    <Line type="monotone" dataKey="totalSales" stroke="#2563eb" name="Total Sales" strokeWidth={2} />
-                    <Line type="monotone" dataKey="totalGST" stroke="#10b981" name="Total GST" strokeWidth={2} />
+                    <Line type="monotone" dataKey="totalSales" stroke="#2563eb" name="Total Sales" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="totalGST" stroke="#10b981" name="Total GST" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -652,8 +691,8 @@ const Analytics = () => {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="period" stroke="#6b7280" />
-                    <YAxis stroke="#6b7280" />
+                    <XAxis dataKey="period" stroke="#6b7280" tick={{ fontSize: 12 }} />
+                    <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} />
                     <Tooltip 
                       contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                     />
@@ -669,8 +708,8 @@ const Analytics = () => {
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={getStatusTrendData()}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="period" stroke="#6b7280" />
-                    <YAxis stroke="#6b7280" />
+                    <XAxis dataKey="period" stroke="#6b7280" tick={{ fontSize: 12 }} />
+                    <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} />
                     <Tooltip 
                       contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                     />
@@ -702,15 +741,14 @@ const Analytics = () => {
             <div className="chart-container">
               <h3>Top Items by Revenue</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={topItems} layout="vertical">
+                <BarChart data={topItems} layout="vertical" margin={{ left: 100 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis type="number" stroke="#6b7280" tickFormatter={(value) => `₹${value}`} />
-                  <YAxis type="category" dataKey="name" width={100} stroke="#6b7280" />
+                  <XAxis type="number" stroke="#6b7280" tickFormatter={(value) => `₹${value}`} tick={{ fontSize: 12 }} />
+                  <YAxis type="category" dataKey="name" width={100} stroke="#6b7280" tick={{ fontSize: 12 }} />
                   <Tooltip 
                     formatter={(value) => [formatCurrency(value), "Revenue"]}
                     contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />
-                  <Legend />
                   <Bar dataKey="totalSales" fill="#8b5cf6" name="Revenue" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -720,43 +758,32 @@ const Analytics = () => {
             <div className="chart-container">
               <h3>Top Items by Quantity Sold</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={topItems}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    outerRadius={80}
-                    dataKey="quantity"
-                    nameKey="name"
-                  >
-                    {topItems.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
+                <BarChart data={topItems}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" stroke="#6b7280" tick={{ fontSize: 12 }} angle={-45} textAnchor="end" height={80} />
+                  <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} />
                   <Tooltip 
-                    formatter={(value, name) => [value, name]}
+                    formatter={(value) => [value, "Quantity"]}
                     contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />
-                  <Legend />
-                </PieChart>
+                  <Bar dataKey="quantity" fill="#ec4899" name="Quantity Sold" radius={[4, 4, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Daily Sales Distribution */}
+            {/* Sales by Day of Week */}
             <div className="chart-container">
               <h3>Sales by Day of Week</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={getSalesByDayOfWeek(filteredOrders)}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" tickFormatter={(value) => `₹${value}`} />
+                  <XAxis dataKey="day" stroke="#6b7280" tick={{ fontSize: 12 }} />
+                  <YAxis stroke="#6b7280" tickFormatter={(value) => `₹${value}`} tick={{ fontSize: 12 }} />
                   <Tooltip 
                     formatter={(value) => [formatCurrency(value), "Sales"]}
                     contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />
-                  <Bar dataKey="sales" fill="#ec4899" name="Sales" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="sales" fill="#06b6d4" name="Sales" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -765,11 +792,10 @@ const Analytics = () => {
             <div className="chart-container">
               <h3>Item Performance Matrix</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <ScatterChart data={getItemPerformanceMatrix(topItems)}>
+                <ScatterChart>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="quantity" name="Quantity" stroke="#6b7280" />
-                  <YAxis dataKey="revenue" name="Revenue" stroke="#6b7280" tickFormatter={(value) => `₹${value}`} />
-                  <ZAxis dataKey="name" name="Item" />
+                  <XAxis dataKey="quantity" name="Quantity" stroke="#6b7280" tick={{ fontSize: 12 }} />
+                  <YAxis dataKey="revenue" name="Revenue" stroke="#6b7280" tickFormatter={(value) => `₹${value}`} tick={{ fontSize: 12 }} />
                   <Tooltip 
                     formatter={(value, name) => {
                       if (name === "quantity") return [value, "Quantity"];
@@ -778,7 +804,7 @@ const Analytics = () => {
                     }}
                     contentStyle={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />
-                  <Scatter name="Items" fill="#06b6d4" shape="circle" />
+                  <Scatter data={getItemPerformanceMatrix(topItems)} fill="#14b8a6" shape="circle" />
                 </ScatterChart>
               </ResponsiveContainer>
             </div>
@@ -810,7 +836,7 @@ const Analytics = () => {
                   <th>GST</th>
                   <th>Net Sales</th>
                   <th>Avg Value</th>
-                 </tr>
+                </tr>
               </thead>
               <tbody>
                 {salesData.map((period, index) => (
@@ -818,16 +844,24 @@ const Analytics = () => {
                     <td><strong>{period.period}</strong></td>
                     <td>{period.totalOrders}</td>
                     <td>
-                      <span className="status-badge pending">{period.pending}</span>
+                      <span className={`status-badge pending ${period.pending === 0 ? 'zero' : ''}`}>
+                        {period.pending}
+                      </span>
                     </td>
                     <td>
-                      <span className="status-badge preparing">{period.preparing}</span>
+                      <span className={`status-badge preparing ${period.preparing === 0 ? 'zero' : ''}`}>
+                        {period.preparing}
+                      </span>
                     </td>
                     <td>
-                      <span className="status-badge completed">{period.completed}</span>
+                      <span className={`status-badge completed ${period.completed === 0 ? 'zero' : ''}`}>
+                        {period.completed}
+                      </span>
                     </td>
                     <td>
-                      <span className="status-badge cancelled">{period.cancelled}</span>
+                      <span className={`status-badge cancelled ${period.cancelled === 0 ? 'zero' : ''}`}>
+                        {period.cancelled}
+                      </span>
                     </td>
                     <td className="amount">{formatCurrency(period.totalSales)}</td>
                     <td className="amount">{formatCurrency(period.totalGST)}</td>
@@ -837,6 +871,11 @@ const Analytics = () => {
                 ))}
               </tbody>
             </table>
+            {salesData.length === 0 && (
+              <div className="no-data-message">
+                <p>No sales data available for the selected time period.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

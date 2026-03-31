@@ -362,7 +362,7 @@ function Login({ setToken }) {
         <div className="login-form-container">
           <div className="form-header">
             <h2>Welcome Back</h2>
-            <p>Login to access your dashboard</p>
+           
           </div>
 
           {/* Backend Status Indicator */}

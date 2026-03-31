@@ -27,7 +27,9 @@ import {
   FaCheckCircle,
   FaExclamationTriangle,
   FaSpinner,
-  FaPercentage
+  FaPercentage,
+  FaBars,
+  FaTimesCircle
 } from 'react-icons/fa';
 import "./Admin.css";
 
@@ -48,6 +50,7 @@ const Admin = () => {
   const [saving, setSaving] = useState(false);
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Password update states
   const [showPasswordUpdate, setShowPasswordUpdate] = useState(false);
@@ -355,20 +358,31 @@ const Admin = () => {
   };
 
   const handleNavigateToAnalytics = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/analytics`);
   };
 
   const handleNavigateToRecords = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/records`);
   };
 
   const handleNavigateToFeedback = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/feedback`);
   };
 
   const handleNavigateToSetMenu = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/setmenu`);
   };
+
+  const navItems = [
+    { icon: FaTachometerAlt, label: 'Admin Dashboard', action: handleBackToDashboard },
+    { icon: FaChartLine, label: 'Analytics', action: handleNavigateToAnalytics },
+    { icon: FaDatabase, label: 'Records', action: handleNavigateToRecords },
+    { icon: FaDatabase, label: 'Feedback', action: handleNavigateToFeedback }
+  ];
 
   if (loading) {
     return (
@@ -381,57 +395,68 @@ const Admin = () => {
 
   return (
     <div className="admin-container">
-     
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        {mobileMenuOpen ? <FaTimesCircle /> : <FaBars />}
+      </button>
+
+      {/* Mobile Navigation Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-nav-header">
+              <h3>Menu</h3>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            {navItems.map((item, index) => (
+              <button 
+                key={index}
+                className="mobile-nav-item"
+                onClick={item.action}
+              >
+                <item.icon /> {item.label}
+              </button>
+            ))}
+            <button className="mobile-nav-item logout" onClick={handleLogout}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="admin-header">
         <div className="header-content">
           <h1>
-            <FaBuilding /> Restaurant Admin Panel
+            <FaBuilding /> Restaurant Admin
           </h1>
           <p className="subtitle">
             {restaurantData?.restaurantName} • {restaurantData?.restaurantCode}
           </p>
         </div>
-        <div className="header-right">
-         <button className="logout-button" onClick={handleLogout}>
-          <FaSignOutAlt /> Logout
-        </button>
+        <div className="header-right desktop-only">
+          <button className="logout-button" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="navigation-tabs">
-        <button 
-          className="nav-tab" 
-          onClick={handleBackToDashboard}
-          title="Go to Dashboard"
-        >
-          <FaTachometerAlt />Admin Dashboard
-        </button>
-        
-        <button 
-          className="nav-tab" 
-          onClick={handleNavigateToAnalytics}
-          title="Go to Analytics"
-        >
-          <FaChartLine /> Analytics
-        </button>
-        
-        <button 
-          className="nav-tab" 
-          onClick={handleNavigateToRecords}
-          title="Go to Records"
-        >
-          <FaDatabase /> Records
-        </button>
-        
-        <button 
-          className="nav-tab" 
-          onClick={handleNavigateToFeedback}
-          title="Go to Feedback"
-        >
-          <FaDatabase /> Feedback
-        </button>
+      {/* Desktop Navigation Tabs */}
+      <div className="navigation-tabs desktop-only">
+        {navItems.map((item, index) => (
+          <button 
+            key={index}
+            className="nav-tab" 
+            onClick={item.action}
+          >
+            <item.icon /> {item.label}
+          </button>
+        ))}
       </div>
 
       {/* Error Display */}
@@ -447,17 +472,17 @@ const Admin = () => {
         <div className="action-buttons-left">
           {!isEditing ? (
             <button className="edit-btn" onClick={handleEditClick}>
-              <FaEdit /> Edit Restaurant Data
+              <FaEdit /> Edit Restaurant
             </button>
           ) : (
-            <div className="edit-controls">
+            <>
               <button 
                 className="save-btn" 
                 onClick={handleSaveChanges}
                 disabled={saving}
               >
                 {saving ? <FaSpinner className="spinner" /> : <FaSave />}
-                {saving ? "Saving..." : "Save Changes"}
+                {saving ? "Saving..." : "Save"}
               </button>
               <button 
                 className="cancel-btn" 
@@ -466,7 +491,7 @@ const Admin = () => {
               >
                 <FaTimes /> Cancel
               </button>
-            </div>
+            </>
           )}
           
           <button 
@@ -474,7 +499,7 @@ const Admin = () => {
             onClick={handlePasswordUpdateClick}
           >
             {showPasswordUpdate ? <FaUnlock /> : <FaLock />}
-            {showPasswordUpdate ? 'Hide Password Update' : 'Update Passwords'}
+            {showPasswordUpdate ? 'Hide' : 'Update Passwords'}
           </button>
         </div>
       </div>
@@ -483,10 +508,10 @@ const Admin = () => {
       {showPasswordUpdate && (
         <div className="password-update-section">
           <h3>
-            <FaKey /> Update Login Passwords
+            <FaKey /> Update Passwords
           </h3>
           <p className="section-description">
-            Update passwords for owner, kitchen, and billing accounts. You must provide your current password.
+            Update passwords for owner, kitchen, and billing accounts.
           </p>
           
           <div className="password-form">
@@ -537,15 +562,13 @@ const Admin = () => {
                     {showPasswords.owner ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                <div className="password-actions">
-                  <button
-                    type="button"
-                    className="generate-btn"
-                    onClick={() => generatePassword('newOwnerPassword')}
-                  >
-                    🎲 Generate
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="generate-btn"
+                  onClick={() => generatePassword('newOwnerPassword')}
+                >
+                  🎲 Generate
+                </button>
                 {passwordErrors.newOwnerPassword && (
                   <span className="error-text">{passwordErrors.newOwnerPassword}</span>
                 )}
@@ -571,15 +594,13 @@ const Admin = () => {
                     {showPasswords.kitchen ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                <div className="password-actions">
-                  <button
-                    type="button"
-                    className="generate-btn"
-                    onClick={() => generatePassword('newKitchenPassword')}
-                  >
-                    🎲 Generate
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="generate-btn"
+                  onClick={() => generatePassword('newKitchenPassword')}
+                >
+                  🎲 Generate
+                </button>
                 {passwordErrors.newKitchenPassword && (
                   <span className="error-text">{passwordErrors.newKitchenPassword}</span>
                 )}
@@ -605,15 +626,13 @@ const Admin = () => {
                     {showPasswords.billing ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-                <div className="password-actions">
-                  <button
-                    type="button"
-                    className="generate-btn"
-                    onClick={() => generatePassword('newBillingPassword')}
-                  >
-                    🎲 Generate
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="generate-btn"
+                  onClick={() => generatePassword('newBillingPassword')}
+                >
+                  🎲 Generate
+                </button>
                 {passwordErrors.newBillingPassword && (
                   <span className="error-text">{passwordErrors.newBillingPassword}</span>
                 )}
@@ -644,13 +663,6 @@ const Admin = () => {
                   </div>
                   {passwordErrors.confirmPassword && (
                     <span className="error-text">{passwordErrors.confirmPassword}</span>
-                  )}
-                  {passwordUpdateForm.newOwnerPassword && 
-                   passwordUpdateForm.confirmPassword &&
-                   passwordUpdateForm.newOwnerPassword === passwordUpdateForm.confirmPassword && (
-                    <span className="success-text">
-                      <FaCheckCircle /> Passwords match
-                    </span>
                   )}
                 </div>
               )}
@@ -695,19 +707,13 @@ const Admin = () => {
           <div className="data-grid">
             {/* Basic Information */}
             <div className="info-card">
-              <h3>
-                <FaIdCard /> Basic Information
-              </h3>
+              <h3>Basic Information</h3>
               
               <div className="info-field">
                 <label>Restaurant Code:</label>
                 <div className="value-with-copy">
                   <span className="data-value code-value">{restaurantData?.restaurantCode}</span>
-                  <button 
-                    className="copy-btn"
-                    onClick={() => copyToClipboard(restaurantData?.restaurantCode)}
-                    title="Copy to clipboard"
-                  >
+                  <button className="copy-btn" onClick={() => copyToClipboard(restaurantData?.restaurantCode)}>
                     <FaCopy />
                   </button>
                 </div>
@@ -722,15 +728,11 @@ const Admin = () => {
                     value={editForm.restaurantName || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="Restaurant Name"
                   />
                 ) : (
                   <div className="value-with-copy">
                     <span className="data-value">{restaurantData?.restaurantName}</span>
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(restaurantData?.restaurantName)}
-                    >
+                    <button className="copy-btn" onClick={() => copyToClipboard(restaurantData?.restaurantName)}>
                       <FaCopy />
                     </button>
                   </div>
@@ -740,36 +742,24 @@ const Admin = () => {
               <div className="info-field">
                 <label>Restaurant Slug:</label>
                 <div className="value-with-copy">
-                  <span className="data-value slug-value">
-                    {restaurantData?.restaurantSlug}
-                  </span>
-                  <button 
-                    className="copy-btn"
-                    onClick={() => copyToClipboard(restaurantData?.restaurantSlug)}
-                  >
+                  <span className="data-value slug-value">{restaurantData?.restaurantSlug}</span>
+                  <button className="copy-btn" onClick={() => copyToClipboard(restaurantData?.restaurantSlug)}>
                     <FaCopy />
                   </button>
                 </div>
-                <small className="slug-hint">
-                  URL: /{restaurantData?.restaurantSlug}/admin
-                </small>
               </div>
               
               <div className="info-field">
-                <label>Created At:</label>
+                <label>Created:</label>
                 <span className="data-value">
-                  {restaurantData?.createdAt ? 
-                    new Date(restaurantData.createdAt).toLocaleString() : 
-                    'N/A'}
+                  {restaurantData?.createdAt ? new Date(restaurantData.createdAt).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
             </div>
 
             {/* Contact Information */}
             <div className="info-card">
-              <h3>
-                <FaEnvelope /> Contact Information
-              </h3>
+              <h3>Contact Information</h3>
               
               <div className="info-field">
                 <label>Email:</label>
@@ -780,15 +770,11 @@ const Admin = () => {
                     value={editForm.email || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="owner@example.com"
                   />
                 ) : (
                   <div className="value-with-copy">
                     <span className="data-value">{restaurantData?.email}</span>
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(restaurantData?.email)}
-                    >
+                    <button className="copy-btn" onClick={() => copyToClipboard(restaurantData?.email)}>
                       <FaCopy />
                     </button>
                   </div>
@@ -804,15 +790,11 @@ const Admin = () => {
                     value={editForm.mobile || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="9876543210"
                   />
                 ) : (
                   <div className="value-with-copy">
                     <span className="data-value">{restaurantData?.mobile}</span>
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(restaurantData?.mobile)}
-                    >
+                    <button className="copy-btn" onClick={() => copyToClipboard(restaurantData?.mobile)}>
                       <FaCopy />
                     </button>
                   </div>
@@ -820,7 +802,7 @@ const Admin = () => {
               </div>
               
               <div className="info-field">
-                <label>Owner Name:</label>
+                <label>Owner:</label>
                 {isEditing ? (
                   <input
                     type="text"
@@ -828,7 +810,6 @@ const Admin = () => {
                     value={editForm.ownerName || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="Owner Full Name"
                   />
                 ) : (
                   <span className="data-value">{restaurantData?.ownerName || "N/A"}</span>
@@ -844,7 +825,6 @@ const Admin = () => {
                     value={editForm.ownerMobile || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="Owner Mobile Number"
                   />
                 ) : (
                   <span className="data-value">{restaurantData?.ownerMobile || "N/A"}</span>
@@ -854,12 +834,10 @@ const Admin = () => {
 
             {/* Login Credentials */}
             <div className="info-card credentials-card">
-              <h3>
-                <FaLock /> Login Credentials
-              </h3>
+              <h3>Login Credentials</h3>
               
               <div className="info-field">
-                <label>Owner Login (Email):</label>
+                <label>Owner Email:</label>
                 {isEditing ? (
                   <input
                     type="email"
@@ -867,15 +845,11 @@ const Admin = () => {
                     value={editForm.email || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="owner@example.com"
                   />
                 ) : (
                   <div className="value-with-copy">
                     <span className="data-value">{restaurantData?.email}</span>
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(restaurantData?.email)}
-                    >
+                    <button className="copy-btn" onClick={() => copyToClipboard(restaurantData?.email)}>
                       <FaCopy />
                     </button>
                   </div>
@@ -891,15 +865,11 @@ const Admin = () => {
                     value={editForm.kitchenUsername || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="kitchen_username"
                   />
                 ) : (
                   <div className="value-with-copy">
                     <span className="data-value">{restaurantData?.kitchenUsername}</span>
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(restaurantData?.kitchenUsername)}
-                    >
+                    <button className="copy-btn" onClick={() => copyToClipboard(restaurantData?.kitchenUsername)}>
                       <FaCopy />
                     </button>
                   </div>
@@ -915,36 +885,21 @@ const Admin = () => {
                     value={editForm.billingUsername || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="billing_username"
                   />
                 ) : (
                   <div className="value-with-copy">
                     <span className="data-value">{restaurantData?.billingUsername}</span>
-                    <button 
-                      className="copy-btn"
-                      onClick={() => copyToClipboard(restaurantData?.billingUsername)}
-                    >
+                    <button className="copy-btn" onClick={() => copyToClipboard(restaurantData?.billingUsername)}>
                       <FaCopy />
                     </button>
                   </div>
                 )}
               </div>
-              
-              <div className="info-field">
-                <label>Last Updated:</label>
-                <span className="data-value">
-                  {restaurantData?.updatedAt ? 
-                    new Date(restaurantData.updatedAt).toLocaleDateString() : 
-                    'Never'}
-                </span>
-              </div>
             </div>
 
             {/* Location Information */}
             <div className="info-card">
-              <h3>
-                <FaMapMarkerAlt /> Location Information
-              </h3>
+              <h3>Location</h3>
               
               <div className="info-field">
                 <label>City:</label>
@@ -955,7 +910,6 @@ const Admin = () => {
                     value={editForm.city || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="City"
                   />
                 ) : (
                   <span className="data-value">{restaurantData?.city}</span>
@@ -971,7 +925,6 @@ const Admin = () => {
                     value={editForm.state || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="State"
                   />
                 ) : (
                   <span className="data-value">{restaurantData?.state}</span>
@@ -987,35 +940,16 @@ const Admin = () => {
                     value={editForm.country || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="Country"
                   />
                 ) : (
                   <span className="data-value">{restaurantData?.country}</span>
-                )}
-              </div>
-              
-              <div className="info-field">
-                <label>Nearest Place:</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="nearestPlace"
-                    value={editForm.nearestPlace || ""}
-                    onChange={handleInputChange}
-                    className="edit-input"
-                    placeholder="Nearest landmark"
-                  />
-                ) : (
-                  <span className="data-value">{restaurantData?.nearestPlace || "N/A"}</span>
                 )}
               </div>
             </div>
 
             {/* Business Information */}
             <div className="info-card">
-              <h3>
-                <FaIdCard /> Business Information
-              </h3>
+              <h3>Business Info</h3>
               
               <div className="info-field">
                 <label>GST Number:</label>
@@ -1026,7 +960,6 @@ const Admin = () => {
                     value={editForm.gstNumber || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="GSTIN Number"
                     maxLength="15"
                   />
                 ) : (
@@ -1035,9 +968,7 @@ const Admin = () => {
               </div>
 
               <div className="info-field">
-                <label>
-                  <FaPercentage /> GST Percentage:
-                </label>
+                <label>GST Percentage:</label>
                 {isEditing ? (
                   <div className="percentage-input-wrapper">
                     <input
@@ -1058,11 +989,6 @@ const Admin = () => {
                     {restaurantData?.gstPercentage ? `${restaurantData.gstPercentage}%` : "Not Set"}
                   </span>
                 )}
-                {isEditing && (
-                  <small className="input-hint">
-                    Enter GST rate charged on food items (0-100%)
-                  </small>
-                )}
               </div>
               
               <div className="info-field">
@@ -1074,7 +1000,6 @@ const Admin = () => {
                     value={editForm.foodLicense || ""}
                     onChange={handleInputChange}
                     className="edit-input"
-                    placeholder="Food License Number"
                   />
                 ) : (
                   <span className="data-value">{restaurantData?.foodLicense || "N/A"}</span>
@@ -1084,18 +1009,13 @@ const Admin = () => {
 
             {/* Restaurant URLs */}
             <div className="info-card urls-card">
-              <h3>
-                <FaHome /> Restaurant URLs
-              </h3>
+              <h3>URLs</h3>
               
               <div className="info-field">
-                <label>Admin Panel:</label>
+                <label>Admin:</label>
                 <div className="url-value">
                   <code>/{restaurantSlug}/admin</code>
-                  <button 
-                    className="copy-btn"
-                    onClick={() => copyToClipboard(`/${restaurantSlug}/admin`)}
-                  >
+                  <button className="copy-btn" onClick={() => copyToClipboard(`/${restaurantSlug}/admin`)}>
                     <FaCopy />
                   </button>
                 </div>
@@ -1105,10 +1025,7 @@ const Admin = () => {
                 <label>Dashboard:</label>
                 <div className="url-value">
                   <code>/{restaurantSlug}/dashboard</code>
-                  <button 
-                    className="copy-btn"
-                    onClick={() => copyToClipboard(`/${restaurantSlug}/dashboard`)}
-                  >
+                  <button className="copy-btn" onClick={() => copyToClipboard(`/${restaurantSlug}/dashboard`)}>
                     <FaCopy />
                   </button>
                 </div>
@@ -1118,10 +1035,7 @@ const Admin = () => {
                 <label>Set Menu:</label>
                 <div className="url-value">
                   <code>/{restaurantSlug}/setmenu</code>
-                  <button 
-                    className="copy-btn"
-                    onClick={() => copyToClipboard(`/${restaurantSlug}/setmenu`)}
-                  >
+                  <button className="copy-btn" onClick={() => copyToClipboard(`/${restaurantSlug}/setmenu`)}>
                     <FaCopy />
                   </button>
                 </div>
@@ -1131,10 +1045,7 @@ const Admin = () => {
                 <label>Public Menu:</label>
                 <div className="url-value">
                   <code>/{restaurantSlug}/menu</code>
-                  <button 
-                    className="copy-btn"
-                    onClick={() => copyToClipboard(`/${restaurantSlug}/menu`)}
-                  >
+                  <button className="copy-btn" onClick={() => copyToClipboard(`/${restaurantSlug}/menu`)}>
                     <FaCopy />
                   </button>
                 </div>
@@ -1146,7 +1057,7 @@ const Admin = () => {
 
       {/* Quick Stats */}
       <div className="quick-stats">
-        <h3>📊 Restaurant Statistics</h3>
+        <h3>Restaurant Statistics</h3>
         <div className="stat-grid">
           <div className="stat-item">
             <span className="stat-label">Restaurant Code</span>
@@ -1154,32 +1065,18 @@ const Admin = () => {
           </div>
           <div className="stat-item">
             <span className="stat-label">Account Type</span>
-            <span className="stat-value role-stat">
-              {restaurantData?.role?.toUpperCase() || 'OWNER'}
+            <span className="stat-value role-stat">{restaurantData?.role?.toUpperCase() || 'OWNER'}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Registration</span>
+            <span className="stat-value">
+              {restaurantData?.createdAt ? new Date(restaurantData.createdAt).toLocaleDateString() : 'N/A'}
             </span>
           </div>
           <div className="stat-item">
-            <span className="stat-label">Registration Date</span>
-            <span className="stat-value">
-              {restaurantData?.createdAt ? 
-                new Date(restaurantData.createdAt).toLocaleDateString() : 
-                'N/A'}
-            </span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-label">Last Updated</span>
-            <span className="stat-value">
-              {restaurantData?.updatedAt ? 
-                new Date(restaurantData.updatedAt).toLocaleDateString() : 
-                'Never'}
-            </span>
-          </div>
-          <div className="stat-item gst-stat">
             <span className="stat-label">GST Rate</span>
             <span className="stat-value">
-              {restaurantData?.gstPercentage ? 
-                `${restaurantData.gstPercentage}%` : 
-                'Not Set'}
+              {restaurantData?.gstPercentage ? `${restaurantData.gstPercentage}%` : 'Not Set'}
             </span>
           </div>
         </div>

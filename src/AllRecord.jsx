@@ -1,3 +1,4 @@
+// AllRecord.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Calendar from 'react-calendar';
@@ -20,7 +21,13 @@ import {
   FaCalendarAlt,
   FaStar,
   FaStarHalfAlt,
-  FaChartBar
+  FaChartBar,
+  FaBars,
+  FaTimesCircle,
+  FaSpinner,
+  FaChevronDown,
+  FaChevronUp,
+  FaEye
 } from 'react-icons/fa';
 import './AllRecord.css';
 
@@ -28,7 +35,6 @@ const AllRecord = () => {
   const { restaurantSlug } = useParams();
   const navigate = useNavigate();
   
-  // Get backend URL from environment variable or use Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   console.log('🔧 AllRecord using backend:', API_URL);
@@ -36,46 +42,59 @@ const AllRecord = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [restaurantData, setRestaurantData] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // User info
   const [userRole, setUserRole] = useState('');
   const [userName, setUserName] = useState('');
-  const [restaurantName, setRestaurantName] = useState('');
   
-  // Filter states - EXACT same as Feedback page
+  // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
   const [dateRange, setDateRange] = useState('all');
   const [showCalendar, setShowCalendar] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   
-  // Sorting - EXACT same as Feedback page
+  // Sorting
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
+  
+  // Section expansion
+  const [expandedSections, setExpandedSections] = useState({
+    stats: true,
+    filters: true,
+    table: true
+  });
   
   // Statistics
   const [stats, setStats] = useState({
     totalOrders: 0,
     totalRevenue: 0,
     totalGST: 0,
-    averageOrderValue: 0
+    averageOrderValue: 0,
+    pendingOrders: 0,
+    preparingOrders: 0,
+    completedOrders: 0,
+    cancelledOrders: 0
   });
 
   useEffect(() => {
-    checkUserRole();
+    checkAuthentication();
   }, []);
 
   useEffect(() => {
     if (restaurantSlug) {
-      fetchRestaurantInfo();
+      fetchRestaurantData();
       fetchAllOrders();
     }
   }, [restaurantSlug]);
 
-  const checkUserRole = () => {
-    const role = localStorage.getItem('userRole');
+  const checkAuthentication = () => {
     const token = localStorage.getItem('token');
+    const role = localStorage.getItem('userRole');
     const name = localStorage.getItem('userName') || 'User';
+    const storedRestaurantSlug = localStorage.getItem('restaurantSlug');
     
     if (!token) {
       setError('Session expired. Please login again.');
@@ -93,6 +112,10 @@ const AllRecord = () => {
       setLoading(false);
       navigate('/');
     }
+    
+    if (storedRestaurantSlug !== restaurantSlug) {
+      navigate(`/${storedRestaurantSlug}/records`);
+    }
   };
 
   const handleLogout = () => {
@@ -100,22 +123,16 @@ const AllRecord = () => {
     navigate('/');
   };
 
-  const fetchRestaurantInfo = async () => {
+  const fetchRestaurantData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const storedRestaurantName = localStorage.getItem('restaurantName');
       
-      if (storedRestaurantName) {
-        setRestaurantName(storedRestaurantName);
-      }
-      
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/restaurant/by-slug/${restaurantSlug}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.data) {
-        setRestaurantName(response.data.restaurantName);
+        setRestaurantData(response.data);
         localStorage.setItem('restaurantName', response.data.restaurantName);
       }
     } catch (error) {
@@ -131,7 +148,6 @@ const AllRecord = () => {
       const token = localStorage.getItem('token');
       const restaurantCode = localStorage.getItem('restaurantCode');
       
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/order/${restaurantCode}/orders`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000
@@ -191,7 +207,11 @@ const AllRecord = () => {
         totalOrders: 0,
         totalRevenue: 0,
         totalGST: 0,
-        averageOrderValue: 0
+        averageOrderValue: 0,
+        pendingOrders: 0,
+        preparingOrders: 0,
+        completedOrders: 0,
+        cancelledOrders: 0
       });
       return;
     }
@@ -201,15 +221,24 @@ const AllRecord = () => {
     const totalGST = ordersData.reduce((sum, order) => sum + (order.gstAmount || 0), 0);
     const averageOrderValue = totalRevenue / totalOrders;
     
+    const pendingOrders = ordersData.filter(order => order.status === 'pending').length;
+    const preparingOrders = ordersData.filter(order => order.status === 'preparing').length;
+    const completedOrders = ordersData.filter(order => order.status === 'completed').length;
+    const cancelledOrders = ordersData.filter(order => order.status === 'cancelled').length;
+    
     setStats({
       totalOrders,
       totalRevenue,
       totalGST,
-      averageOrderValue
+      averageOrderValue,
+      pendingOrders,
+      preparingOrders,
+      completedOrders,
+      cancelledOrders
     });
   };
 
-  // Filter functions - EXACT same pattern as Feedback page
+  // Filter functions
   const getFilteredOrders = () => {
     let filtered = [...orders];
     
@@ -260,7 +289,7 @@ const AllRecord = () => {
       );
     }
     
-    // Apply sorting - EXACT same as Feedback page
+    // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
       
@@ -323,11 +352,11 @@ const AllRecord = () => {
       case 'pending':
         return <span className="status-badge pending"><FaClock /> Pending</span>;
       case 'preparing':
-        return <span className="status-badge reviewed"><FaClock /> Preparing</span>;
+        return <span className="status-badge preparing"><FaClock /> Preparing</span>;
       case 'completed':
-        return <span className="status-badge resolved"><FaCheckCircle /> Completed</span>;
+        return <span className="status-badge completed"><FaCheckCircle /> Completed</span>;
       case 'cancelled':
-        return <span className="status-badge archived"><FaTimes /> Cancelled</span>;
+        return <span className="status-badge cancelled"><FaTimes /> Cancelled</span>;
       default:
         return <span className="status-badge pending">Pending</span>;
     }
@@ -376,32 +405,55 @@ const AllRecord = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  // Navigation Functions - EXACT same as Feedback page
+  // Navigation Functions
   const handleNavigateToAdmin = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/admin`);
   };
 
   const handleNavigateToAnalytics = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/analytics`);
   };
 
   const handleNavigateToRecords = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/records`);
   };
 
   const handleNavigateToFeedback = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/feedback`);
   };
 
-  const handleNavigateToDashboard = () => {
-    navigate(`/${restaurantSlug}/dashboard`);
-  };
 
   const handleRefresh = () => {
     fetchAllOrders();
   };
 
+  const resetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setDateRange('all');
+    setSelectedDate(null);
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   const filteredOrders = getFilteredOrders();
+
+  const navItems = [
+    { icon: FaTachometerAlt, label: 'Admin Dashboard', action: handleNavigateToAdmin },
+    { icon: FaChartLine, label: 'Analytics', action: handleNavigateToAnalytics },
+    { icon: FaDatabase, label: 'Records', action: handleNavigateToRecords },
+    { icon: FaEye, label: 'Feedback', action: handleNavigateToFeedback },
+   
+  ];
 
   if (loading) {
     return (
@@ -413,185 +465,72 @@ const AllRecord = () => {
   }
 
   return (
-    <div className="records-container full-width">
-      {/* Top Bar with Logout - EXACT same as Feedback page */}
-      <div className="top-bar">
-        <div className="user-info">
-          <FaUserCircle className="user-icon" />
-          <span className="user-name">{userName}</span>
-          <span className="user-role">{userRole}</span>
-        </div>
-        <button className="logout-button" onClick={handleLogout}>
-          <FaSignOutAlt /> Logout
-        </button>
-      </div>
+    <div className="records-container">
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        {mobileMenuOpen ? <FaTimesCircle /> : <FaBars />}
+      </button>
 
-      {/* Header - EXACT same as Feedback page */}
+      {/* Mobile Navigation Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-nav-header">
+              <h3>Menu</h3>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            {navItems.map((item, index) => (
+              <button 
+                key={index}
+                className="mobile-nav-item"
+                onClick={item.action}
+              >
+                <item.icon /> {item.label}
+              </button>
+            ))}
+            <button className="mobile-nav-item logout" onClick={handleLogout}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="records-header">
         <div className="header-content">
           <h1>
-            <FaDatabase /> Order Records Dashboard
+            <FaDatabase /> Order Records
           </h1>
           <p className="subtitle">
-            {userRole === 'admin' ? 'All Restaurants Orders' : `${restaurantName} - Order History`}
+            {restaurantData?.restaurantName} • {restaurantData?.restaurantCode}
           </p>
         </div>
-        <div className="header-right">
-          <button className="refresh-button" onClick={handleRefresh}>
-            🔄 Refresh Data
+        <div className="header-right desktop-only">
+          <button className="logout-button" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
           </button>
         </div>
       </div>
 
-      {/* Navigation Tabs - EXACT same as Feedback page */}
-      <div className="navigation-tabs">
-        <button 
-          className="nav-tab" 
-          onClick={handleNavigateToAdmin}
-          title="Go to Admin Dashboard"
-        >
-          <FaTachometerAlt /> Admin Dashboard
-        </button>
-        
-        <button 
-          className="nav-tab" 
-          onClick={handleNavigateToAnalytics}
-          title="Go to Analytics"
-        >
-          <FaChartLine /> Analytics
-        </button>
-        
-        <button 
-          className="nav-tab active-tab" 
-          onClick={handleNavigateToRecords}
-          title="Go to Records"
-        >
-          <FaDatabase />  Records
-        </button>
-        
-        <button 
-          className="nav-tab" 
-          onClick={handleNavigateToFeedback}
-          title="Go to Feedback"
-        >
-          <FaChartBar /> Feedback
-        </button>
-      </div>
-
-      {/* Statistics Cards - EXACT same style as Feedback page */}
-      <div className="stats-cards">
-        <div className="stat-card total-orders">
-          <div className="stat-icon">📋</div>
-          <div className="stat-content">
-            <h3>Total Orders</h3>
-            <p className="stat-number">{stats.totalOrders}</p>
-          </div>
-        </div>
-        
-        <div className="stat-card total-revenue">
-          <div className="stat-icon">💰</div>
-          <div className="stat-content">
-            <h3>Total Revenue</h3>
-            <p className="stat-number">₹{stats.totalRevenue.toFixed(2)}</p>
-          </div>
-        </div>
-        
-        <div className="stat-card total-gst">
-          <div className="stat-icon">🏛️</div>
-          <div className="stat-content">
-            <h3>Total GST</h3>
-            <p className="stat-number">₹{stats.totalGST.toFixed(2)}</p>
-          </div>
-        </div>
-        
-        <div className="stat-card avg-order">
-          <div className="stat-icon">📊</div>
-          <div className="stat-content">
-            <h3>Avg Order Value</h3>
-            <p className="stat-number">₹{stats.averageOrderValue.toFixed(2)}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters Section - EXACT same as Feedback page */}
-      <div className="filters-section">
-        <div className="search-box">
-          <FaSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search by bill number, customer, or table..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-          {searchTerm && (
-            <button className="clear-search" onClick={() => setSearchTerm('')}>
-              <FaTimes />
-            </button>
-          )}
-        </div>
-
-        <div className="filter-controls">
-          <div className="filter-group">
-            <label><FaClock /> Status:</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="preparing">Preparing</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label>📅 Date Range:</label>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="year">Last Year</option>
-            </select>
-          </div>
-
-          <div className="filter-group date-picker">
-            <button 
-              className="date-button"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
-              <FaCalendarAlt /> {selectedDate ? formatDate(selectedDate) : 'Select Date'}
-            </button>
-            {selectedDate && (
-              <button className="clear-date" onClick={clearDateFilter}>
-                <FaTimes />
-              </button>
-            )}
-            {showCalendar && (
-              <div className="calendar-popup">
-                <Calendar onChange={handleDateChange} value={selectedDate} />
-              </div>
-            )}
-          </div>
-
-          <button
-            className="export-btn"
-            onClick={handleExportCSV}
-            disabled={filteredOrders.length === 0}
+      {/* Desktop Navigation Tabs */}
+      <div className="navigation-tabs desktop-only">
+        {navItems.map((item, index) => (
+          <button 
+            key={index}
+            className={`nav-tab ${item.label === 'Records' ? 'active' : ''}`}
+            onClick={item.action}
           >
-            <FaDownload /> Export CSV
+            <item.icon /> {item.label}
           </button>
-        </div>
+        ))}
       </div>
 
-      {/* Error Display - EXACT same as Feedback page */}
+      {/* Error Display */}
       {error && (
         <div className="error-message">
           <FaExclamationTriangle /> {error}
@@ -599,79 +538,265 @@ const AllRecord = () => {
         </div>
       )}
 
-      {/* Main Content - Table with sorting - EXACT same style as Feedback page */}
-      <div className="records-content">
-        {filteredOrders.length > 0 ? (
-          <div className="table-responsive">
-            <table className="orders-table">
-              <thead>
-                <tr>
-                  <th onClick={() => handleSort('date')}>
-                    Date/Time {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => handleSort('billNumber')}>
-                    Bill # {sortBy === 'billNumber' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th onClick={() => handleSort('customer')}>
-                    Customer {sortBy === 'customer' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th>Table</th>
-                  <th>Items</th>
-                  <th onClick={() => handleSort('total')}>
-                    Total {sortBy === 'total' && (sortOrder === 'asc' ? '↑' : '↓')}
-                  </th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map(order => (
-                  <tr key={order._id}>
-                    <td>{formatDateTime(order.date, order.time)}</td>
-                    <td>
-                      <span className="bill-number">#{order.billNumber}</span>
-                    </td>
-                    <td>
-                      <div className="customer-info">
-                        <strong>{order.customerName || 'Guest'}</strong>
-                        {order.gstNumber && (
-                          <small>GST: {order.gstNumber}</small>
-                        )}
-                      </div>
-                    </td>
-                    <td>{order.tableNumber || '-'}</td>
-                    <td>
-                      <ul className="items-list">
-                        {order.items.map((item, idx) => (
-                          <li key={idx}>
-                            {item.name} × {item.quantity}
-                            <small>₹{item.price}</small>
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td className="amount-cell">₹{order.total?.toFixed(2)}</td>
-                    <td>{getStatusBadge(order.status)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Statistics Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('stats')}>
+          <h2><FaChartBar /> Key Metrics</h2>
+          <button className="expand-toggle">
+            {expandedSections.stats ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+        
+        {expandedSections.stats && (
+          <>
+            <div className="summary-cards">
+              <div className="stat-card">
+                <div className="stat-icon">📋</div>
+                <div className="stat-content">
+                  <h3>Total Orders</h3>
+                  <p className="stat-number">{stats.totalOrders}</p>
+                </div>
+              </div>
+              
+              <div className="stat-card">
+                <div className="stat-icon">💰</div>
+                <div className="stat-content">
+                  <h3>Total Revenue</h3>
+                  <p className="stat-number">₹{stats.totalRevenue.toFixed(2)}</p>
+                </div>
+              </div>
+              
+              <div className="stat-card">
+                <div className="stat-icon">🏛️</div>
+                <div className="stat-content">
+                  <h3>Total GST</h3>
+                  <p className="stat-number">₹{stats.totalGST.toFixed(2)}</p>
+                </div>
+              </div>
+              
+              <div className="stat-card">
+                <div className="stat-icon">📊</div>
+                <div className="stat-content">
+                  <h3>Avg Order Value</h3>
+                  <p className="stat-number">₹{stats.averageOrderValue.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="status-cards">
+              <div className="status-card pending">
+                <FaClock className="status-icon" />
+                <div className="status-info">
+                  <h4>Pending</h4>
+                  <p className="status-count">{stats.pendingOrders}</p>
+                </div>
+              </div>
+              
+              <div className="status-card preparing">
+                <FaClock className="status-icon" />
+                <div className="status-info">
+                  <h4>Preparing</h4>
+                  <p className="status-count">{stats.preparingOrders}</p>
+                </div>
+              </div>
+              
+              <div className="status-card completed">
+                <FaCheckCircle className="status-icon" />
+                <div className="status-info">
+                  <h4>Completed</h4>
+                  <p className="status-count">{stats.completedOrders}</p>
+                </div>
+              </div>
+              
+              <div className="status-card cancelled">
+                <FaTimes className="status-icon" />
+                <div className="status-info">
+                  <h4>Cancelled</h4>
+                  <p className="status-count">{stats.cancelledOrders}</p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Filters Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('filters')}>
+          <h2><FaSearch /> Filters & Search</h2>
+          <button className="expand-toggle">
+            {expandedSections.filters ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+        
+        {expandedSections.filters && (
+          <div className="filters-section">
+            <div className="search-box">
+              <FaSearch className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search by bill number, customer, or table..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+              {searchTerm && (
+                <button className="clear-search" onClick={() => setSearchTerm('')}>
+                  <FaTimes />
+                </button>
+              )}
+            </div>
+
+            <div className="filter-controls">
+              <div className="filter-group">
+                <label><FaClock /> Status:</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>📅 Date Range:</label>
+                <select
+                  value={dateRange}
+                  onChange={(e) => setDateRange(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">Last 30 Days</option>
+                  <option value="year">Last Year</option>
+                </select>
+              </div>
+
+              <div className="filter-group date-picker">
+                <button 
+                  className="date-button"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                >
+                  <FaCalendarAlt /> {selectedDate ? formatDate(selectedDate) : 'Select Date'}
+                </button>
+                {selectedDate && (
+                  <button className="clear-date" onClick={clearDateFilter}>
+                    <FaTimes />
+                  </button>
+                )}
+                {showCalendar && (
+                  <div className="calendar-popup">
+                    <Calendar onChange={handleDateChange} value={selectedDate} />
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="export-btn"
+                onClick={handleExportCSV}
+                disabled={filteredOrders.length === 0}
+              >
+                <FaDownload /> Export CSV
+              </button>
+
+              {(searchTerm || statusFilter !== 'all' || dateRange !== 'all' || selectedDate) && (
+                <button className="reset-filters-btn" onClick={resetFilters}>
+                  <FaTimes /> Reset Filters
+                </button>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="no-records">
-            <div className="no-records-icon">📭</div>
-            <h3>No Orders Found</h3>
-            <p>Try adjusting your filters or check back later.</p>
-            <button
-              className="reset-filters-btn"
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-                setDateRange('all');
-                setSelectedDate(null);
-              }}
-            >
-              Reset All Filters
+        )}
+      </div>
+
+      {/* Orders Table Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('table')}>
+          <h2><FaDatabase /> Order Details</h2>
+          <div className="header-actions">
+            <button className="refresh-btn-small" onClick={handleRefresh}>
+              <FaSpinner className={loading ? 'spinner' : ''} /> Refresh
             </button>
+            <button className="expand-toggle">
+              {expandedSections.table ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+          </div>
+        </div>
+        
+        {expandedSections.table && (
+          <div className="records-content">
+            {filteredOrders.length > 0 ? (
+              <div className="table-responsive">
+                <table className="orders-table">
+                  <thead>
+                    <tr>
+                      <th onClick={() => handleSort('date')} className="sortable">
+                        Date/Time {sortBy === 'date' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th onClick={() => handleSort('billNumber')} className="sortable">
+                        Bill # {sortBy === 'billNumber' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th onClick={() => handleSort('customer')} className="sortable">
+                        Customer {sortBy === 'customer' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th>Table</th>
+                      <th>Items</th>
+                      <th onClick={() => handleSort('total')} className="sortable">
+                        Total {sortBy === 'total' && (sortOrder === 'asc' ? '↑' : '↓')}
+                      </th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map(order => (
+                      <tr key={order._id}>
+                        <td className="date-cell">{formatDateTime(order.date, order.time)}</td>
+                        <td>
+                          <span className="bill-number">#{order.billNumber}</span>
+                        </td>
+                        <td>
+                          <div className="customer-info">
+                            <strong>{order.customerName || 'Guest'}</strong>
+                            {order.gstNumber && (
+                              <small className="gst-number">GST: {order.gstNumber}</small>
+                            )}
+                          </div>
+                        </td>
+                        <td className="table-number">{order.tableNumber || '-'}</td>
+                        <td>
+                          <ul className="items-list">
+                            {order.items.map((item, idx) => (
+                              <li key={idx}>
+                                <span className="item-name">{item.name}</span>
+                                <span className="item-quantity">×{item.quantity}</span>
+                                <span className="item-price">₹{item.price}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td className="amount-cell">₹{order.total?.toFixed(2)}</td>
+                        <td>{getStatusBadge(order.status)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="no-records">
+                <div className="no-records-icon">📭</div>
+                <h3>No Orders Found</h3>
+                <p>Try adjusting your filters or check back later.</p>
+                <button className="reset-filters-btn" onClick={resetFilters}>
+                  Reset All Filters
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
