@@ -1,38 +1,81 @@
+// TotalBill.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
+import {
+  FaTachometerAlt,
+  FaChartLine,
+  FaDatabase,
+  FaHome,
+  FaSignOutAlt,
+  FaBuilding,
+  FaSearch,
+  FaTimes,
+  FaPrint,
+  FaEdit,
+  FaTrash,
+  FaSave,
+  FaPlus,
+  FaMinus,
+  FaClock,
+  FaCheckCircle,
+  FaHourglassHalf,
+  FaSpinner,
+  FaBars,
+  FaTimesCircle,
+  FaChevronDown,
+  FaChevronUp,
+  FaExclamationTriangle,
+  FaShoppingCart,
+  FaReceipt,
+  FaQrcode,
+  FaWallet,
+  FaUtensils,
+  FaClipboardList,
+  FaStar,
+  FaEye,
+  FaChartBar,
+  FaCalendarAlt
+} from 'react-icons/fa';
 import './TotalBill.css';
 
 const TotalBill = () => {
-  const { restaurantSlug } = useParams(); // Get restaurant slug from URL
+  const { restaurantSlug } = useParams();
+  const navigate = useNavigate();
+  
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [restaurantName, setRestaurantName] = useState('');
-  const [restaurantInfo, setRestaurantInfo] = useState(null);
-  const navigate = useNavigate();
+  const [restaurantData, setRestaurantData] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    stats: true,
+    items: true,
+    orders: true,
+    revenue: true
+  });
 
-  // Get backend URL from environment variable or use Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   console.log('🔧 TotalBill using backend:', API_URL);
 
-  // Function to get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
-  // Function to compare dates (ignoring time)
   const isSameDate = (date1, date2) => {
     return new Date(date1).toDateString() === new Date(date2).toDateString();
   };
 
   useEffect(() => {
-    verifyAccess();
+    checkAuthentication();
   }, [restaurantSlug]);
 
-  const verifyAccess = () => {
+  const checkAuthentication = () => {
     const userRole = localStorage.getItem('userRole');
     const token = localStorage.getItem('token');
     const userRestaurantSlug = localStorage.getItem('restaurantSlug');
@@ -40,73 +83,62 @@ const TotalBill = () => {
     if (!token) {
       setError('Session expired. Please login again.');
       setLoading(false);
-      return false;
+      navigate('/');
+      return;
     }
     
     if (userRole !== 'owner' && userRole !== 'billing') {
       setError('Access denied. This page is for owners and billing staff only.');
       setLoading(false);
-      return false;
+      navigate('/');
+      return;
     }
     
     if (userRestaurantSlug !== restaurantSlug) {
       setError(`You don't have access to ${restaurantSlug}'s billing system.`);
       setLoading(false);
-      return false;
+      navigate('/');
+      return;
     }
-    
-    return true;
   };
 
   useEffect(() => {
     if (restaurantSlug) {
-      fetchRestaurantInfo();
-      fetchAndFilterTodayOrders();
+      fetchRestaurantData();
+      fetchTodayOrders();
     }
   }, [restaurantSlug]);
 
-  const fetchRestaurantInfo = async () => {
+  const fetchRestaurantData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const storedRestaurantName = localStorage.getItem('restaurantName');
-      const storedRestaurantCode = localStorage.getItem('restaurantCode');
+      const response = await axios.get(
+        `${API_URL}/api/restaurant/by-slug/${restaurantSlug}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
       
-      if (storedRestaurantName) {
-        setRestaurantName(storedRestaurantName);
-        setRestaurantInfo({
-          name: storedRestaurantName,
-          code: storedRestaurantCode
+      if (response.data) {
+        setRestaurantData(response.data);
+        localStorage.setItem('restaurantName', response.data.restaurantName);
+        localStorage.setItem('restaurantCode', response.data.restaurantCode);
+      } else {
+        setRestaurantData({
+          restaurantName: localStorage.getItem('restaurantName') || restaurantSlug,
+          restaurantCode: localStorage.getItem('restaurantCode') || 'N/A',
+          gstNumber: 'N/A'
         });
       }
-      
-      // Try to fetch restaurant info from API
-      try {
-        // CHANGED: Use full URL with API_URL
-        const response = await axios.get(
-          `${API_URL}/api/restaurant/by-slug/${restaurantSlug}`,
-          {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }
-        );
-        
-        if (response.data) {
-          setRestaurantName(response.data.restaurantName);
-          setRestaurantInfo(response.data);
-          
-          localStorage.setItem('restaurantName', response.data.restaurantName);
-          localStorage.setItem('restaurantCode', response.data.restaurantCode);
-        }
-      } catch (apiErr) {
-        console.log('Using stored restaurant info');
-      }
-      
     } catch (err) {
       console.error('Error fetching restaurant info:', err);
-      setRestaurantName(localStorage.getItem('restaurantName') || restaurantSlug);
+      setRestaurantData({
+        restaurantName: localStorage.getItem('restaurantName') || restaurantSlug,
+        restaurantCode: localStorage.getItem('restaurantCode') || 'N/A',
+        gstNumber: 'N/A'
+      });
     }
   };
 
-  const fetchAndFilterTodayOrders = async () => {
+  const fetchTodayOrders = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -114,22 +146,6 @@ const TotalBill = () => {
       const token = localStorage.getItem('token');
       const today = getTodayDate();
       
-      console.log("🔍 Fetching today's orders for:", {
-        restaurantSlug,
-        today
-      });
-      
-      // Test backend connection first
-      try {
-        // CHANGED: Use full URL with API_URL
-        await axios.get(`${API_URL}/api/test`, { timeout: 3000 });
-        console.log("✅ Backend connection OK");
-      } catch (testErr) {
-        throw new Error('Backend server not reachable');
-      }
-      
-      // Fetch billing orders for the restaurant
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(
         `${API_URL}/api/order/billing/${restaurantSlug}`,
         {
@@ -141,15 +157,11 @@ const TotalBill = () => {
         }
       );
       
-      console.log("✅ Orders response:", response.data);
-      
       if (response.data && response.data.success) {
-        // Filter orders to only include today's date
         const todayOrders = response.data.orders.filter(order => 
           isSameDate(order.date, today)
         );
         
-        console.log(`📊 Found ${todayOrders.length} orders for today`);
         setOrders(todayOrders);
         setError(null);
       } else {
@@ -159,25 +171,18 @@ const TotalBill = () => {
       
     } catch (err) {
       console.error('❌ Error fetching orders:', err);
-      
       let errorMessage = 'Failed to load today\'s orders. ';
       
-      if (err.message.includes('Backend server not reachable')) {
-        errorMessage = 'Backend server is not running. Please start the server.';
+      if (err.response?.status === 401) {
+        errorMessage = 'Session expired. Please login again.';
+        localStorage.clear();
+        setTimeout(() => navigate('/'), 2000);
+      } else if (err.response?.status === 404) {
+        errorMessage = `No orders found for ${restaurantData?.restaurantName || restaurantSlug}`;
+        setOrders([]);
       } else if (err.code === 'ECONNABORTED') {
         errorMessage = 'Request timeout. Server is not responding.';
-      } else if (err.response) {
-        if (err.response.status === 401) {
-          errorMessage = 'Session expired. Please login again.';
-          localStorage.clear();
-          setTimeout(() => navigate('/'), 2000);
-        } else if (err.response.status === 404) {
-          errorMessage = `No orders found for ${restaurantName || restaurantSlug}`;
-          setOrders([]);
-        } else {
-          errorMessage += `Server error: ${err.response.status}`;
-        }
-      } else if (err.request) {
+      } else if (!err.response) {
         errorMessage = 'Cannot connect to server. Please check backend is running.';
       } else {
         errorMessage += err.message;
@@ -193,6 +198,15 @@ const TotalBill = () => {
   const formatDisplayDate = (dateString) => {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const calculateSummary = (orders) => {
@@ -251,51 +265,78 @@ const TotalBill = () => {
 
   const getStatusBadge = (status) => {
     switch (status.toLowerCase()) {
-      case 'pending': return <span className="status-badge pending">⏳ Pending</span>;
-      case 'preparing': return <span className="status-badge preparing">👨‍🍳 Preparing</span>;
-      case 'completed': return <span className="status-badge completed">✅ Completed</span>;
-      default: return <span className="status-badge pending">⏳ Pending</span>;
+      case 'pending': 
+        return <span className="status-badge pending"><FaHourglassHalf /> Pending</span>;
+      case 'preparing': 
+        return <span className="status-badge preparing"><FaSpinner /> Preparing</span>;
+      case 'completed': 
+        return <span className="status-badge completed"><FaCheckCircle /> Completed</span>;
+      default: 
+        return <span className="status-badge pending"><FaClock /> Pending</span>;
     }
   };
 
-  const handleNavigateToBorder = () => {
-    navigate(`/${restaurantSlug}/Border`);
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
-  const handleNavigateToPublicMenu = () => {
-    navigate(`/${restaurantSlug}/menu`);
+  // Navigation Functions
+  const handleNavigateToAdmin = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/admin`);
+  };
+
+  const handleNavigateToAnalytics = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/analytics`);
+  };
+
+  const handleNavigateToRecords = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/records`);
+  };
+
+  const handleNavigateToFeedback = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/feedback`);
+  };
+
+  const handleNavigateToDashboard = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/dashboard`);
+  };
+
+  const handleNavigateToSetMenu = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/setmenu`);
   };
 
   const handleNavigateToKorder = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/Korder`);
   };
 
+  const handleNavigateToBorder = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/border`);
+  };
+  
+  const handleNavigateToTotalBill = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/totalbill`);
+  };
+  
   const handleLogout = () => {
     localStorage.clear();
     navigate('/');
   };
 
   const handleRefresh = () => {
-    fetchAndFilterTodayOrders();
+    fetchTodayOrders();
   };
-
-  if (loading) return (
-    <div className="loading-container">
-      <div className="loading-spinner"></div>
-      <p className="loading-text">Loading today's orders for {restaurantName || restaurantSlug}...</p>
-    </div>
-  );
-  
-  if (error && orders.length === 0) return (
-    <div className="error-container">
-      <div className="error-icon">⚠️</div>
-      <p className="error-message">Error: {error}</p>
-      <div className="error-actions">
-        <button className="retry-button" onClick={handleRefresh}>Retry</button>
-        <button className="logout-button" onClick={handleLogout}>Login Again</button>
-      </div>
-    </div>
-  );
 
   const { 
     itemSales, 
@@ -308,59 +349,97 @@ const TotalBill = () => {
   } = calculateSummary(orders);
   const today = getTodayDate();
 
+  // Navigation items for mobile
+  const navItems = [
+    { icon: FaTachometerAlt, label: 'Admin', action: handleNavigateToAdmin },
+    { icon: FaChartLine, label: 'Analytics', action: handleNavigateToAnalytics },
+    { icon: FaDatabase, label: 'Records', action: handleNavigateToRecords },
+    { icon: FaStar, label: 'Feedback', action: handleNavigateToFeedback },
+    { icon: FaUtensils, label: 'Set Menu', action: handleNavigateToSetMenu },
+    { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
+   
+  ];
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading today's orders...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="totalbill-container">
-      {/* Header */}
-      <div className="totalbill-header">
-        <div className="header-content">
-          <div className="header-text">
-            <h1 className="totalbill-title">
-              <span className="title-icon">💰</span>
-              {restaurantName} - Today's Total Bill
-            </h1>
-            <p className="totalbill-subtitle">Complete overview of today's orders and revenue</p>
-            <div className="restaurant-info">
-              <span className="restaurant-code">{restaurantInfo?.code || restaurantSlug}</span>
-              <span className="restaurant-date">Today: {formatDisplayDate(today)}</span>
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        {mobileMenuOpen ? <FaTimesCircle /> : <FaBars />}
+      </button>
+
+      {/* Mobile Navigation Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-nav-header">
+              <h3>Menu</h3>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <FaTimes />
+              </button>
             </div>
-          </div>
-          <div className="header-actions">
-            {/* ✅ BORDER BUTTON - Navigate to Order Management */}
-            <button 
-              className="nav-btn border-btn"
-              onClick={handleNavigateToBorder}
-            >
-              <span className="nav-btn-icon">📊</span>
-              Border
-            </button>
-            <button 
-              className="nav-btn totalbill-btn"
-              onClick={() => navigate(`/${restaurantSlug}/totalbill`)}
-            >
-              <span className="nav-btn-icon">🧾</span>
-              Total Bill
-            </button>
-            <button 
-              className="nav-btn logout-btn"
-              onClick={handleLogout}
-            >
-              <span className="nav-btn-icon">🚪</span>
-              Logout
+            {navItems.map((item, index) => (
+              <button 
+                key={index}
+                className="mobile-nav-item"
+                onClick={item.action}
+              >
+                <item.icon /> {item.label}
+              </button>
+            ))}
+            <button className="mobile-nav-item logout" onClick={handleLogout}>
+              <FaSignOutAlt /> Logout
             </button>
           </div>
         </div>
+      )}
+
+      {/* Header */}
+      <div className="totalbill-header">
+        <div className="header-content">
+          <h1>
+            <FaReceipt /> Total Bill Summary
+          </h1>
+          <p className="subtitle">
+            {restaurantData?.restaurantName} • {restaurantData?.restaurantCode}
+          </p>
+        </div>
+        <div className="header-right desktop-only">
+          <button className="logout-button" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
+        </div>
       </div>
 
+      {/* Desktop Navigation Tabs */}
+      <div className="navigation-tabs desktop-only">
+       
+       
+        <button className="nav-tab" onClick={handleNavigateToBorder}>
+          <FaWallet /> Border
+        </button>
+        <button className="nav-tab active" onClick={handleNavigateToTotalBill}>
+          <FaReceipt /> Total Bill
+        </button>
+      
+      </div>
+
+      {/* Error Display */}
       {error && (
-        <div className="error-banner">
-          <span className="error-banner-icon">⚠️</span>
-          <span>{error}</span>
-          <button 
-            className="error-banner-dismiss"
-            onClick={() => setError(null)}
-          >
-            ✕
-          </button>
+        <div className="error-message">
+          <FaExclamationTriangle /> {error}
+          <button onClick={() => setError(null)}>✕</button>
         </div>
       )}
 
@@ -369,7 +448,7 @@ const TotalBill = () => {
           <div className="empty-icon">💰</div>
           <h2 className="empty-title">No Orders for Today</h2>
           <p className="empty-subtitle">
-            No orders have been placed today for {restaurantName}. All orders will appear here automatically.
+            No orders have been placed today for {restaurantData?.restaurantName}. All orders will appear here automatically.
           </p>
           <div className="empty-tips">
             <h4>💡 Tips:</h4>
@@ -380,225 +459,244 @@ const TotalBill = () => {
             </ul>
           </div>
           <button className="refresh-data-btn" onClick={handleRefresh}>
-            🔄 Refresh Data
+            <FaSpinner /> Refresh Data
           </button>
         </div>
       ) : (
         <>
-          {/* Summary Section */}
-          <div className="stats-container">
-            <div className="stat-card total">
-              <div className="stat-icon">📦</div>
-              <div className="stat-content">
-                <h3>{totalBills}</h3>
-                <p>Total Orders</p>
+          {/* Statistics Section */}
+          <div className="summary-section">
+            <div className="section-header" onClick={() => toggleSection('stats')}>
+              <h2><FaChartBar /> Today's Statistics</h2>
+              <div className="header-actions">
+                <span className="date-badge"><FaCalendarAlt /> {formatDisplayDate(today)}</span>
+                <button className="expand-toggle">
+                  {expandedSections.stats ? <FaChevronUp /> : <FaChevronDown />}
+                </button>
               </div>
             </div>
-            <div className="stat-card completed">
-              <div className="stat-icon">✅</div>
-              <div className="stat-content">
-                <h3>{completedOrders}</h3>
-                <p>Completed</p>
+            
+            {expandedSections.stats && (
+              <div className="summary-cards">
+                <div className="stat-card">
+                  <div className="stat-icon">📦</div>
+                  <div className="stat-content">
+                    <h3>Total Orders</h3>
+                    <p className="stat-number">{totalBills}</p>
+                  </div>
+                </div>
+                <div className="stat-card completed-stat">
+                  <div className="stat-icon">✅</div>
+                  <div className="stat-content">
+                    <h3>Completed</h3>
+                    <p className="stat-number">{completedOrders}</p>
+                  </div>
+                </div>
+                <div className="stat-card preparing-stat">
+                  <div className="stat-icon">👨‍🍳</div>
+                  <div className="stat-content">
+                    <h3>Preparing</h3>
+                    <p className="stat-number">{preparingOrders}</p>
+                  </div>
+                </div>
+                <div className="stat-card pending-stat">
+                  <div className="stat-icon">⏳</div>
+                  <div className="stat-content">
+                    <h3>Pending</h3>
+                    <p className="stat-number">{pendingOrders}</p>
+                  </div>
+                </div>
+                <div className="stat-card revenue-stat">
+                  <div className="stat-icon">💰</div>
+                  <div className="stat-content">
+                    <h3>Daily Revenue</h3>
+                    <p className="stat-number">₹{dailyTotal.toFixed(2)}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="stat-card preparing">
-              <div className="stat-icon">👨‍🍳</div>
-              <div className="stat-content">
-                <h3>{preparingOrders}</h3>
-                <p>Preparing</p>
-              </div>
-            </div>
-            <div className="stat-card pending">
-              <div className="stat-icon">⏳</div>
-              <div className="stat-content">
-                <h3>{pendingOrders}</h3>
-                <p>Pending</p>
-              </div>
-            </div>
-            <div className="stat-card overall">
-              <div className="stat-icon">💰</div>
-              <div className="stat-content">
-                <h3>₹{dailyTotal.toFixed(2)}</h3>
-                <p>Daily Revenue</p>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Results Info */}
-          <div className="results-info">
-            <div className="results-left">
-              <p>
-                Showing {orders.length} orders for today ({formatDisplayDate(today)})
-              </p>
-            </div>
-            <div className="results-right">
-              <div className="gst-summary">
-                Total GST: ₹{totalGST.toFixed(2)}
-              </div>
-              <button className="refresh-btn" onClick={handleRefresh}>
-                🔄 Refresh Now
+          {/* Top Selling Items Section */}
+          <div className="summary-section">
+            <div className="section-header" onClick={() => toggleSection('items')}>
+              <h2><FaChartLine /> Top Selling Items</h2>
+              <button className="expand-toggle">
+                {expandedSections.items ? <FaChevronUp /> : <FaChevronDown />}
               </button>
             </div>
+            
+            {expandedSections.items && (
+              <div className="top-items-grid">
+                {Object.entries(itemSales)
+                  .sort((a, b) => b[1].quantity - a[1].quantity)
+                  .slice(0, 8)
+                  .map(([itemName, sales]) => (
+                    <div key={itemName} className="item-card">
+                      <div className="item-header">
+                        <h4 className="item-name">{itemName}</h4>
+                        <span className="item-quantity-badge">{sales.quantity} sold</span>
+                      </div>
+                      <div className="item-details">
+                        <div className="item-stat">
+                          <span className="stat-label">Revenue</span>
+                          <span className="stat-value">₹{sales.totalAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="item-stat">
+                          <span className="stat-label">GST</span>
+                          <span className="stat-value">₹{sales.gstAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="item-stat">
+                          <span className="stat-label">Avg. Price</span>
+                          <span className="stat-value">
+                            ₹{(sales.totalAmount / sales.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
 
-          {/* Top Selling Items */}
+          {/* Orders Table Section */}
           <div className="summary-section">
-            <div className="section-header">
-              <h2>📈 Top Selling Items</h2>
-              <div className="section-subtitle">
-                Best performing items for {restaurantName} today
+            <div className="section-header" onClick={() => toggleSection('orders')}>
+              <h2><FaReceipt /> Today's Order Details</h2>
+              <div className="header-actions">
+                <span className="summary-badge">Total: ₹{dailyTotal.toFixed(2)}</span>
+                <button className="refresh-btn-small" onClick={handleRefresh}>
+                  <FaSpinner /> Refresh
+                </button>
+                <button className="expand-toggle">
+                  {expandedSections.orders ? <FaChevronUp /> : <FaChevronDown />}
+                </button>
               </div>
             </div>
-            <div className="top-items-grid">
-              {Object.entries(itemSales)
-                .sort((a, b) => b[1].quantity - a[1].quantity)
-                .slice(0, 8)
-                .map(([itemName, sales]) => (
-                  <div key={itemName} className="item-card">
-                    <div className="item-header">
-                      <h4 className="item-name">{itemName}</h4>
-                      <span className="item-quantity-badge">{sales.quantity} sold</span>
-                    </div>
-                    <div className="item-details">
-                      <div className="item-stat">
-                        <span className="stat-label">Revenue</span>
-                        <span className="stat-value">₹{sales.totalAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="item-stat">
-                        <span className="stat-label">GST</span>
-                        <span className="stat-value">₹{sales.gstAmount.toFixed(2)}</span>
-                      </div>
-                      <div className="item-stat">
-                        <span className="stat-label">Avg. Price</span>
-                        <span className="stat-value">
-                          ₹{(sales.totalAmount / sales.quantity).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
+            
+            {expandedSections.orders && (
+              <div className="table-responsive">
+                <table className="orders-table">
+                  <thead>
+                    <tr>
+                      <th>Bill No</th>
+                      <th>Status</th>
+                      <th>Time</th>
+                      <th>Customer</th>
+                      <th>Table</th>
+                      <th>Items</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders
+                      .sort((a, b) => b.billNumber - a.billNumber)
+                      .map((order) => (
+                        <tr key={order._id}>
+                          <td className="bill-number">
+                            #{order.billNumber}
+                          </td>
+                          <td>{getStatusBadge(order.status)}</td>
+                          <td className="order-time">
+                            {order.time ? order.time.split(':').slice(0, 2).join(':') : '--:--'}
+                          </td>
+                          <td className="customer-name">
+                            {order.customerName || 'Guest'}
+                          </td>
+                          <td className="table-number">
+                            {order.tableNumber || 'Takeaway'}
+                          </td>
+                          <td className="order-items">
+                            <div className="items-list">
+                              {order.items.slice(0, 2).map((item, index) => (
+                                <span key={index} className="item-tag">
+                                  {item.name} (x{item.quantity})
+                                </span>
+                              ))}
+                              {order.items.length > 2 && (
+                                <span className="item-tag more-items">
+                                  +{order.items.length - 2} more
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="order-total">
+                            <strong>₹{(order.discountedTotal || order.total || 0).toFixed(2)}</strong>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="table-footer">
+                      <td colSpan="6" className="footer-label">
+                        <strong>Grand Total for {restaurantData?.restaurantName} today:</strong>
+                      </td>
+                      <td className="grand-total">
+                        <strong>₹{dailyTotal.toFixed(2)}</strong>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Revenue Summary Section */}
+          <div className="summary-section">
+            <div className="section-header" onClick={() => toggleSection('revenue')}>
+              <h2><FaChartBar /> Revenue Summary</h2>
+              <button className="expand-toggle">
+                {expandedSections.revenue ? <FaChevronUp /> : <FaChevronDown />}
+              </button>
+            </div>
+            
+            {expandedSections.revenue && (
+              <div className="revenue-grid">
+                <div className="revenue-card">
+                  <div className="revenue-icon">💵</div>
+                  <div className="revenue-content">
+                    <h3>₹{dailyTotal.toFixed(2)}</h3>
+                    <p>Total Revenue</p>
                   </div>
-                ))}
-            </div>
-          </div>
-
-          {/* Orders Table */}
-          <div className="orders-section">
-            <div className="section-header">
-              <h2>📋 Today's Order Details</h2>
-              <div className="section-summary">
-                <span className="summary-item">
-                  <strong>Total Revenue:</strong> ₹{dailyTotal.toFixed(2)}
-                </span>
-                <span className="summary-item">
-                  <strong>Total GST:</strong> ₹{totalGST.toFixed(2)}
-                </span>
-                <span className="summary-item">
-                  <strong>Total Orders:</strong> {totalBills}
-                </span>
-              </div>
-            </div>
-            <div className="table-container">
-              <table className="orders-table">
-                <thead>
-                  <tr>
-                    <th>Bill No</th>
-                    <th>Status</th>
-                    <th>Time</th>
-                    <th>Customer</th>
-                    <th>Table</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                   </tr>
-                </thead>
-                <tbody>
-                  {orders
-                    .sort((a, b) => b.billNumber - a.billNumber)
-                    .map((order) => (
-                      <tr key={order._id} className="order-row">
-                        <td className="bill-number">
-                          #{order.billNumber}
-                        </td>
-                        <td>{getStatusBadge(order.status)}</td>
-                        <td className="order-time">
-                          {order.time ? order.time.split(':').slice(0, 2).join(':') : '--:--'}
-                        </td>
-                        <td className="customer-name">
-                          {order.customerName || 'Guest'}
-                        </td>
-                        <td className="table-number">
-                          {order.tableNumber || 'Takeaway'}
-                        </td>
-                        <td className="order-items">
-                          <div className="items-list">
-                            {order.items.slice(0, 2).map((item, index) => (
-                              <span key={index} className="item-tag">
-                                {item.name} (x{item.quantity})
-                              </span>
-                            ))}
-                            {order.items.length > 2 && (
-                              <span className="item-tag more-items">
-                                +{order.items.length - 2} more
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="order-total">
-                          <strong>₹{(order.discountedTotal || order.total || 0).toFixed(2)}</strong>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-                <tfoot>
-                  <tr className="table-footer">
-                    <td colSpan="6" className="footer-label">
-                      <strong>Grand Total for {restaurantName} today:</strong>
-                    </td>
-                    <td className="grand-total">
-                      <strong>₹{dailyTotal.toFixed(2)}</strong>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-
-          {/* Revenue Summary */}
-          <div className="revenue-summary">
-            <div className="revenue-header">
-              <h2>💰 Revenue Summary</h2>
-            </div>
-            <div className="revenue-grid">
-              <div className="revenue-card">
-                <div className="revenue-icon">💵</div>
-                <div className="revenue-content">
-                  <h3>₹{dailyTotal.toFixed(2)}</h3>
-                  <p>Total Revenue</p>
+                </div>
+                <div className="revenue-card">
+                  <div className="revenue-icon">🧾</div>
+                  <div className="revenue-content">
+                    <h3>₹{totalGST.toFixed(2)}</h3>
+                    <p>Total GST</p>
+                  </div>
+                </div>
+                <div className="revenue-card">
+                  <div className="revenue-icon">📊</div>
+                  <div className="revenue-content">
+                    <h3>{totalBills}</h3>
+                    <p>Total Bills</p>
+                  </div>
+                </div>
+                <div className="revenue-card">
+                  <div className="revenue-icon">📈</div>
+                  <div className="revenue-content">
+                    <h3>₹{(dailyTotal / (totalBills || 1)).toFixed(2)}</h3>
+                    <p>Average Bill Value</p>
+                  </div>
                 </div>
               </div>
-              <div className="revenue-card">
-                <div className="revenue-icon">🧾</div>
-                <div className="revenue-content">
-                  <h3>₹{totalGST.toFixed(2)}</h3>
-                  <p>Total GST</p>
-                </div>
-              </div>
-              <div className="revenue-card">
-                <div className="revenue-icon">📊</div>
-                <div className="revenue-content">
-                  <h3>{totalBills}</h3>
-                  <p>Total Bills</p>
-                </div>
-              </div>
-              <div className="revenue-card">
-                <div className="revenue-icon">📈</div>
-                <div className="revenue-content">
-                  <h3>₹{(dailyTotal / (totalBills || 1)).toFixed(2)}</h3>
-                  <p>Average Bill Value</p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </>
       )}
+
+      {/* Footer */}
+      <div className="totalbill-footer">
+        <p>
+          {restaurantData?.restaurantName} Total Bill Summary • 
+          <span className="footer-code"> {restaurantData?.restaurantCode}</span> • 
+          Today: {formatDisplayDate(today)}
+        </p>
+        <p className="footer-note">
+          All orders are restaurant-specific and accessible only to authorized staff
+        </p>
+      </div>
     </div>
   );
 };

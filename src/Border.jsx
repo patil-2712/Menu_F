@@ -1,12 +1,46 @@
+// Border.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
+import {
+  FaTachometerAlt,
+  FaChartLine,
+  FaDatabase,
+  FaHome,
+  FaSignOutAlt,
+  FaBuilding,
+  FaSearch,
+  FaTimes,
+  FaPrint,
+  FaEdit,
+  FaTrash,
+  FaSave,
+  FaPlus,
+  FaMinus,
+  FaClock,
+  FaCheckCircle,
+  FaHourglassHalf,
+  FaSpinner,
+  FaBars,
+  FaTimesCircle,
+  FaChevronDown,
+  FaChevronUp,
+  FaExclamationTriangle,
+  FaShoppingCart,
+  FaReceipt,
+  FaQrcode,
+  FaWallet,
+  FaUtensils,
+  FaClipboardList,
+  FaStar,
+  FaEye
+} from 'react-icons/fa';
 import './Border.css';
 
 const Border = () => {
   const { restaurantSlug } = useParams();
+  const navigate = useNavigate();
   
-  // Get backend URL from environment variable or use Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   console.log('🔧 Border using backend:', API_URL);
@@ -16,10 +50,16 @@ const Border = () => {
   const [error, setError] = useState(null);
   const [editingOrder, setEditingOrder] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
-  const [restaurantName, setRestaurantName] = useState('');
-  const [restaurantGst, setRestaurantGst] = useState('');
+  const [restaurantData, setRestaurantData] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTable, setSearchTable] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [expandedSections, setExpandedSections] = useState({
+    stats: true,
+    filters: true,
+    orders: true
+  });
+  
   const [editFormData, setEditFormData] = useState({
     customerName: '',
     tableNumber: '',
@@ -34,7 +74,6 @@ const Border = () => {
   });
   
   const printRefs = useRef({});
-  const navigate = useNavigate();
 
   // Fixed helper function to calculate discounted total
   const calculateDiscountedTotal = (total, discount, discountType) => {
@@ -58,10 +97,10 @@ const Border = () => {
   };
 
   useEffect(() => {
-    verifyAccess();
-  }, [restaurantSlug]);
+    checkAuthentication();
+  }, []);
 
-  const verifyAccess = () => {
+  const checkAuthentication = () => {
     const userRole = localStorage.getItem('userRole');
     const userRestaurantSlug = localStorage.getItem('restaurantSlug');
     const token = localStorage.getItem('token');
@@ -69,50 +108,51 @@ const Border = () => {
     if (!token) {
       setError('Session expired. Please login again.');
       setLoading(false);
-      return false;
+      navigate('/');
+      return;
     }
     
     if (userRole !== 'billing' && userRole !== 'owner') {
       setError('Access denied. This page is for billing staff and owners only.');
       setLoading(false);
-      return false;
+      navigate('/');
+      return;
     }
     
     if (userRestaurantSlug !== restaurantSlug) {
       setError(`You don't have access to ${restaurantSlug}'s billing system.`);
       setLoading(false);
-      return false;
+      navigate('/');
+      return;
     }
-    
-    return true;
   };
 
   useEffect(() => {
     if (restaurantSlug) {
-      fetchRestaurantInfo();
+      fetchRestaurantData();
       fetchOrders();
       fetchMenuItems();
     }
   }, [restaurantSlug]);
 
-  const fetchRestaurantInfo = async () => {
+  const fetchRestaurantData = async () => {
     try {
       const token = localStorage.getItem('token');
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(
         `${API_URL}/api/restaurant/by-slug/${restaurantSlug}`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
+        { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
       if (response.data) {
-        setRestaurantName(response.data.restaurantName);
-        setRestaurantGst(response.data.gstNumber || 'N/A');
+        setRestaurantData(response.data);
       }
     } catch (err) {
       console.error('Error fetching restaurant info:', err);
-      setRestaurantName(localStorage.getItem('restaurantName') || restaurantSlug);
+      setRestaurantData({
+        restaurantName: localStorage.getItem('restaurantName') || restaurantSlug,
+        restaurantCode: localStorage.getItem('restaurantCode') || 'N/A',
+        gstNumber: 'N/A'
+      });
     }
   };
 
@@ -120,24 +160,7 @@ const Border = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const restaurantCode = localStorage.getItem('restaurantCode');
-      const today = getTodayDate();
       
-      console.log("🔍 Fetching orders for billing:", {
-        restaurantSlug,
-        restaurantCode,
-        today
-      });
-
-      // First test backend connection - CHANGED to full URL
-      try {
-        const testResponse = await axios.get(`${API_URL}/api/test`, { timeout: 3000 });
-        console.log("✅ Backend connection OK:", testResponse.data);
-      } catch (testErr) {
-        throw new Error('Backend server not reachable');
-      }
-      
-      // Fetch billing orders - CHANGED to full URL
       const response = await axios.get(
         `${API_URL}/api/order/billing/${restaurantSlug}`,
         {
@@ -149,13 +172,10 @@ const Border = () => {
         }
       );
       
-      console.log("✅ Billing orders response:", response.data);
-      
       if (response.data && response.data.success) {
         const grouped = {};
         
         response.data.orders.forEach(order => {
-          // Calculate order totals if not present
           const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
           const gstAmount = order.gstAmount || order.items.reduce((sum, item) => {
             return sum + (item.price * item.quantity * (item.gstPercentage || 18) / 100);
@@ -179,62 +199,41 @@ const Border = () => {
           grouped[order.date].push(order);
         });
         
-        // Sort orders within each date group (completed first, then by status priority)
         Object.keys(grouped).forEach(date => {
           grouped[date].sort((a, b) => {
-            // First sort by status: completed first
             const statusPriority = {
               'completed': 1,
               'preparing': 2,
               'pending': 3,
               'cancelled': 4
             };
-            
             const priorityA = statusPriority[a.status] || 5;
             const priorityB = statusPriority[b.status] || 5;
-            
-            if (priorityA !== priorityB) {
-              return priorityA - priorityB;
-            }
-            
-            // If same status, sort by bill number (newest first)
+            if (priorityA !== priorityB) return priorityA - priorityB;
             return b.billNumber - a.billNumber;
           });
         });
         
         setGroupedOrders(grouped);
         setError(null);
-        
-        if (response.data.orders.length === 0) {
-          setGroupedOrders({});
-        }
-        
       } else {
         setGroupedOrders({});
-        setError('No orders found for today');
+        setError('No orders found');
       }
-      
     } catch (err) {
       console.error('❌ Error fetching orders:', err);
-      
       let errorMessage = 'Failed to load orders: ';
       
-      if (err.message.includes('Backend server not reachable')) {
-        errorMessage = 'Backend server is not running. Please start the server.';
+      if (err.response?.status === 401) {
+        errorMessage = 'Session expired. Please login again.';
+        localStorage.clear();
+        setTimeout(() => navigate('/'), 2000);
+      } else if (err.response?.status === 404) {
+        errorMessage = `No orders found for ${restaurantData?.restaurantName || restaurantSlug}`;
+        setGroupedOrders({});
       } else if (err.code === 'ECONNABORTED') {
         errorMessage = 'Request timeout. Server is not responding.';
-      } else if (err.response) {
-        if (err.response.status === 401) {
-          errorMessage = 'Session expired. Please login again.';
-          localStorage.clear();
-          setTimeout(() => navigate('/'), 2000);
-        } else if (err.response.status === 404) {
-          errorMessage = `No orders found for ${restaurantName || restaurantSlug}`;
-          setGroupedOrders({});
-        } else {
-          errorMessage += `Server error: ${err.response.status}`;
-        }
-      } else if (err.request) {
+      } else if (!err.response) {
         errorMessage = 'Cannot connect to server. Please check backend is running.';
       } else {
         errorMessage += err.message;
@@ -250,12 +249,9 @@ const Border = () => {
   const fetchMenuItems = async () => {
     try {
       const token = localStorage.getItem('token');
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(
         `${API_URL}/api/menu/restaurant/${restaurantSlug}`,
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
+        { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
       if (response.data) {
@@ -266,34 +262,22 @@ const Border = () => {
     }
   };
 
-  // Filter orders by table number
-  const filterOrdersByTable = (orders) => {
-    if (!searchTable.trim()) return orders;
-    
-    return orders.filter(order => {
-      const tableNum = order.tableNumber?.toString().toLowerCase() || '';
-      return tableNum.includes(searchTable.toLowerCase());
-    });
-  };
-
-  // Filter orders by status
-  const filterOrdersByStatus = (orders) => {
-    if (statusFilter === 'all') return orders;
-    return orders.filter(order => order.status === statusFilter);
-  };
-
-  // Apply all filters to grouped orders
+  // Filter orders
   const getFilteredGroupedOrders = () => {
     const filtered = {};
     
     Object.keys(groupedOrders).forEach(date => {
       let dateOrders = groupedOrders[date];
       
-      // Apply table filter
-      dateOrders = filterOrdersByTable(dateOrders);
+      if (searchTable.trim()) {
+        dateOrders = dateOrders.filter(order => 
+          order.tableNumber?.toString().toLowerCase().includes(searchTable.toLowerCase())
+        );
+      }
       
-      // Apply status filter
-      dateOrders = filterOrdersByStatus(dateOrders);
+      if (statusFilter !== 'all') {
+        dateOrders = dateOrders.filter(order => order.status === statusFilter);
+      }
       
       if (dateOrders.length > 0) {
         filtered[date] = dateOrders;
@@ -303,24 +287,50 @@ const Border = () => {
     return filtered;
   };
 
-  const handleNavigateToPublicMenu = () => {
-    navigate(`/${restaurantSlug}/menu`);
+  // Navigation Functions
+  const handleNavigateToAdmin = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/admin`);
+  };
+
+  const handleNavigateToAnalytics = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/analytics`);
+  };
+
+  const handleNavigateToRecords = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/records`);
+  };
+
+  const handleNavigateToFeedback = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/feedback`);
+  };
+
+  const handleNavigateToDashboard = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/dashboard`);
   };
 
   const handleNavigateToSetMenu = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/setmenu`);
   };
 
   const handleNavigateToKorder = () => {
+    setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/Korder`);
   };
 
-  const handleNavigateToTotalBill = () => {
-    navigate(`/${restaurantSlug}/totalbill`);
+  const handleNavigateToBorder = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/border`);
   };
   
-  const handleNavigateToBorder = () => {
-    navigate(`/${restaurantSlug}/border`);
+  const handleNavigateToTotalBill = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/totalbill`);
   };
   
   const handleLogout = () => {
@@ -360,10 +370,8 @@ const Border = () => {
         gstPercentage: item.gstPercentage || 18,
         total: item.price * item.quantity
       })),
-      subtotal: order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      gstAmount: order.gstAmount || order.items.reduce((sum, item) => {
-        return sum + (item.price * item.quantity * (item.gstPercentage || 18) / 100);
-      }, 0),
+      subtotal: order.subtotal || 0,
+      gstAmount: order.gstAmount || 0,
       total: order.total || 0,
       discount: order.discount || 0,
       discountType: order.discountType || 'amount',
@@ -372,47 +380,29 @@ const Border = () => {
     });
   };
 
-  // FIXED: handleEditChange with proper discount handling
   const handleEditChange = (e, index) => {
     const { name, value } = e.target;
     
     if (name === 'status') {
-      setEditFormData(prev => ({
-        ...prev,
-        status: value
-      }));
+      setEditFormData(prev => ({ ...prev, status: value }));
       return;
     }
 
     if (name === 'discountType') {
-      // When discount type changes, recalculate discounted total without changing status
       setEditFormData(prev => {
         const newDiscountedTotal = calculateDiscountedTotal(prev.total, prev.discount, value);
-        return {
-          ...prev,
-          discountType: value,
-          discountedTotal: newDiscountedTotal
-        };
+        return { ...prev, discountType: value, discountedTotal: newDiscountedTotal };
       });
       return;
     }
 
     if (name === 'customerName' || name === 'tableNumber') {
-      setEditFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setEditFormData(prev => ({ ...prev, [name]: value }));
     } else if (name === 'discount') {
       const discountValue = parseFloat(value) || 0;
-      
-      // When discount changes, recalculate discounted total without changing status
       setEditFormData(prev => {
         const newDiscountedTotal = calculateDiscountedTotal(prev.total, discountValue, prev.discountType);
-        return {
-          ...prev,
-          discount: discountValue,
-          discountedTotal: newDiscountedTotal
-        };
+        return { ...prev, discount: discountValue, discountedTotal: newDiscountedTotal };
       });
     } else if (name === 'menuItem') {
       const selectedMenuItem = menuItems.find(item => item._id === value);
@@ -427,7 +417,6 @@ const Border = () => {
           quantity: updatedItems[index].quantity || 1,
           total: selectedMenuItem.price * (updatedItems[index].quantity || 1)
         };
-        
         updateOrderTotals(updatedItems, editFormData.discount, editFormData.discountType);
       }
     } else {
@@ -439,7 +428,6 @@ const Border = () => {
       } else {
         updatedItems[index][name] = value;
       }
-      
       updateOrderTotals(updatedItems, editFormData.discount, editFormData.discountType);
     }
   };
@@ -462,12 +450,8 @@ const Border = () => {
     }));
   };
 
-  // FIXED: handleUpdateOrder with proper discount handling - CHANGED to full URL
   const handleUpdateOrder = async (orderId) => {
     try {
-      console.log('🔄 Starting order update process...');
-
-      // Find the order to get restaurantCode and billNumber
       const allOrders = Object.values(groupedOrders).flat();
       const orderToUpdate = allOrders.find(order => order._id === orderId);
       
@@ -476,29 +460,21 @@ const Border = () => {
         return;
       }
 
-      // Validate and clean items data
-      const validItems = editFormData.items.map((item, index) => {
-        const cleanItem = {
-          itemId: item.itemId || item._id,
-          name: item.name?.trim() || `Item ${index + 1}`,
-          price: Math.max(0, parseFloat(item.price) || 0),
-          quantity: Math.max(1, parseInt(item.quantity) || 1),
-          gstPercentage: Math.max(0, Math.min(100, parseFloat(item.gstPercentage) || 18)),
-        };
-        return cleanItem;
-      });
+      const validItems = editFormData.items.map((item, index) => ({
+        itemId: item.itemId || item._id,
+        name: item.name?.trim() || `Item ${index + 1}`,
+        price: Math.max(0, parseFloat(item.price) || 0),
+        quantity: Math.max(1, parseInt(item.quantity) || 1),
+        gstPercentage: Math.max(0, Math.min(100, parseFloat(item.gstPercentage) || 18)),
+      }));
 
-      // Filter out invalid items
-      const filteredItems = validItems.filter(item => 
-        item.name && item.name !== 'Item' && item.price > 0
-      );
+      const filteredItems = validItems.filter(item => item.name && item.name !== 'Item' && item.price > 0);
 
       if (filteredItems.length === 0) {
-        alert('❌ Please add at least one valid item with a name and price');
+        alert('❌ Please add at least one valid item');
         return;
       }
 
-      // Calculate totals
       const subtotal = parseFloat(filteredItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2));
       const gstAmount = parseFloat(filteredItems.reduce((sum, item) => {
         return sum + (item.price * item.quantity * (item.gstPercentage || 18) / 100);
@@ -506,13 +482,8 @@ const Border = () => {
       const total = parseFloat((subtotal + gstAmount).toFixed(2));
       const discount = parseFloat(editFormData.discount) || 0;
       const discountType = editFormData.discountType || 'amount';
-      
       const discountedTotal = calculateDiscountedTotal(total, discount, discountType);
       
-      // IMPORTANT: Preserve the original status - don't change it when applying discount
-      const finalStatus = editFormData.status || orderToUpdate.status || 'pending';
-      
-      // Prepare final data for PUT request
       const finalData = {
         customerName: editFormData.customerName?.trim() || 'Guest',
         tableNumber: editFormData.tableNumber?.trim() || 'Takeaway',
@@ -523,16 +494,12 @@ const Border = () => {
         discount: discount,
         discountType: discountType,
         discountedTotal: discountedTotal,
-        status: finalStatus  // Keep the original status
+        status: editFormData.status
       };
-
-      console.log('📦 Final data to send:', finalData);
-      console.log('🔗 Sending PUT request to:', `${API_URL}/api/order/${orderToUpdate.restaurantCode}/${orderToUpdate.billNumber}`);
 
       const token = localStorage.getItem('token');
       
-      // CHANGED: Use full URL with API_URL
-      const response = await axios.put(
+      await axios.put(
         `${API_URL}/api/order/${orderToUpdate.restaurantCode}/${orderToUpdate.billNumber}`,
         finalData,
         {
@@ -544,65 +511,13 @@ const Border = () => {
         }
       );
 
-      console.log('✅ Update successful! Response:', response.data);
-      
       await fetchOrders();
       setEditingOrder(null);
-      alert('✅ Order updated successfully with discount applied!');
+      alert('✅ Order updated successfully!');
       
     } catch (err) {
       console.error('❌ Error updating order:', err);
-      
-      if (err.code === 'ECONNABORTED') {
-        alert('⏰ Request timeout - please try again');
-        return;
-      }
-
-      if (err.response) {
-        const serverMessage = err.response.data?.message || err.response.data?.error || 'Unknown server error';
-        alert(`❌ Server Error (${err.response.status}): ${serverMessage}`);
-      } else if (err.request) {
-        alert('❌ No response from server - please check if the server is running');
-      } else {
-        alert(`❌ Request error: ${err.message}`);
-      }
-    }
-  };
-
-  // FIXED: Dedicated function for applying discount without changing status - CHANGED to full URL
-  const handleApplyDiscountOnly = async (orderId) => {
-    try {
-      const allOrders = Object.values(groupedOrders).flat();
-      const order = allOrders.find(o => o._id === orderId);
-      if (!order) return;
-      
-      const token = localStorage.getItem('token');
-      
-      const discountData = {
-        discount: parseFloat(editFormData.discount) || 0,
-        discountType: editFormData.discountType || 'amount'
-      };
-      
-      console.log('🎯 Applying discount only:', discountData);
-      
-      // CHANGED: Use full URL with API_URL
-      const response = await axios.post(
-        `${API_URL}/api/order/${order.restaurantCode}/${order.billNumber}/discount`,
-        discountData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      console.log('✅ Discount applied successfully:', response.data);
-      await fetchOrders();
-      alert('✅ Discount applied successfully!');
-    } catch (err) {
-      console.error('❌ Error applying discount:', err);
-      alert('❌ Failed to apply discount');
+      alert('❌ Failed to update order');
     }
   };
 
@@ -619,12 +534,9 @@ const Border = () => {
         
         const token = localStorage.getItem('token');
         
-        // CHANGED: Use full URL with API_URL
         await axios.delete(
           `${API_URL}/api/order/${orderToDelete.restaurantCode}/${orderToDelete.billNumber}`,
-          {
-            headers: { 'Authorization': `Bearer ${token}` }
-          }
+          { headers: { 'Authorization': `Bearer ${token}` } }
         );
         
         fetchOrders();
@@ -665,6 +577,15 @@ const Border = () => {
     }
   };
 
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending': return <FaHourglassHalf />;
+      case 'preparing': return <FaSpinner />;
+      case 'completed': return <FaCheckCircle />;
+      default: return <FaClock />;
+    }
+  };
+
   const handleRefresh = () => {
     fetchOrders();
   };
@@ -674,519 +595,579 @@ const Border = () => {
     setStatusFilter('all');
   };
 
-  if (loading) return (
-    <div className="loading-container">
-      <div className="loading-spinner"></div>
-      <p className="loading-text">Loading {restaurantName || restaurantSlug}'s orders...</p>
-    </div>
-  );
-  
-  if (error) return (
-    <div className="error-container">
-      <div className="error-icon">⚠️</div>
-      <p className="error-message">Error: {error}</p>
-      <div className="error-actions">
-        <button className="retry-button" onClick={fetchOrders}>Retry</button>
-        <button className="logout-button" onClick={handleLogout}>Login Again</button>
-      </div>
-    </div>
-  );
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
 
   const filteredGroupedOrders = getFilteredGroupedOrders();
   const allOrders = Object.values(groupedOrders).flat();
-  const filteredOrders = Object.values(filteredGroupedOrders).flat();
   const today = getTodayDate();
+
+  // Navigation items for mobile
+  const navItems = [
+    { icon: FaTachometerAlt, label: 'Admin', action: handleNavigateToAdmin },
+    { icon: FaChartLine, label: 'Analytics', action: handleNavigateToAnalytics },
+    { icon: FaDatabase, label: 'Records', action: handleNavigateToRecords },
+    { icon: FaStar, label: 'Feedback', action: handleNavigateToFeedback },
+    { icon: FaUtensils, label: 'Set Menu', action: handleNavigateToSetMenu },
+    { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
+    { icon: FaWallet, label: 'Border', action: handleNavigateToBorder },
+    { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill },
+    { icon: FaHome, label: 'Dashboard', action: handleNavigateToDashboard }
+  ];
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading orders data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="border-container">
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        {mobileMenuOpen ? <FaTimesCircle /> : <FaBars />}
+      </button>
+
+      {/* Mobile Navigation Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-nav-header">
+              <h3>Menu</h3>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            {navItems.map((item, index) => (
+              <button 
+                key={index}
+                className="mobile-nav-item"
+                onClick={item.action}
+              >
+                <item.icon /> {item.label}
+              </button>
+            ))}
+            <button className="mobile-nav-item logout" onClick={handleLogout}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="border-header">
         <div className="header-content">
-          <div className="header-text">
-            <h1 className="border-title">
-              <span className="title-icon">📊</span>
-              {restaurantName} - Order Management
-            </h1>
-            <p className="border-subtitle">Manage and track all today's orders with real-time updates</p>
-            <div className="restaurant-info">
-              <span className="restaurant-code">{localStorage.getItem('restaurantCode')}</span>
-              <span className="restaurant-date">Today: {today}</span>
-            </div>
-          </div>
-          <div className="header-actions">
-            {/* Search by Table Number */}
-            <div className="search-table-container">
-              <input
-                type="text"
-                className="search-table-input"
-                placeholder="🔍 Search by table number..."
-                value={searchTable}
-                onChange={(e) => setSearchTable(e.target.value)}
-              />
-              {searchTable && (
-                <button 
-                  className="clear-search-btn"
-                  onClick={() => setSearchTable('')}
-                  title="Clear search"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            
-            {/* Status Filter */}
-            <select
-              className="status-filter-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all">📋 All Orders</option>
-              <option value="pending">⏳ Pending Orders</option>
-              <option value="preparing">👨‍🍳 Preparing Orders</option>
-              <option value="completed">✅ Completed Orders</option>
-            </select>
-            
-            {(searchTable || statusFilter !== 'all') && (
-              <button 
-                className="clear-filters-btn"
-                onClick={clearFilters}
-                title="Clear all filters"
-              >
-                ✕ Clear Filters
-              </button>
-            )}
-            
-            <button 
-              className="nav-btn border-btn"
-              onClick={handleNavigateToBorder}
-            >
-              <span className="nav-btn-icon">📊</span>
-              Border
-            </button>
-
-            <button 
-              className="nav-btn totalbill-btn"
-              onClick={handleNavigateToTotalBill}
-            >
-              <span className="nav-btn-icon">🧾</span>
-              Total Bill
-            </button>
-            
-            <button 
-              className="nav-btn logout-btn"
-              onClick={handleLogout}
-            >
-              <span className="nav-btn-icon">🚪</span>
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="stats-container">
-        <div className="stat-card total">
-          <div className="stat-icon">📦</div>
-          <div className="stat-content">
-            <h3>{allOrders.length}</h3>
-            <p>Total Orders</p>
-          </div>
-        </div>
-        <div className="stat-card service">
-          <div className="stat-icon">⏳</div>
-          <div className="stat-content">
-            <h3>{allOrders.filter(order => order.status === 'pending').length}</h3>
-            <p>Pending Orders</p>
-          </div>
-        </div>
-        <div className="stat-card food">
-          <div className="stat-icon">👨‍🍳</div>
-          <div className="stat-content">
-            <h3>{allOrders.filter(order => order.status === 'preparing').length}</h3>
-            <p>Preparing Orders</p>
-          </div>
-        </div>
-        <div className="stat-card overall">
-          <div className="stat-icon">✅</div>
-          <div className="stat-content">
-            <h3>{allOrders.filter(order => order.status === 'completed').length}</h3>
-            <p>Completed Orders</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Results Info */}
-      <div className="results-info">
-        <div className="results-left">
-          <p>
-            {Object.keys(filteredGroupedOrders).length === 0 ? 
-              (searchTable ? `No orders found for table "${searchTable}"` : `No orders for today (${today})`) : 
-              `Showing ${filteredOrders.length} order${filteredOrders.length !== 1 ? 's' : ''} for today (${today})`
-            }
-            {searchTable && ` • Filtered by table: ${searchTable}`}
-            {statusFilter !== 'all' && ` • Status: ${statusFilter}`}
+          <h1>
+            <FaWallet /> Order Management
+          </h1>
+          <p className="subtitle">
+            {restaurantData?.restaurantName} • {restaurantData?.restaurantCode}
           </p>
         </div>
-        <div className="results-right">
-          <button className="refresh-btn" onClick={handleRefresh}>
-            🔄 Refresh Orders
+        <div className="header-right desktop-only">
+          <button className="logout-button" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
           </button>
         </div>
       </div>
 
-      {Object.keys(filteredGroupedOrders).length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">📊</div>
-          <h2 className="empty-title">
-            {searchTable ? `No Orders for Table ${searchTable}` : "No Orders for Today"}
-          </h2>
-          <p className="empty-subtitle">
-            {searchTable 
-              ? `No orders found matching table number "${searchTable}"` 
-              : "All orders placed today will appear here automatically"}
-          </p>
-          <div className="empty-tips">
-            <h4>💡 Tips:</h4>
-            <ul>
-              <li>Orders are automatically synced from the kitchen system</li>
-              <li>New orders will appear in real-time</li>
-              <li>Use the search by table number to find specific orders</li>
-              <li>Filter by status to focus on pending, preparing, or completed orders</li>
-              <li>Print bills only for completed orders</li>
-            </ul>
-          </div>
+      {/* Desktop Navigation Tabs */}
+      <div className="navigation-tabs desktop-only">
+       
+      
+        <button className="nav-tab active" onClick={handleNavigateToBorder}>
+          <FaWallet /> Border
+        </button>
+        <button className="nav-tab" onClick={handleNavigateToTotalBill}>
+          <FaReceipt /> Total Bill
+        </button>
+       
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="error-message">
+          <FaExclamationTriangle /> {error}
+          <button onClick={() => setError(null)}>✕</button>
         </div>
-      ) : (
-        Object.keys(filteredGroupedOrders)
-          .sort((a, b) => new Date(b) - new Date(a))
-          .map(date => (
-            <div key={date} className="date-group">
-              <h3 className="date-header">Today's Date: {date}</h3>
-              <div className="orders-grid">
-                {filteredGroupedOrders[date].map(order => (
-                  <div key={order._id} className="order-card-wrapper">
-                    {editingOrder === order._id ? (
-                      <div className="edit-order-form">
-                        <div className="edit-header">
-                          <h3>Edit Order #{order.billNumber}</h3>
-                          <button 
-                            className="close-edit-btn"
-                            onClick={() => setEditingOrder(null)}
-                          >
-                            ×
-                          </button>
-                        </div>
-                        
-                        <div className="form-row">
-                          <div className="form-group">
-                            <label className="form-label">Status:</label>
-                            <select
-                              name="status"
-                              value={editFormData.status}
-                              onChange={handleEditChange}
-                              className="form-select"
-                            >
-                              <option value="pending">⏳ Pending</option>
-                              <option value="preparing">👨‍🍳 Preparing</option>
-                              <option value="completed">✅ Completed</option>
-                            </select>
-                          </div>
-                          
-                          <div className="form-group">
-                            <label className="form-label">Customer Name:</label>
-                            <input
-                              type="text"
-                              name="customerName"
-                              value={editFormData.customerName}
-                              onChange={handleEditChange}
-                              placeholder="Enter customer name"
-                              className="form-input"
-                            />
-                          </div>
-                          
-                          <div className="form-group">
-                            <label className="form-label">Table Number:</label>
-                            <input
-                              type="text"
-                              name="tableNumber"
-                              value={editFormData.tableNumber}
-                              onChange={handleEditChange}
-                              placeholder="Enter table number"
-                              className="form-input"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="items-section">
-                          <h4>Order Items:</h4>
-                          {editFormData.items.map((item, index) => (
-                            <div key={index} className="item-row-editable">
-                              <select
-                                name="menuItem"
-                                value={item.itemId || item._id || ''}
-                                onChange={(e) => handleEditChange(e, index)}
-                                className="menu-dropdown"
-                              >
-                                <option value="">Select Menu Item</option>
-                                {menuItems.map(menuItem => (
-                                  <option key={menuItem._id} value={menuItem._id}>
-                                    {menuItem.name} (₹{menuItem.price})
-                                  </option>
-                                ))}
-                              </select>
-                              <input
-                                type="number"
-                                name="quantity"
-                                min="1"
-                                value={item.quantity}
-                                onChange={(e) => handleEditChange(e, index)}
-                                className="quantity-input"
-                                placeholder="Qty"
-                              />
-                              <input
-                                type="number"
-                                name="price"
-                                min="0"
-                                step="0.01"
-                                value={item.price}
-                                onChange={(e) => handleEditChange(e, index)}
-                                className="price-input"
-                                placeholder="Price"
-                              />
-                              <input
-                                type="number"
-                                name="gstPercentage"
-                                min="0"
-                                max="100"
-                                step="0.1"
-                                value={item.gstPercentage}
-                                onChange={(e) => handleEditChange(e, index)}
-                                className="gst-input"
-                                placeholder="GST %"
-                              />
-                              <span className="item-total-display">
-                                ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
-                              </span>
-                              <button 
-                                type="button" 
-                                onClick={() => removeItemRow(index)}
-                                className="remove-item-btn"
-                                title="Remove item"
-                              >
-                                🗑️
-                              </button>
-                            </div>
-                          ))}
-                          <button type="button" onClick={addItemRow} className="add-item-btn">
-                            ➕ Add New Item
-                          </button>
-                        </div>
-                        
-                        <div className="discount-section">
-                          <div className="form-row">
-                            <div className="form-group">
-                              <label className="form-label">Discount Type:</label>
-                              <select
-                                name="discountType"
-                                value={editFormData.discountType}
-                                onChange={handleEditChange}
-                                className="form-select"
-                              >
-                                <option value="amount">₹ Fixed Amount</option>
-                                <option value="percentage">% Percentage</option>
-                              </select>
-                            </div>
-                            
-                            <div className="form-group">
-                              <label className="form-label">
-                                {editFormData.discountType === 'percentage' ? 'Discount Percentage (%):' : 'Discount Amount (₹):'}
-                              </label>
-                              <input
-                                type="number"
-                                name="discount"
-                                min="0"
-                                max={editFormData.discountType === 'percentage' ? 100 : undefined}
-                                step="0.01"
-                                value={editFormData.discount}
-                                onChange={handleEditChange}
-                                className="form-input"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="total-display-edit">
-                          <div className="total-row">
-                            <span>Subtotal:</span>
-                            <span>₹{editFormData.subtotal.toFixed(2)}</span>
-                          </div>
-                          <div className="total-row">
-                            <span>GST Amount:</span>
-                            <span>₹{editFormData.gstAmount.toFixed(2)}</span>
-                          </div>
-                          <div className="total-row">
-                            <span>Total Before Discount:</span>
-                            <span>₹{editFormData.total.toFixed(2)}</span>
-                          </div>
-                          {editFormData.discount > 0 && (
-                            <>
-                              <div className="total-row discount-row">
-                                <span>
-                                  Discount: {editFormData.discountType === 'percentage' 
-                                    ? `${editFormData.discount}%` 
-                                    : `₹${editFormData.discount.toFixed(2)}`}
-                                </span>
-                                <span>-₹{(editFormData.total - editFormData.discountedTotal).toFixed(2)}</span>
-                              </div>
-                              <div className="total-row final-total">
-                                <span>Final Total:</span>
-                                <span>₹{editFormData.discountedTotal.toFixed(2)}</span>
-                              </div>
-                            </>
-                          )}
-                          {editFormData.discount === 0 && (
-                            <div className="total-row final-total">
-                              <span>Total:</span>
-                              <span>₹{editFormData.total.toFixed(2)}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="form-actions">
-                          <button onClick={() => handleUpdateOrder(order._id)} className="save-btn">
-                            💾 Save Changes
-                          </button>
-                          <button onClick={() => setEditingOrder(null)} className="cancel-btn">
-                            ❌ Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="order-card">
-                        <div
-                          className={`bill-card ${getStatusClass(order.status)}`}
-                          ref={(el) => (printRefs.current[order._id] = el)}
-                        >
-                          <h2 className="restaurant-name">{restaurantName}</h2>
-                          <div className="bill-header">
-                            <span>📅 Date: {order.date}</span>
-                            <span>🕒 Time: {order.time}</span>
-                          </div>
-                          <div className="bill-header">
-                            <span>📋 GST No: {restaurantGst}</span>
-                            <span>🧾 Bill No: {order.billNumber}</span>
-                          </div>
-                          <div className="bill-header">
-                            <span>👤 Customer: {order.customerName || 'Guest'}</span>
-                            <span>🪑 Table: {order.tableNumber || 'Takeaway'}</span>
-                          </div>
+      )}
 
-                          <table className="order-items-table">
-                            <thead>
-                              <tr>
-                                <th>Item</th>
-                                <th>Qty</th>
-                                <th>Price</th>
-                                <th>GST%</th>
-                                <th>Total</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {order.items.map((item, i) => (
-                                <tr key={i}>
-                                  <td className="item-name">{item.name}</td>
-                                  <td className="item-qty">{item.quantity}</td>
-                                  <td className="item-price">₹{item.price.toFixed(2)}</td>
-                                  <td className="item-gst">{item.gstPercentage}%</td>
-                                  <td className="item-total">₹{(item.price * item.quantity).toFixed(2)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-
-                          <div className="bill-totals">
-                            <div className="total-row">
-                              <span>Subtotal:</span>
-                              <span>₹{order.subtotal.toFixed(2)}</span>
-                            </div>
-                            <div className="total-row">
-                              <span>GST Amount:</span>
-                              <span>₹{order.gstAmount.toFixed(2)}</span>
-                            </div>
-                            <div className="total-row">
-                              <span>Total Before Discount:</span>
-                              <span>₹{order.total.toFixed(2)}</span>
-                            </div>
-                            {order.discount > 0 && (
-                              <>
-                                <div className="total-row discount-row">
-                                  <span>
-                                    Discount: {order.discountType === 'percentage' 
-                                      ? `${order.discount}%` 
-                                      : `₹${order.discount.toFixed(2)}`}
-                                  </span>
-                                  <span>-₹{(order.total - order.discountedTotal).toFixed(2)}</span>
-                                </div>
-                                <div className="total-row final-total">
-                                  <span>Final Total:</span>
-                                  <span>₹{order.discountedTotal.toFixed(2)}</span>
-                                </div>
-                              </>
-                            )}
-                            {order.discount === 0 && (
-                              <div className="total-row final-total">
-                                <span>Total:</span>
-                                <span>₹{order.total.toFixed(2)}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className={`order-status-display ${getStatusClass(order.status)}`}>
-                            <strong>Status:</strong> 
-                            {order.status === 'pending' && ' ⏳ Pending'}
-                            {order.status === 'preparing' && ' 👨‍🍳 Preparing'}
-                            {order.status === 'completed' && ' ✅ Completed'}
-                          </div>
-
-                          <div className="thank-you-message">
-                            <p>🙏 Thank you for dining with us!</p>
-                            <p>😊 Please visit again!</p>
-                          </div>
-                        </div>
-
-                        <div className="order-actions">
-                          <button 
-                            className="action-btn print-btn" 
-                            onClick={() => handlePrint(order._id)}
-                            disabled={order.status !== 'completed'}
-                            title={order.status !== 'completed' ? 'Complete order to print' : 'Print bill'}
-                          >
-                            <span className="btn-icon">🖨️</span>
-                            Print Bill
-                          </button>
-                          <button className="action-btn edit-btn" onClick={() => handleEdit(order)}>
-                            <span className="btn-icon">✏️</span>
-                            Edit Order
-                          </button>
-                          <button className="action-btn delete-btn" onClick={() => handleDeleteOrder(order._id)}>
-                            <span className="btn-icon">🗑️</span>
-                            Delete Order
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+      {/* Statistics Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('stats')}>
+          <h2><FaChartLine /> Order Statistics</h2>
+          <button className="expand-toggle">
+            {expandedSections.stats ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+        
+        {expandedSections.stats && (
+          <div className="summary-cards">
+            <div className="stat-card">
+              <div className="stat-icon">📦</div>
+              <div className="stat-content">
+                <h3>Total Orders</h3>
+                <p className="stat-number">{allOrders.length}</p>
               </div>
             </div>
-          ))
-      )}
-      
+            
+            <div className="stat-card pending-stat">
+              <div className="stat-icon">⏳</div>
+              <div className="stat-content">
+                <h3>Pending</h3>
+                <p className="stat-number">{allOrders.filter(order => order.status === 'pending').length}</p>
+              </div>
+            </div>
+            
+            <div className="stat-card preparing-stat">
+              <div className="stat-icon">👨‍🍳</div>
+              <div className="stat-content">
+                <h3>Preparing</h3>
+                <p className="stat-number">{allOrders.filter(order => order.status === 'preparing').length}</p>
+              </div>
+            </div>
+            
+            <div className="stat-card completed-stat">
+              <div className="stat-icon">✅</div>
+              <div className="stat-content">
+                <h3>Completed</h3>
+                <p className="stat-number">{allOrders.filter(order => order.status === 'completed').length}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Filters Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('filters')}>
+          <h2><FaSearch /> Filters & Search</h2>
+          <div className="header-actions">
+            <button className="refresh-btn-small" onClick={handleRefresh}>
+              <FaSpinner className={loading ? 'spinner' : ''} /> Refresh
+            </button>
+            <button className="expand-toggle">
+              {expandedSections.filters ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+          </div>
+        </div>
+        
+        {expandedSections.filters && (
+          <div className="filters-section">
+            <div className="filter-controls">
+              <div className="filter-group">
+                <label><FaSearch /> Table Number:</label>
+                <div className="search-wrapper">
+                  <FaSearch className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search by table number..."
+                    value={searchTable}
+                    onChange={(e) => setSearchTable(e.target.value)}
+                    className="filter-input"
+                  />
+                  {searchTable && (
+                    <button className="clear-input" onClick={() => setSearchTable('')}>
+                      <FaTimes />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="filter-group">
+                <label><FaClock /> Status:</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">All Orders</option>
+                  <option value="pending">Pending</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+
+              {(searchTable || statusFilter !== 'all') && (
+                <button className="reset-filters-btn" onClick={clearFilters}>
+                  <FaTimes /> Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Orders Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('orders')}>
+          <h2><FaWallet /> Today's Orders</h2>
+          <div className="header-actions">
+            <span className="date-badge">📅 {today}</span>
+            <button className="expand-toggle">
+              {expandedSections.orders ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+          </div>
+        </div>
+        
+        {expandedSections.orders && (
+          <div className="orders-content">
+            {Object.keys(filteredGroupedOrders).length === 0 ? (
+              <div className="no-orders">
+                <div className="no-orders-icon">📭</div>
+                <h3>No Orders Found</h3>
+                <p>
+                  {searchTable 
+                    ? `No orders found for table "${searchTable}"` 
+                    : `No orders for today (${today})`}
+                </p>
+                {(searchTable || statusFilter !== 'all') && (
+                  <button className="reset-filters-btn" onClick={clearFilters}>
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              Object.keys(filteredGroupedOrders)
+                .sort((a, b) => new Date(b) - new Date(a))
+                .map(date => (
+                  <div key={date} className="date-group">
+                    <h3 className="date-header">📅 {date}</h3>
+                    <div className="orders-grid">
+                      {filteredGroupedOrders[date].map(order => (
+                        <div key={order._id} className="order-card-wrapper">
+                          {editingOrder === order._id ? (
+                            <div className="edit-order-modal">
+                              <div className="edit-modal-header">
+                                <h3>Edit Order #{order.billNumber}</h3>
+                                <button 
+                                  className="close-edit-btn"
+                                  onClick={() => setEditingOrder(null)}
+                                >
+                                  <FaTimes />
+                                </button>
+                              </div>
+                              
+                              <div className="edit-form">
+                                <div className="form-row">
+                                  <div className="form-group">
+                                    <label>Status:</label>
+                                    <select
+                                      name="status"
+                                      value={editFormData.status}
+                                      onChange={handleEditChange}
+                                      className="form-select"
+                                    >
+                                      <option value="pending">⏳ Pending</option>
+                                      <option value="preparing">👨‍🍳 Preparing</option>
+                                      <option value="completed">✅ Completed</option>
+                                    </select>
+                                  </div>
+                                  
+                                  <div className="form-group">
+                                    <label>Customer Name:</label>
+                                    <input
+                                      type="text"
+                                      name="customerName"
+                                      value={editFormData.customerName}
+                                      onChange={handleEditChange}
+                                      placeholder="Enter customer name"
+                                      className="form-input"
+                                    />
+                                  </div>
+                                  
+                                  <div className="form-group">
+                                    <label>Table Number:</label>
+                                    <input
+                                      type="text"
+                                      name="tableNumber"
+                                      value={editFormData.tableNumber}
+                                      onChange={handleEditChange}
+                                      placeholder="Enter table number"
+                                      className="form-input"
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <div className="items-section">
+                                  <label>Order Items:</label>
+                                  {editFormData.items.map((item, index) => (
+                                    <div key={index} className="item-row">
+                                      <select
+                                        name="menuItem"
+                                        value={item.itemId || ''}
+                                        onChange={(e) => handleEditChange(e, index)}
+                                        className="menu-select"
+                                      >
+                                        <option value="">Select Item</option>
+                                        {menuItems.map(menuItem => (
+                                          <option key={menuItem._id} value={menuItem._id}>
+                                            {menuItem.name} (₹{menuItem.price})
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <input
+                                        type="number"
+                                        name="quantity"
+                                        min="1"
+                                        value={item.quantity}
+                                        onChange={(e) => handleEditChange(e, index)}
+                                        className="qty-input"
+                                        placeholder="Qty"
+                                      />
+                                      <input
+                                        type="number"
+                                        name="price"
+                                        min="0"
+                                        step="0.01"
+                                        value={item.price}
+                                        onChange={(e) => handleEditChange(e, index)}
+                                        className="price-input"
+                                        placeholder="Price"
+                                      />
+                                      <input
+                                        type="number"
+                                        name="gstPercentage"
+                                        min="0"
+                                        max="100"
+                                        step="0.1"
+                                        value={item.gstPercentage}
+                                        onChange={(e) => handleEditChange(e, index)}
+                                        className="gst-input"
+                                        placeholder="GST%"
+                                      />
+                                      <span className="item-total">
+                                        ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                                      </span>
+                                      <button 
+                                        type="button" 
+                                        onClick={() => removeItemRow(index)}
+                                        className="remove-item-btn"
+                                      >
+                                        <FaMinus />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <button type="button" onClick={addItemRow} className="add-item-btn">
+                                    <FaPlus /> Add Item
+                                  </button>
+                                </div>
+                                
+                                <div className="discount-section">
+                                  <div className="form-row">
+                                    <div className="form-group">
+                                      <label>Discount Type:</label>
+                                      <select
+                                        name="discountType"
+                                        value={editFormData.discountType}
+                                        onChange={handleEditChange}
+                                        className="form-select"
+                                      >
+                                        <option value="amount">₹ Fixed Amount</option>
+                                        <option value="percentage">% Percentage</option>
+                                      </select>
+                                    </div>
+                                    
+                                    <div className="form-group">
+                                      <label>
+                                        {editFormData.discountType === 'percentage' ? 'Discount %:' : 'Discount ₹:'}
+                                      </label>
+                                      <input
+                                        type="number"
+                                        name="discount"
+                                        min="0"
+                                        max={editFormData.discountType === 'percentage' ? 100 : undefined}
+                                        step="0.01"
+                                        value={editFormData.discount}
+                                        onChange={handleEditChange}
+                                        className="form-input"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="totals-panel">
+                                  <div className="total-line">
+                                    <span>Subtotal:</span>
+                                    <span>₹{editFormData.subtotal.toFixed(2)}</span>
+                                  </div>
+                                  <div className="total-line">
+                                    <span>GST Amount:</span>
+                                    <span>₹{editFormData.gstAmount.toFixed(2)}</span>
+                                  </div>
+                                  <div className="total-line">
+                                    <span>Total Before Discount:</span>
+                                    <span>₹{editFormData.total.toFixed(2)}</span>
+                                  </div>
+                                  {editFormData.discount > 0 && (
+                                    <div className="total-line discount-line">
+                                      <span>Discount:</span>
+                                      <span>-₹{(editFormData.total - editFormData.discountedTotal).toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  <div className="total-line final-total">
+                                    <span>Final Total:</span>
+                                    <span>₹{editFormData.discountedTotal.toFixed(2)}</span>
+                                  </div>
+                                </div>
+                                
+                                <div className="form-actions">
+                                  <button onClick={() => handleUpdateOrder(order._id)} className="save-btn">
+                                    <FaSave /> Save Changes
+                                  </button>
+                                  <button onClick={() => setEditingOrder(null)} className="cancel-btn">
+                                    <FaTimes /> Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="order-card">
+                              <div
+                                className={`bill-card ${getStatusClass(order.status)}`}
+                                ref={(el) => (printRefs.current[order._id] = el)}
+                              >
+                                <div className="bill-header-main">
+                                  <h2 className="restaurant-name">{restaurantData?.restaurantName}</h2>
+                                  <div className="bill-number">Bill #{order.billNumber}</div>
+                                </div>
+                                
+                                <div className="bill-details">
+                                  <div className="detail-row">
+                                    <span>📅 Date:</span>
+                                    <span>{order.date}</span>
+                                  </div>
+                                  <div className="detail-row">
+                                    <span>🕒 Time:</span>
+                                    <span>{order.time}</span>
+                                  </div>
+                                  <div className="detail-row">
+                                    <span>📋 GST No:</span>
+                                    <span>{restaurantData?.gstNumber || 'N/A'}</span>
+                                  </div>
+                                  <div className="detail-row">
+                                    <span>👤 Customer:</span>
+                                    <span>{order.customerName || 'Guest'}</span>
+                                  </div>
+                                  <div className="detail-row">
+                                    <span>🪑 Table:</span>
+                                    <span>{order.tableNumber || 'Takeaway'}</span>
+                                  </div>
+                                </div>
+
+                                <table className="items-table">
+                                  <thead>
+                                    <tr>
+                                      <th>Item</th>
+                                      <th>Qty</th>
+                                      <th>Price</th>
+                                      <th>GST%</th>
+                                      <th>Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {order.items.map((item, i) => (
+                                      <tr key={i}>
+                                        <td className="item-name">{item.name}</td>
+                                        <td className="item-qty">{item.quantity}</td>
+                                        <td className="item-price">₹{item.price.toFixed(2)}</td>
+                                        <td className="item-gst">{item.gstPercentage}%</td>
+                                        <td className="item-total">₹{(item.price * item.quantity).toFixed(2)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+
+                                <div className="totals-section">
+                                  <div className="total-row">
+                                    <span>Subtotal:</span>
+                                    <span>₹{order.subtotal.toFixed(2)}</span>
+                                  </div>
+                                  <div className="total-row">
+                                    <span>GST Amount:</span>
+                                    <span>₹{order.gstAmount.toFixed(2)}</span>
+                                  </div>
+                                  <div className="total-row">
+                                    <span>Total Before Discount:</span>
+                                    <span>₹{order.total.toFixed(2)}</span>
+                                  </div>
+                                  {order.discount > 0 && (
+                                    <>
+                                      <div className="total-row discount-row">
+                                        <span>Discount ({order.discountType === 'percentage' ? `${order.discount}%` : `₹${order.discount.toFixed(2)}`}):</span>
+                                        <span>-₹{(order.total - order.discountedTotal).toFixed(2)}</span>
+                                      </div>
+                                      <div className="total-row final-total">
+                                        <span>Final Total:</span>
+                                        <span>₹{order.discountedTotal.toFixed(2)}</span>
+                                      </div>
+                                    </>
+                                  )}
+                                  {order.discount === 0 && (
+                                    <div className="total-row final-total">
+                                      <span>Total:</span>
+                                      <span>₹{order.total.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className={`status-badge ${getStatusClass(order.status)}`}>
+                                  {getStatusIcon(order.status)}
+                                  <span>
+                                    {order.status === 'pending' && ' Pending'}
+                                    {order.status === 'preparing' && ' Preparing'}
+                                    {order.status === 'completed' && ' Completed'}
+                                  </span>
+                                </div>
+
+                                <div className="thank-you">
+                                  <p>🙏 Thank you for dining with us!</p>
+                                  <p>😊 Please visit again!</p>
+                                </div>
+                              </div>
+
+                              <div className="order-actions">
+                                <button 
+                                  className="action-btn print-btn" 
+                                  onClick={() => handlePrint(order._id)}
+                                  disabled={order.status !== 'completed'}
+                                >
+                                  <FaPrint /> Print Bill
+                                </button>
+                                <button className="action-btn edit-btn" onClick={() => handleEdit(order)}>
+                                  <FaEdit /> Edit Order
+                                </button>
+                                <button className="action-btn delete-btn" onClick={() => handleDeleteOrder(order._id)}>
+                                  <FaTrash /> Delete Order
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Footer */}
       <div className="border-footer">
         <p>
-          {restaurantName} Order Management • 
-          <span className="footer-restaurant-code"> {localStorage.getItem('restaurantCode')}</span> • 
+          {restaurantData?.restaurantName} Order Management • 
+          <span className="footer-code"> {restaurantData?.restaurantCode}</span> • 
           Today: {today}
         </p>
         <p className="footer-note">
