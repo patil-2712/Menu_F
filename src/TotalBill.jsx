@@ -353,8 +353,8 @@ const TotalBill = () => {
   const navItems = [
     
     { icon: FaWallet, label: 'Border', action: handleNavigateToBorder },
-    { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill },
-    { icon: FaHome, label: 'Dashboard', action: handleNavigateToDashboard }
+    { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill }
+   
   ];
 
   if (loading) {
