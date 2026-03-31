@@ -1,3 +1,4 @@
+// FeedbackPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -8,10 +9,8 @@ import {
   FaStarHalfAlt,
   FaChartBar,
   FaDownload,
-  FaFilter,
   FaSearch,
   FaTimes,
-  FaArrowLeft,
   FaEnvelope,
   FaPhone,
   FaComment,
@@ -21,22 +20,22 @@ import {
   FaEye,
   FaEyeSlash,
   FaBuilding,
-  FaSort,
   FaSortUp,
   FaSortDown,
-  FaPrint,
   FaWhatsapp,
   FaChevronDown,
   FaChevronUp,
   FaExclamationTriangle,
-  FaThumbsUp,
-  FaThumbsDown,
   FaTachometerAlt,
   FaChartLine,
   FaDatabase,
   FaHome,
   FaSignOutAlt,
-  FaUserCircle
+  FaUserCircle,
+  FaBars,
+  FaTimesCircle,
+  FaSpinner,
+  FaCalendarAlt
 } from 'react-icons/fa';
 import './FeedbackPage.css';
 
@@ -44,7 +43,6 @@ const FeedbackPage = () => {
   const { restaurantSlug } = useParams();
   const navigate = useNavigate();
   
-  // Get backend URL from environment variable or use Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   console.log('🔧 FeedbackPage using backend:', API_URL);
@@ -53,10 +51,11 @@ const FeedbackPage = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [restaurantData, setRestaurantData] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // User info
   const [userRole, setUserRole] = useState('');
-  const [currentRestaurant, setCurrentRestaurant] = useState(null);
   const [userName, setUserName] = useState('');
   
   // Filter states
@@ -72,13 +71,21 @@ const FeedbackPage = () => {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   
+  // Section expansion
+  const [expandedSections, setExpandedSections] = useState({
+    stats: true,
+    filters: true,
+    feedback: true
+  });
+  
   // Statistics
   const [stats, setStats] = useState({
     totalFeedback: 0,
     averageRating: 0,
     restaurantsCount: 0,
     pendingCount: 0,
-    resolvedCount: 0
+    resolvedCount: 0,
+    lowRatingCount: 0
   });
   
   // Grouped data
@@ -90,25 +97,23 @@ const FeedbackPage = () => {
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [responseText, setResponseText] = useState('');
   const [submittingResponse, setSubmittingResponse] = useState(false);
-  
-  // REMOVED: const API_BASE = 'http://localhost:5001/api';
 
   useEffect(() => {
-    checkUserRole();
-    fetchAllFeedback();
+    checkAuthentication();
   }, []);
 
   useEffect(() => {
     if (restaurantSlug) {
-      setSelectedRestaurant(restaurantSlug);
-      fetchRestaurantDetails(restaurantSlug);
+      fetchRestaurantData();
+      fetchAllFeedback();
     }
   }, [restaurantSlug]);
 
-  const checkUserRole = () => {
-    const role = localStorage.getItem('userRole');
+  const checkAuthentication = () => {
     const token = localStorage.getItem('token');
+    const role = localStorage.getItem('userRole');
     const name = localStorage.getItem('userName') || 'User';
+    const storedRestaurantSlug = localStorage.getItem('restaurantSlug');
     
     if (!token) {
       setError('Session expired. Please login again.');
@@ -126,6 +131,10 @@ const FeedbackPage = () => {
       setLoading(false);
       navigate('/');
     }
+    
+    if (storedRestaurantSlug !== restaurantSlug && role !== 'admin') {
+      navigate(`/${storedRestaurantSlug}/feedback`);
+    }
   };
 
   const handleLogout = () => {
@@ -133,16 +142,15 @@ const FeedbackPage = () => {
     navigate('/');
   };
 
-  const fetchRestaurantDetails = async (slug) => {
+  const fetchRestaurantData = async () => {
     try {
       const token = localStorage.getItem('token');
-      // CHANGED: Use full URL with API_URL
-      const response = await axios.get(`${API_URL}/api/restaurant/by-slug/${slug}`, {
+      const response = await axios.get(`${API_URL}/api/restaurant/by-slug/${restaurantSlug}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.data) {
-        setCurrentRestaurant(response.data);
+        setRestaurantData(response.data);
       }
     } catch (error) {
       console.log('Could not fetch restaurant details:', error.message);
@@ -164,16 +172,12 @@ const FeedbackPage = () => {
       let response;
       
       if (userRole === 'admin') {
-        // Admin can see all feedback from all restaurants
-        // CHANGED: Use full URL with API_URL
         response = await axios.get(`${API_URL}/api/feedback/all`, {
           headers: { Authorization: `Bearer ${token}` },
           params: { limit: 1000 }
         });
       } else {
-        // Regular owner can only see their restaurant's feedback
         const restaurantSlug = localStorage.getItem('restaurantSlug');
-        // CHANGED: Use full URL with API_URL
         response = await axios.get(`${API_URL}/api/feedback/restaurant/${restaurantSlug}`, {
           headers: { Authorization: `Bearer ${token}` },
           params: { limit: 1000 }
@@ -183,14 +187,8 @@ const FeedbackPage = () => {
       if (response.data && response.data.success) {
         const feedbackData = response.data.feedback || [];
         setAllFeedback(feedbackData);
-        
-        // Group feedback by restaurant
         groupFeedbackByRestaurant(feedbackData);
-        
-        // Extract unique restaurants
         extractRestaurants(feedbackData);
-        
-        // Calculate statistics
         calculateStats(feedbackData);
         
         console.log(`📊 Loaded ${feedbackData.length} feedback records`);
@@ -217,8 +215,6 @@ const FeedbackPage = () => {
         errorMessage = 'Request timeout. Server is not responding.';
       } else if (!err.response) {
         errorMessage = 'Cannot connect to server. Please check backend is running.';
-      } else {
-        errorMessage += err.message;
       }
       
       setError(errorMessage);
@@ -253,20 +249,17 @@ const FeedbackPage = () => {
       grouped[key].feedbacks.push(feedback);
       grouped[key].stats.total++;
       
-      // Count status
       if (feedback.status === 'pending') {
         grouped[key].stats.pending++;
       } else if (feedback.status === 'resolved') {
         grouped[key].stats.resolved++;
       }
       
-      // Count low ratings (3 stars or less)
       if (feedback.overallRating <= 3) {
         grouped[key].stats.lowRatings++;
       }
     });
     
-    // Calculate average ratings for each restaurant
     Object.keys(grouped).forEach(key => {
       const restaurant = grouped[key];
       if (restaurant.feedbacks.length > 0) {
@@ -310,7 +303,8 @@ const FeedbackPage = () => {
         averageRating: 0,
         restaurantsCount: 0,
         pendingCount: 0,
-        resolvedCount: 0
+        resolvedCount: 0,
+        lowRatingCount: 0
       });
       return;
     }
@@ -320,24 +314,21 @@ const FeedbackPage = () => {
     const restaurants = [...new Set(feedbackData.map(fb => fb.restaurantSlug))];
     const pendingCount = feedbackData.filter(fb => fb.status === 'pending').length;
     const resolvedCount = feedbackData.filter(fb => fb.status === 'resolved').length;
+    const lowRatingCount = feedbackData.filter(fb => fb.overallRating <= 3).length;
     
     setStats({
       totalFeedback: total,
       averageRating: parseFloat(avgRating.toFixed(1)),
       restaurantsCount: restaurants.length,
       pendingCount,
-      resolvedCount
+      resolvedCount,
+      lowRatingCount
     });
-  };
-
-  const handleFilterChange = () => {
-    // Filtering logic will be applied in getFilteredFeedback
   };
 
   const getFilteredFeedback = () => {
     let filtered = [...allFeedback];
     
-    // Filter by restaurant
     if (selectedRestaurant !== 'all') {
       filtered = filtered.filter(fb => 
         fb.restaurantSlug === selectedRestaurant || 
@@ -345,18 +336,15 @@ const FeedbackPage = () => {
       );
     }
     
-    // Filter by status
     if (statusFilter !== 'all') {
       filtered = filtered.filter(fb => fb.status === statusFilter);
     }
     
-    // Filter by rating
     if (ratingFilter !== 'all') {
       const minRating = parseInt(ratingFilter);
       filtered = filtered.filter(fb => fb.overallRating >= minRating);
     }
     
-    // Filter by date range
     if (dateRange !== 'all') {
       const now = new Date();
       let startDate = new Date();
@@ -382,7 +370,6 @@ const FeedbackPage = () => {
       });
     }
     
-    // Filter by specific date
     if (selectedDate) {
       const selectedDateStr = selectedDate.toISOString().split('T')[0];
       filtered = filtered.filter(fb => {
@@ -391,7 +378,6 @@ const FeedbackPage = () => {
       });
     }
     
-    // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(fb =>
@@ -402,7 +388,6 @@ const FeedbackPage = () => {
       );
     }
     
-    // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
       
@@ -442,6 +427,13 @@ const FeedbackPage = () => {
     setExpandedRestaurants(prev => ({
       ...prev,
       [restaurantKey]: !prev[restaurantKey]
+    }));
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
     }));
   };
 
@@ -516,7 +508,6 @@ const FeedbackPage = () => {
     try {
       const token = localStorage.getItem('token');
       
-      // CHANGED: Use full URL with API_URL
       const response = await axios.put(
         `${API_URL}/api/feedback/${selectedFeedback._id}/response`,
         { response: responseText },
@@ -524,7 +515,6 @@ const FeedbackPage = () => {
       );
       
       if (response.data.success) {
-        // Update local state
         const updatedFeedback = allFeedback.map(fb => {
           if (fb._id === selectedFeedback._id) {
             return {
@@ -540,7 +530,6 @@ const FeedbackPage = () => {
         setAllFeedback(updatedFeedback);
         groupFeedbackByRestaurant(updatedFeedback);
         
-        // Close modal
         setShowResponseModal(false);
         setSelectedFeedback(null);
         setResponseText('');
@@ -559,7 +548,6 @@ const FeedbackPage = () => {
     try {
       const token = localStorage.getItem('token');
       
-      // CHANGED: Use full URL with API_URL
       const response = await axios.put(
         `${API_URL}/api/feedback/${feedbackId}/status`,
         { status: newStatus },
@@ -567,7 +555,6 @@ const FeedbackPage = () => {
       );
       
       if (response.data.success) {
-        // Update local state
         const updatedFeedback = allFeedback.map(fb => {
           if (fb._id === feedbackId) {
             return {
@@ -598,7 +585,6 @@ const FeedbackPage = () => {
       return;
     }
     
-    // Create CSV content
     const headers = [
       'Restaurant Name', 'Restaurant Code', 'Bill Number', 'Customer Name',
       'Table', 'Order Date', 'Order Time', 'Service Rating', 'Food Rating',
@@ -631,7 +617,6 @@ const FeedbackPage = () => {
       ...csvRows.map(row => row.join(','))
     ].join('\n');
     
-    // Create download link
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -643,52 +628,48 @@ const FeedbackPage = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  // Navigation Functions
-  const handleNavigateToAdmin = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/admin`);
-    } else {
-      navigate('/');
-    }
-  };
-  
-  const handleNavigateToFeedback = () => {
-    navigate(`/${restaurantSlug}/feedback`);
-  };
-  
-  const handleNavigateToAnalytics = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/analytics`);
-    } else {
-      navigate('/');
-    }
-  };
-
-  const handleNavigateToRecords = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/records`);
-    } else {
-      navigate('/');
-    }
-  };
-
-  const handleNavigateToDashboard = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/admin`);
-    } else {
-      navigate('/');
-    }
-  };
-
   const handleRefresh = () => {
     fetchAllFeedback();
   };
 
+  const resetFilters = () => {
+    setSelectedRestaurant('all');
+    setStatusFilter('all');
+    setRatingFilter('all');
+    setDateRange('all');
+    setSelectedDate(null);
+    setSearchTerm('');
+  };
+
+  // Navigation Functions
+  const handleNavigateToAdmin = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/admin`);
+  };
+  
+  const handleNavigateToAnalytics = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/analytics`);
+  };
+
+  const handleNavigateToRecords = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/records`);
+  };
+
+  const handleNavigateToDashboard = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/dashboard`);
+  };
+
   const filteredFeedback = getFilteredFeedback();
+
+  const navItems = [
+    { icon: FaTachometerAlt, label: 'Admin Dashboard', action: handleNavigateToAdmin },
+    { icon: FaChartLine, label: 'Analytics', action: handleNavigateToAnalytics },
+    { icon: FaDatabase, label: 'Records', action: handleNavigateToRecords },
+    { icon: FaChartBar, label: 'Feedback', action: handleNavigateToDashboard }
+  ];
 
   if (loading) {
     return (
@@ -700,214 +681,69 @@ const FeedbackPage = () => {
   }
 
   return (
-    <div className="feedback-container full-width">
+    <div className="feedback-container">
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        {mobileMenuOpen ? <FaTimesCircle /> : <FaBars />}
+      </button>
+
+      {/* Mobile Navigation Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-nav-header">
+              <h3>Menu</h3>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            {navItems.map((item, index) => (
+              <button 
+                key={index}
+                className="mobile-nav-item"
+                onClick={item.action}
+              >
+                <item.icon /> {item.label}
+              </button>
+            ))}
+            <button className="mobile-nav-item logout" onClick={handleLogout}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="feedback-header">
         <div className="header-content">
           <h1>
-            <FaChartBar /> Customer Feedback Dashboard
-            {currentRestaurant && ` - ${currentRestaurant.restaurantName}`}
+            <FaChartBar /> Customer Feedback
           </h1>
           <p className="subtitle">
-            {userRole === 'admin' ? 'All Restaurants Feedback' : 'Your Restaurant Feedback'}
+            {restaurantData?.restaurantName} • {restaurantData?.restaurantCode}
           </p>
         </div>
-        <div className="header-right">
-         <button className="logout-button" onClick={handleLogout}>
+        <div className="header-right desktop-only">
+          <button className="logout-button" onClick={handleLogout}>
             <FaSignOutAlt /> Logout
           </button>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="navigation-tabs">
-        <button 
-          className="nav-tab" 
-          onClick={handleNavigateToAdmin}
-          title="Go to Admin Dashboard"
-        >
-          <FaTachometerAlt /> Admin Dashboard
-        </button>
-        
-        <button 
-          className="nav-tab" 
-          onClick={handleNavigateToAnalytics}
-          title="Go to Analytics"
-        >
-          <FaChartLine /> Analytics
-        </button>
-        
-        <button 
-          className="nav-tab " 
-          onClick={handleNavigateToRecords}
-          title="Go to Records"
-        >
-          <FaDatabase />  Records
-        </button>
-        <button 
-				 className="nav-tab active-tab" 
-				 onClick={handleNavigateToFeedback}
-				 title="Go to Feedback"
-			   >
-				 <FaDatabase /> Feedback
-			   </button>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="stats-cards">
-        <div className="stat-card total-feedback">
-          <div className="stat-icon">📝</div>
-          <div className="stat-content">
-            <h3>Total Feedback</h3>
-            <p className="stat-number">{stats.totalFeedback}</p>
-          </div>
-        </div>
-        
-        <div className="stat-card avg-rating">
-          <div className="stat-icon">⭐</div>
-          <div className="stat-content">
-            <h3>Average Rating</h3>
-            <p className="stat-number">{stats.averageRating}/5</p>
-          </div>
-        </div>
-        
-        {userRole === 'admin' && (
-          <div className="stat-card restaurants-count">
-            <div className="stat-icon">🏪</div>
-            <div className="stat-content">
-              <h3>Restaurants</h3>
-              <p className="stat-number">{stats.restaurantsCount}</p>
-            </div>
-          </div>
-        )}
-        
-        <div className="stat-card pending-feedback">
-          <div className="stat-icon">⏰</div>
-          <div className="stat-content">
-            <h3>Pending Review</h3>
-            <p className="stat-number">{stats.pendingCount}</p>
-          </div>
-        </div>
-
-        <div className="stat-card resolved-feedback">
-          <div className="stat-icon">✅</div>
-          <div className="stat-content">
-            <h3>Resolved</h3>
-            <p className="stat-number">{stats.resolvedCount}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="filters-section">
-        <div className="search-box">
-          <FaSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search by customer, bill number, or comments..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-          {searchTerm && (
-            <button className="clear-search" onClick={() => setSearchTerm('')}>
-              <FaTimes />
-            </button>
-          )}
-        </div>
-
-        <div className="filter-controls">
-          {userRole === 'admin' && (
-            <div className="filter-group">
-              <label><FaBuilding /> Restaurant:</label>
-              <select
-                value={selectedRestaurant}
-                onChange={(e) => setSelectedRestaurant(e.target.value)}
-                className="filter-select"
-              >
-                <option value="all">All Restaurants</option>
-                {restaurants.map(rest => (
-                  <option key={rest.slug || rest.code} value={rest.slug || rest.code}>
-                    {rest.name} ({rest.count})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="filter-group">
-            <label><FaClock /> Status:</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="resolved">Resolved</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label><FaStar /> Rating:</label>
-            <select
-              value={ratingFilter}
-              onChange={(e) => setRatingFilter(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Ratings</option>
-              <option value="5">5 Stars</option>
-              <option value="4">4+ Stars</option>
-              <option value="3">3+ Stars</option>
-              <option value="2">2+ Stars</option>
-              <option value="1">1+ Stars</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label>📅 Date Range:</label>
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Time</option>
-              <option value="today">Today</option>
-              <option value="week">Last 7 Days</option>
-              <option value="month">Last 30 Days</option>
-              <option value="year">Last Year</option>
-            </select>
-          </div>
-
-          <div className="filter-group date-picker">
-            <button 
-              className="date-button"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
-              {selectedDate ? formatDateOnly(selectedDate.toISOString()) : 'Select Date'}
-            </button>
-            {selectedDate && (
-              <button className="clear-date" onClick={clearDateFilter}>
-                <FaTimes />
-              </button>
-            )}
-            {showCalendar && (
-              <div className="calendar-popup">
-                <Calendar onChange={handleDateChange} value={selectedDate} />
-              </div>
-            )}
-          </div>
-
-          <button
-            className="export-btn"
-            onClick={handleExportFeedback}
-            disabled={filteredFeedback.length === 0}
+      {/* Desktop Navigation Tabs */}
+      <div className="navigation-tabs desktop-only">
+        {navItems.map((item, index) => (
+          <button 
+            key={index}
+            className={`nav-tab ${item.label === 'Feedback' ? 'active' : ''}`}
+            onClick={item.action}
           >
-            <FaDownload /> Export CSV
+            <item.icon /> {item.label}
           </button>
-        </div>
+        ))}
       </div>
 
       {/* Error Display */}
@@ -918,253 +754,451 @@ const FeedbackPage = () => {
         </div>
       )}
 
-      {/* Main Content - Grouped by Restaurant */}
-      <div className="feedback-content">
-        {userRole === 'admin' && Object.keys(groupedByRestaurant).length > 0 ? (
-          <div className="restaurant-groups">
-            {Object.keys(groupedByRestaurant)
-              .filter(restKey => {
-                if (selectedRestaurant === 'all') return true;
-                return restKey === selectedRestaurant;
-              })
-              .map(restKey => {
-                const restaurant = groupedByRestaurant[restKey];
-                const restaurantFeedbacks = restaurant.feedbacks.filter(fb => {
-                  if (statusFilter !== 'all' && fb.status !== statusFilter) return false;
-                  if (ratingFilter !== 'all' && fb.overallRating < parseInt(ratingFilter)) return false;
-                  if (searchTerm && !fb.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                      !fb.billNumber?.toString().toLowerCase().includes(searchTerm.toLowerCase()) &&
-                      !fb.comments?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-                  return true;
-                });
-
-                if (restaurantFeedbacks.length === 0) return null;
-
-                const isExpanded = expandedRestaurants[restKey];
-
-                return (
-                  <div key={restKey} className="restaurant-group">
-                    <div 
-                      className="restaurant-header"
-                      onClick={() => toggleRestaurantExpand(restKey)}
-                    >
-                      <div className="restaurant-info">
-                        <h3>
-                          <FaBuilding /> {restaurant.restaurantName}
-                          <span className="restaurant-code">({restaurant.restaurantCode})</span>
-                        </h3>
-                        <div className="restaurant-stats">
-                          <span className="stat-item">
-                            <FaStar /> Avg: {restaurant.stats.averageRating}/5
-                          </span>
-                          <span className="stat-item">
-                            📝 Total: {restaurantFeedbacks.length}
-                          </span>
-                          <span className="stat-item pending">
-                            ⏰ Pending: {restaurant.stats.pending}
-                          </span>
-                          <span className="stat-item low-rating">
-                            <FaExclamationTriangle /> Low Ratings: {restaurant.stats.lowRatings}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="expand-toggle">
-                        {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="restaurant-feedbacks">
-                        <div className="table-responsive">
-                          <table className="feedback-table">
-                            <thead>
-                              <tr>
-                                <th onClick={() => handleSort('date')}>
-                                  Date {sortBy === 'date' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
-                                </th>
-                                <th>Bill #</th>
-                                <th>Customer</th>
-                                <th onClick={() => handleSort('rating')}>
-                                  Rating {sortBy === 'rating' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
-                                </th>
-                                <th>Comments</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {restaurantFeedbacks.map(feedback => (
-                                <tr key={feedback._id}>
-                                  <td>{formatDate(feedback.submittedAt)}</td>
-                                  <td>
-                                    <strong>#{feedback.billNumber}</strong>
-                                    <small>{feedback.orderDate} {feedback.orderTime}</small>
-                                  </td>
-                                  <td>
-                                    <div className="customer-info">
-                                      <strong>{feedback.customerName || 'Guest'}</strong>
-                                      {feedback.tableNumber && (
-                                        <small>Table: {feedback.tableNumber}</small>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td>
-                                    {renderStars(feedback.overallRating)}
-                                    <div className="detailed-ratings">
-                                      <small>S: {feedback.serviceRating} | F: {feedback.foodRating} | C: {feedback.cleanlinessRating}</small>
-                                    </div>
-                                  </td>
-                                  <td className="comments-cell">
-                                    {feedback.comments ? (
-                                      <div className="comment-preview">
-                                        "{feedback.comments.substring(0, 60)}
-                                        {feedback.comments.length > 60 ? '...' : ''}"
-                                      </div>
-                                    ) : (
-                                      <span className="no-comment">No comments</span>
-                                    )}
-                                  </td>
-                                  <td>{getStatusBadge(feedback.status)}</td>
-                                  <td>
-                                    <div className="action-buttons">
-                                      <button
-                                        className="view-btn"
-                                        onClick={() => {
-                                          setSelectedFeedback(feedback);
-                                          setResponseText(feedback.restaurantResponse || '');
-                                          setShowResponseModal(true);
-                                        }}
-                                      >
-                                        <FaEye /> View & Respond
-                                      </button>
-                                      <select
-                                        value={feedback.status}
-                                        onChange={(e) => handleUpdateStatus(feedback._id, e.target.value)}
-                                        className="status-select"
-                                      >
-                                        <option value="pending">Pending</option>
-                                        <option value="reviewed">Reviewed</option>
-                                        <option value="resolved">Resolved</option>
-                                        <option value="archived">Archived</option>
-                                      </select>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
-        ) : (
-          // Single restaurant view or no grouped data
-          <div className="feedback-table-container">
-            {filteredFeedback.length > 0 ? (
-              <>
-                <div className="table-responsive">
-                  <table className="feedback-table">
-                    <thead>
-                      <tr>
-                        <th onClick={() => handleSort('date')}>
-                          Date {sortBy === 'date' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
-                        </th>
-                        <th>Bill #</th>
-                        <th onClick={() => handleSort('customer')}>
-                          Customer {sortBy === 'customer' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
-                        </th>
-                        <th onClick={() => handleSort('rating')}>
-                          Rating {sortBy === 'rating' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
-                        </th>
-                        <th>Comments</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredFeedback.map(feedback => (
-                        <tr key={feedback._id}>
-                          <td>{formatDate(feedback.submittedAt)}</td>
-                          <td>
-                            <strong>#{feedback.billNumber}</strong>
-                            <small>{feedback.orderDate} {feedback.orderTime}</small>
-                          </td>
-                          <td>
-                            <div className="customer-info">
-                              <strong>{feedback.customerName || 'Guest'}</strong>
-                              {feedback.tableNumber && (
-                                <small>Table: {feedback.tableNumber}</small>
-                              )}
-                            </div>
-                          </td>
-                          <td>
-                            {renderStars(feedback.overallRating)}
-                            <div className="detailed-ratings">
-                              <small>S: {feedback.serviceRating} | F: {feedback.foodRating} | C: {feedback.cleanlinessRating}</small>
-                            </div>
-                          </td>
-                          <td className="comments-cell">
-                            {feedback.comments ? (
-                              <div className="comment-preview">
-                                "{feedback.comments.substring(0, 60)}
-                                {feedback.comments.length > 60 ? '...' : ''}"
-                              </div>
-                            ) : (
-                              <span className="no-comment">No comments</span>
-                            )}
-                           </td>
-                          <td>{getStatusBadge(feedback.status)}</td>
-                          <td>
-                            <div className="action-buttons">
-                              <button
-                                className="view-btn"
-                                onClick={() => {
-                                  setSelectedFeedback(feedback);
-                                  setResponseText(feedback.restaurantResponse || '');
-                                  setShowResponseModal(true);
-                                }}
-                              >
-                                <FaEye /> View & Respond
-                              </button>
-                              <select
-                                value={feedback.status}
-                                onChange={(e) => handleUpdateStatus(feedback._id, e.target.value)}
-                                className="status-select"
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="reviewed">Reviewed</option>
-                                <option value="resolved">Resolved</option>
-                                <option value="archived">Archived</option>
-                              </select>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+      {/* Statistics Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('stats')}>
+          <h2><FaChartBar /> Key Metrics</h2>
+          <button className="expand-toggle">
+            {expandedSections.stats ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+        
+        {expandedSections.stats && (
+          <div className="summary-cards">
+            <div className="stat-card">
+              <div className="stat-icon">📝</div>
+              <div className="stat-content">
+                <h3>Total Feedback</h3>
+                <p className="stat-number">{stats.totalFeedback}</p>
+              </div>
+            </div>
+            
+            <div className="stat-card">
+              <div className="stat-icon">⭐</div>
+              <div className="stat-content">
+                <h3>Average Rating</h3>
+                <p className="stat-number">{stats.averageRating}/5</p>
+              </div>
+            </div>
+            
+            {userRole === 'admin' && (
+              <div className="stat-card">
+                <div className="stat-icon">🏪</div>
+                <div className="stat-content">
+                  <h3>Restaurants</h3>
+                  <p className="stat-number">{stats.restaurantsCount}</p>
                 </div>
-              </>
-            ) : (
-              <div className="no-feedback">
-                <div className="no-feedback-icon">📭</div>
-                <h3>No Feedback Found</h3>
-                <p>Try adjusting your filters or check back later.</p>
-                <button
-                  className="reset-filters-btn"
-                  onClick={() => {
-                    setSelectedRestaurant('all');
-                    setStatusFilter('all');
-                    setRatingFilter('all');
-                    setDateRange('all');
-                    setSelectedDate(null);
-                    setSearchTerm('');
-                  }}
-                >
-                  Reset All Filters
+              </div>
+            )}
+            
+            <div className="stat-card">
+              <div className="stat-icon">⏰</div>
+              <div className="stat-content">
+                <h3>Pending Review</h3>
+                <p className="stat-number">{stats.pendingCount}</p>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">✅</div>
+              <div className="stat-content">
+                <h3>Resolved</h3>
+                <p className="stat-number">{stats.resolvedCount}</p>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">⚠️</div>
+              <div className="stat-content">
+                <h3>Low Ratings (≤3)</h3>
+                <p className="stat-number">{stats.lowRatingCount}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Filters Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('filters')}>
+          <h2><FaSearch /> Filters & Search</h2>
+          <button className="expand-toggle">
+            {expandedSections.filters ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+        
+        {expandedSections.filters && (
+          <div className="filters-section">
+            <div className="search-box">
+              <FaSearch className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search by customer, bill number, or comments..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+              />
+              {searchTerm && (
+                <button className="clear-search" onClick={() => setSearchTerm('')}>
+                  <FaTimes />
                 </button>
+              )}
+            </div>
+
+            <div className="filter-controls">
+              {userRole === 'admin' && (
+                <div className="filter-group">
+                  <label><FaBuilding /> Restaurant:</label>
+                  <select
+                    value={selectedRestaurant}
+                    onChange={(e) => setSelectedRestaurant(e.target.value)}
+                    className="filter-select"
+                  >
+                    <option value="all">All Restaurants</option>
+                    {restaurants.map(rest => (
+                      <option key={rest.slug || rest.code} value={rest.slug || rest.code}>
+                        {rest.name} ({rest.count})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="filter-group">
+                <label><FaClock /> Status:</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label><FaStar /> Rating:</label>
+                <select
+                  value={ratingFilter}
+                  onChange={(e) => setRatingFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">All Ratings</option>
+                  <option value="5">5 Stars</option>
+                  <option value="4">4+ Stars</option>
+                  <option value="3">3+ Stars</option>
+                  <option value="2">2+ Stars</option>
+                  <option value="1">1+ Stars</option>
+                </select>
+              </div>
+
+              <div className="filter-group">
+                <label>📅 Date Range:</label>
+                <select
+                  value={dateRange}
+                  onChange={(e) => setDateRange(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">Last 30 Days</option>
+                  <option value="year">Last Year</option>
+                </select>
+              </div>
+
+              <div className="filter-group date-picker">
+                <button 
+                  className="date-button"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                >
+                  <FaCalendarAlt /> {selectedDate ? formatDateOnly(selectedDate.toISOString()) : 'Select Date'}
+                </button>
+                {selectedDate && (
+                  <button className="clear-date" onClick={clearDateFilter}>
+                    <FaTimes />
+                  </button>
+                )}
+                {showCalendar && (
+                  <div className="calendar-popup">
+                    <Calendar onChange={handleDateChange} value={selectedDate} />
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="export-btn"
+                onClick={handleExportFeedback}
+                disabled={filteredFeedback.length === 0}
+              >
+                <FaDownload /> Export CSV
+              </button>
+
+              {(searchTerm || statusFilter !== 'all' || ratingFilter !== 'all' || dateRange !== 'all' || selectedDate || selectedRestaurant !== 'all') && (
+                <button className="reset-filters-btn" onClick={resetFilters}>
+                  <FaTimes /> Reset Filters
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Feedback Content Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('feedback')}>
+          <h2><FaComment /> Customer Feedback</h2>
+          <div className="header-actions">
+            <button className="refresh-btn-small" onClick={handleRefresh}>
+              <FaSpinner className={loading ? 'spinner' : ''} /> Refresh
+            </button>
+            <button className="expand-toggle">
+              {expandedSections.feedback ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+          </div>
+        </div>
+        
+        {expandedSections.feedback && (
+          <div className="feedback-content">
+            {userRole === 'admin' && Object.keys(groupedByRestaurant).length > 0 ? (
+              <div className="restaurant-groups">
+                {Object.keys(groupedByRestaurant)
+                  .filter(restKey => {
+                    if (selectedRestaurant === 'all') return true;
+                    return restKey === selectedRestaurant;
+                  })
+                  .map(restKey => {
+                    const restaurant = groupedByRestaurant[restKey];
+                    const restaurantFeedbacks = restaurant.feedbacks.filter(fb => {
+                      if (statusFilter !== 'all' && fb.status !== statusFilter) return false;
+                      if (ratingFilter !== 'all' && fb.overallRating < parseInt(ratingFilter)) return false;
+                      if (searchTerm && !fb.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                          !fb.billNumber?.toString().toLowerCase().includes(searchTerm.toLowerCase()) &&
+                          !fb.comments?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+                      return true;
+                    });
+
+                    if (restaurantFeedbacks.length === 0) return null;
+
+                    const isExpanded = expandedRestaurants[restKey];
+
+                    return (
+                      <div key={restKey} className="restaurant-group-card">
+                        <div 
+                          className="restaurant-header"
+                          onClick={() => toggleRestaurantExpand(restKey)}
+                        >
+                          <div className="restaurant-info">
+                            <h3>
+                              <FaBuilding /> {restaurant.restaurantName}
+                              <span className="restaurant-code">({restaurant.restaurantCode})</span>
+                            </h3>
+                            <div className="restaurant-stats">
+                              <span className="stat-badge rating">
+                                <FaStar /> {restaurant.stats.averageRating}/5
+                              </span>
+                              <span className="stat-badge total">
+                                📝 {restaurantFeedbacks.length}
+                              </span>
+                              <span className="stat-badge pending">
+                                ⏰ {restaurant.stats.pending}
+                              </span>
+                              <span className="stat-badge warning">
+                                ⚠️ {restaurant.stats.lowRatings}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="expand-toggle-icon">
+                            {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="restaurant-feedbacks">
+                            <div className="table-responsive">
+                              <table className="feedback-table">
+                                <thead>
+                                  <tr>
+                                    <th onClick={() => handleSort('date')} className="sortable">
+                                      Date {sortBy === 'date' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
+                                    </th>
+                                    <th>Bill #</th>
+                                    <th onClick={() => handleSort('customer')} className="sortable">
+                                      Customer {sortBy === 'customer' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
+                                    </th>
+                                    <th onClick={() => handleSort('rating')} className="sortable">
+                                      Rating {sortBy === 'rating' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
+                                    </th>
+                                    <th>Comments</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {restaurantFeedbacks.map(feedback => (
+                                    <tr key={feedback._id}>
+                                      <td className="date-cell">{formatDate(feedback.submittedAt)}</td>
+                                      <td>
+                                        <span className="bill-number">#{feedback.billNumber}</span>
+                                        <small>{feedback.orderDate} {feedback.orderTime}</small>
+                                      </td>
+                                      <td>
+                                        <div className="customer-info">
+                                          <strong>{feedback.customerName || 'Guest'}</strong>
+                                          {feedback.tableNumber && (
+                                            <small>Table: {feedback.tableNumber}</small>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td>
+                                        {renderStars(feedback.overallRating)}
+                                        <div className="detailed-ratings">
+                                          <small>S: {feedback.serviceRating} | F: {feedback.foodRating} | C: {feedback.cleanlinessRating}</small>
+                                        </div>
+                                      </td>
+                                      <td className="comments-cell">
+                                        {feedback.comments ? (
+                                          <div className="comment-preview">
+                                            "{feedback.comments.substring(0, 60)}
+                                            {feedback.comments.length > 60 ? '...' : ''}"
+                                          </div>
+                                        ) : (
+                                          <span className="no-comment">No comments</span>
+                                        )}
+                                      </td>
+                                      <td>{getStatusBadge(feedback.status)}</td>
+                                      <td>
+                                        <div className="action-buttons">
+                                          <button
+                                            className="view-btn"
+                                            onClick={() => {
+                                              setSelectedFeedback(feedback);
+                                              setResponseText(feedback.restaurantResponse || '');
+                                              setShowResponseModal(true);
+                                            }}
+                                          >
+                                            <FaEye /> Respond
+                                          </button>
+                                          <select
+                                            value={feedback.status}
+                                            onChange={(e) => handleUpdateStatus(feedback._id, e.target.value)}
+                                            className="status-select"
+                                          >
+                                            <option value="pending">Pending</option>
+                                            <option value="reviewed">Reviewed</option>
+                                            <option value="resolved">Resolved</option>
+                                            <option value="archived">Archived</option>
+                                          </select>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : (
+              <div className="feedback-table-container">
+                {filteredFeedback.length > 0 ? (
+                  <div className="table-responsive">
+                    <table className="feedback-table">
+                      <thead>
+                        <tr>
+                          <th onClick={() => handleSort('date')} className="sortable">
+                            Date {sortBy === 'date' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
+                          </th>
+                          <th>Bill #</th>
+                          <th onClick={() => handleSort('customer')} className="sortable">
+                            Customer {sortBy === 'customer' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
+                          </th>
+                          <th onClick={() => handleSort('rating')} className="sortable">
+                            Rating {sortBy === 'rating' && (sortOrder === 'asc' ? <FaSortUp /> : <FaSortDown />)}
+                          </th>
+                          <th>Comments</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredFeedback.map(feedback => (
+                          <tr key={feedback._id}>
+                            <td className="date-cell">{formatDate(feedback.submittedAt)}</td>
+                            <td>
+                              <span className="bill-number">#{feedback.billNumber}</span>
+                              <small>{feedback.orderDate} {feedback.orderTime}</small>
+                            </td>
+                            <td>
+                              <div className="customer-info">
+                                <strong>{feedback.customerName || 'Guest'}</strong>
+                                {feedback.tableNumber && (
+                                  <small>Table: {feedback.tableNumber}</small>
+                                )}
+                              </div>
+                            </td>
+                            <td>
+                              {renderStars(feedback.overallRating)}
+                              <div className="detailed-ratings">
+                                <small>S: {feedback.serviceRating} | F: {feedback.foodRating} | C: {feedback.cleanlinessRating}</small>
+                              </div>
+                            </td>
+                            <td className="comments-cell">
+                              {feedback.comments ? (
+                                <div className="comment-preview">
+                                  "{feedback.comments.substring(0, 60)}
+                                  {feedback.comments.length > 60 ? '...' : ''}"
+                                </div>
+                              ) : (
+                                <span className="no-comment">No comments</span>
+                              )}
+                            </td>
+                            <td>{getStatusBadge(feedback.status)}</td>
+                            <td>
+                              <div className="action-buttons">
+                                <button
+                                  className="view-btn"
+                                  onClick={() => {
+                                    setSelectedFeedback(feedback);
+                                    setResponseText(feedback.restaurantResponse || '');
+                                    setShowResponseModal(true);
+                                  }}
+                                >
+                                  <FaEye /> Respond
+                                </button>
+                                <select
+                                  value={feedback.status}
+                                  onChange={(e) => handleUpdateStatus(feedback._id, e.target.value)}
+                                  className="status-select"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="reviewed">Reviewed</option>
+                                  <option value="resolved">Resolved</option>
+                                  <option value="archived">Archived</option>
+                                </select>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="no-feedback">
+                    <div className="no-feedback-icon">📭</div>
+                    <h3>No Feedback Found</h3>
+                    <p>Try adjusting your filters or check back later.</p>
+                    <button className="reset-filters-btn" onClick={resetFilters}>
+                      Reset All Filters
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1264,7 +1298,7 @@ const FeedbackPage = () => {
                   onClick={handleSubmitResponse}
                   disabled={!responseText.trim() || submittingResponse}
                 >
-                  {submittingResponse ? 'Submitting...' : 'Submit Response'}
+                  {submittingResponse ? <><FaSpinner className="spinner" /> Submitting...</> : 'Submit Response'}
                 </button>
               </div>
             </div>
