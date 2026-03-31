@@ -1,3 +1,4 @@
+// Setmenu.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -25,7 +26,17 @@ import {
   FaDrumstickBite,
   FaTags,
   FaBoxOpen,
-  FaStore
+  FaStore,
+  FaBars,
+  FaTimesCircle,
+  FaChevronDown,
+  FaChevronUp,
+  FaClipboardList,
+  FaStar,
+  FaReceipt,
+  FaWallet,
+  FaChartBar,
+  FaCalendarAlt
 } from 'react-icons/fa';
 import './Setmenu.css';
 
@@ -33,7 +44,6 @@ function Setmenu() {
   const { restaurantSlug } = useParams();
   const navigate = useNavigate();
   
-  // Get backend URL from environment variable or use Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   console.log('🔧 Setmenu using backend:', API_URL);
@@ -42,6 +52,8 @@ function Setmenu() {
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
+  const [restaurantData, setRestaurantData] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [form, setForm] = useState({
     name: '',
     type: 'Veg',
@@ -61,6 +73,11 @@ function Setmenu() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
+  const [expandedSections, setExpandedSections] = useState({
+    stats: true,
+    categories: true,
+    menu: true
+  });
 
   // Helper function to generate local placeholder image (works offline)
   const getPlaceholderImage = (name) => {
@@ -72,7 +89,6 @@ function Setmenu() {
   const checkBackendConnection = async () => {
     try {
       console.log("🔍 Checking backend connection...");
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/`, { timeout: 3000 });
       console.log("✅ Backend connected:", response.data);
       setBackendConnected(true);
@@ -88,11 +104,16 @@ function Setmenu() {
   // Fetch restaurant details
   const fetchRestaurant = async () => {
     try {
+      const token = localStorage.getItem('token');
       console.log(`🔍 Fetching restaurant: ${restaurantSlug}`);
-      // CHANGED: Use full URL with API_URL
-      const response = await axios.get(`${API_URL}/api/restaurant/by-slug/${restaurantSlug}`);
+      const response = await axios.get(`${API_URL}/api/restaurant/by-slug/${restaurantSlug}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       console.log("✅ Restaurant data:", response.data);
       setRestaurant(response.data);
+      setRestaurantData(response.data);
+      localStorage.setItem('restaurantName', response.data.restaurantName);
+      localStorage.setItem('restaurantCode', response.data.restaurantCode);
     } catch (error) {
       console.error('❌ Error fetching restaurant:', error);
       setError('Failed to load restaurant details');
@@ -103,13 +124,11 @@ function Setmenu() {
   const fetchCategories = async () => {
     try {
       console.log(`🔍 Fetching categories for: ${restaurantSlug}`);
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/menu/restaurant/${restaurantSlug}/categories`);
       console.log("✅ Categories:", response.data);
       setCategories(response.data || []);
     } catch (error) {
       console.error('❌ Error fetching categories:', error);
-      // Initialize with default categories if none exist
       if (!categories.length) {
         setCategories(['Starter', 'Main Course', 'Dessert', 'Drinks']);
       }
@@ -122,7 +141,6 @@ function Setmenu() {
       setLoading(true);
       setError('');
       console.log(`🔍 Fetching menu for: ${restaurantSlug}`);
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/menu/restaurant/${restaurantSlug}`);
       console.log("✅ Menu items received:", response.data);
       setMenuItems(response.data || []);
@@ -195,13 +213,11 @@ function Setmenu() {
 
     try {
       if (editingIndex !== null) {
-        // CHANGED: Use full URL with API_URL
         await axios.put(`${API_URL}/api/menu/restaurant/${restaurantSlug}/${editingId}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         setSuccess('Menu item updated successfully!');
       } else {
-        // CHANGED: Use full URL with API_URL
         await axios.post(`${API_URL}/api/menu/restaurant/${restaurantSlug}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
@@ -254,7 +270,6 @@ function Setmenu() {
     }
 
     try {
-      // CHANGED: Use full URL with API_URL
       await axios.delete(`${API_URL}/api/menu/restaurant/${restaurantSlug}/${id}`);
       setSuccess('Menu item deleted successfully!');
       fetchMenu();
@@ -316,51 +331,66 @@ function Setmenu() {
     setLoading(false);
   };
 
-  // Navigation functions
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  // Navigation functions - Complete with all pages
   const handleNavigateToAdmin = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/admin`);
-    } else {
-      navigate('/');
-    }
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/admin`);
   };
 
   const handleNavigateToAnalytics = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/analytics`);
-    } else {
-      navigate('/');
-    }
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/analytics`);
   };
 
   const handleNavigateToRecords = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/records`);
-    } else {
-      navigate('/');
-    }
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/records`);
+  };
+
+  const handleNavigateToFeedback = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/feedback`);
   };
 
   const handleNavigateToDashboard = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/admin`);
-    } else {
-      navigate('/');
-    }
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/dashboard`);
   };
 
-  const handleNavigateToKitchen = () => {
-    const restaurantSlug = localStorage.getItem('restaurantSlug');
-    if (restaurantSlug) {
-      navigate(`/${restaurantSlug}/Korder`);
-    } else {
-      navigate('/');
-    }
+  const handleNavigateToSetMenu = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/setmenu`);
   };
+
+  const handleNavigateToKorder = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/Korder`);
+  };
+
+  const handleNavigateToBorder = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/border`);
+  };
+  
+  const handleNavigateToTotalBill = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/totalbill`);
+  };
+
+  // Navigation items for mobile
+  const navItems = [
+    { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
+    { icon: FaUtensils, label: 'Set Menu', action: handleNavigateToSetMenu }
+   
+    
+  ];
 
   // Initialize component
   useEffect(() => {
@@ -393,7 +423,6 @@ function Setmenu() {
       item.category.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = filterType === 'all' || item.type === filterType;
-    
     const matchesCategory = filterCategory === 'all' || item.category === filterCategory;
     
     return matchesSearch && matchesType && matchesCategory;
@@ -416,447 +445,415 @@ function Setmenu() {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <p className="loading-text">Loading menu items...</p>
+        <p>Loading menu items...</p>
       </div>
     );
   }
 
   return (
-    <div className="setmenu-container full-width">
-      {/* Top Bar with User Info */}
-      <div className="top-bar">
-        <div className="user-info">
-          <FaUserCircle className="user-avatar" />
-          <span className="user-name">{userName}</span>
-          <span className="user-role">{userRole.toUpperCase()}</span>
+    <div className="setmenu-container">
+      {/* Mobile Menu Toggle */}
+      <button 
+        className="mobile-menu-toggle"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        {mobileMenuOpen ? <FaTimesCircle /> : <FaBars />}
+      </button>
+
+      {/* Mobile Navigation Overlay */}
+      {mobileMenuOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setMobileMenuOpen(false)}>
+          <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-nav-header">
+              <h3>Menu</h3>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            {navItems.map((item, index) => (
+              <button 
+                key={index}
+                className="mobile-nav-item"
+                onClick={item.action}
+              >
+                <item.icon /> {item.label}
+              </button>
+            ))}
+            <button className="mobile-nav-item logout" onClick={handleLogout}>
+              <FaSignOutAlt /> Logout
+            </button>
+          </div>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>
-          <FaSignOutAlt /> Logout
-        </button>
-      </div>
+      )}
 
       {/* Header */}
       <div className="setmenu-header">
         <div className="header-content">
           <h1>
-            <FaUtensils /> {restaurant?.restaurantName || 'Restaurant'} - Menu Management
+            <FaUtensils /> Menu Management
           </h1>
-          <div className="header-date">
-            {formattedToday}
-          </div>
+          <p className="subtitle">
+            {restaurantData?.restaurantName || restaurant?.restaurantName || 'Restaurant'} • {restaurantData?.restaurantCode || restaurant?.restaurantCode || 'N/A'}
+          </p>
         </div>
-        <p className="subtitle">
-          Restaurant Code: {restaurant?.restaurantCode || 'Loading...'}
-        </p>
+        <div className="header-right desktop-only">
+          <button className="logout-button" onClick={handleLogout}>
+            <FaSignOutAlt /> Logout
+          </button>
+        </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="navigation-tabs">
-        <button 
-          className="nav-tab kitchen-tab" 
-          onClick={handleNavigateToKitchen}
-          title="Go to Kitchen Orders"
-        >
-          👨‍🍳  Korders
+      {/* Desktop Navigation Tabs - Complete with all pages */}
+      <div className="navigation-tabs desktop-only">
+        <button className="nav-tab" onClick={handleNavigateToKorder}>
+          <FaClipboardList /> KOT
         </button>
-        <button 
-          className="nav-tab active-tab" 
-          onClick={handleNavigateToDashboard}
-          title="Go to Dashboard"
-        >
-          📋 Set Menu
+       
+        <button className="nav-tab active" onClick={handleNavigateToSetMenu}>
+          <FaUtensils /> Set Menu
         </button>
+       
       </div>
 
       {/* Connection Status */}
       {!backendConnected && (
-        <div className="connection-alert">
-          <FaExclamationTriangle className="alert-icon" />
-          <div className="alert-content">
-            <strong>Connection Error:</strong> Cannot connect to backend server. 
-            Make sure your backend is running.
-          </div>
-          <button 
-            className="retry-btn"
-            onClick={handleRetryConnection}
-          >
-            <FaSpinner className={loading ? 'spinning' : ''} /> Retry
+        <div className="error-message">
+          <FaExclamationTriangle /> Cannot connect to backend server. Make sure your backend is running.
+          <button className="retry-btn" onClick={handleRetryConnection}>
+            <FaSpinner className={loading ? 'spinner' : ''} /> Retry
           </button>
         </div>
       )}
 
       {/* Error/Success Messages */}
       {error && (
-        <div className="error-banner">
-          <FaExclamationTriangle className="banner-icon" />
-          <span>{error}</span>
-          <button className="banner-dismiss" onClick={() => setError('')}>
-            <FaTimes />
-          </button>
+        <div className="error-message">
+          <FaExclamationTriangle /> {error}
+          <button onClick={() => setError('')}>✕</button>
         </div>
       )}
       
       {success && (
-        <div className="success-banner">
-          <FaCheckCircle className="banner-icon" />
-          <span>{success}</span>
-          <button className="banner-dismiss" onClick={() => setSuccess('')}>
-            <FaTimes />
-          </button>
+        <div className="success-message">
+          <FaCheckCircle /> {success}
+          <button onClick={() => setSuccess('')}>✕</button>
         </div>
       )}
 
-      {/* Statistics Cards */}
-      <div className="stats-container">
-        <div className="stat-card total">
-          <div className="stat-icon">
-            <FaBoxOpen />
-          </div>
-          <div className="stat-content">
-            <h3>{totalItems}</h3>
-            <p>Total Items</p>
-          </div>
-        </div>
-        <div className="stat-card veg">
-          <div className="stat-icon">
-            <FaLeaf />
-          </div>
-          <div className="stat-content">
-            <h3>{vegItems}</h3>
-            <p>Veg Items</p>
+      {/* Statistics Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('stats')}>
+          <h2><FaChartBar /> Menu Statistics</h2>
+          <div className="header-actions">
+            <span className="date-badge"><FaCalendarAlt /> {formattedToday}</span>
+            <button className="expand-toggle">
+              {expandedSections.stats ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
           </div>
         </div>
-        <div className="stat-card non-veg">
-          <div className="stat-icon">
-            <FaDrumstickBite />
+        
+        {expandedSections.stats && (
+          <div className="summary-cards">
+            <div className="stat-card">
+              <div className="stat-icon"><FaBoxOpen /></div>
+              <div className="stat-content">
+                <h3>Total Items</h3>
+                <p className="stat-number">{totalItems}</p>
+              </div>
+            </div>
+            <div className="stat-card veg-stat">
+              <div className="stat-icon"><FaLeaf /></div>
+              <div className="stat-content">
+                <h3>Veg Items</h3>
+                <p className="stat-number">{vegItems}</p>
+              </div>
+            </div>
+            <div className="stat-card nonveg-stat">
+              <div className="stat-icon"><FaDrumstickBite /></div>
+              <div className="stat-content">
+                <h3>Non-Veg Items</h3>
+                <p className="stat-number">{nonVegItems}</p>
+              </div>
+            </div>
+            <div className="stat-card category-stat">
+              <div className="stat-icon"><FaTags /></div>
+              <div className="stat-content">
+                <h3>Categories</h3>
+                <p className="stat-number">{categories.length}</p>
+              </div>
+            </div>
           </div>
-          <div className="stat-content">
-            <h3>{nonVegItems}</h3>
-            <p>Non-Veg Items</p>
-          </div>
-        </div>
-        <div className="stat-card categories">
-          <div className="stat-icon">
-            <FaTags />
-          </div>
-          <div className="stat-content">
-            <h3>{categories.length}</h3>
-            <p>Categories</p>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Add/Edit Form */}
-      <div className="form-section">
-        <div className="form-card">
-          <div className="form-header">
-            <h3 className="form-title">
-              {editingIndex !== null ? <FaEdit /> : <FaPlus />}
-              {editingIndex !== null ? ' Edit Dish' : ' Add New Dish'}
-            </h3>
-            {editingIndex !== null && (
-              <button 
-                type="button"
-                className="cancel-edit-btn"
-                onClick={handleResetForm}
-              >
-                <FaTimes /> Cancel
-              </button>
-            )}
+      {/* Add/Edit Form Section */}
+      <div className="summary-section">
+        <div className="section-header">
+          <h2>{editingIndex !== null ? <FaEdit /> : <FaPlus />} {editingIndex !== null ? 'Edit Dish' : 'Add New Dish'}</h2>
+          {editingIndex !== null && (
+            <button className="cancel-edit-btn" onClick={handleResetForm}>
+              <FaTimes /> Cancel
+            </button>
+          )}
+        </div>
+        
+        <form onSubmit={handleSubmit} className="menu-form">
+          <div className="form-row">
+            <div className="form-group">
+              <label>Dish Name *</label>
+              <input
+                type="text"
+                name="name"
+                placeholder="Enter dish name"
+                value={form.name}
+                onChange={handleChange}
+                className="form-input"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Price (₹) *</label>
+              <input
+                type="number"
+                name="price"
+                placeholder="Enter price"
+                value={form.price}
+                onChange={handleChange}
+                className="form-input"
+                required
+                min="0"
+                step="0.01"
+              />
+            </div>
           </div>
-          <form onSubmit={handleSubmit} className="menu-form">
-            <div className="form-row">
-              <div className="form-group image-group">
-                <label className="form-label">Dish Image *</label>
-                <div className="image-upload-container">
-                  <input
-                    id="imageInput"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="file-input"
-                    required={editingIndex === null}
-                  />
-                  <div className="file-input-label">
-                    <FaImage /> Choose Image
-                  </div>
-                  {form.imagePreview && (
-                    <div className="image-preview">
-                      <img 
-                        src={form.imagePreview} 
-                        alt="Preview" 
-                        className="preview-image"
-                      />
-                      <button 
-                        type="button" 
-                        className="remove-image-btn"
-                        onClick={() => setForm(prev => ({ ...prev, image: null, imagePreview: null }))}
-                      >
-                        <FaTimes />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div className="helper-text">Supported: JPG, PNG, GIF, WebP (max 5MB)</div>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Dish Name *</label>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Enter dish name"
-                  value={form.name}
-                  onChange={handleChange}
-                  className="form-input"
-                  required
-                />
+          
+          <div className="form-row">
+            <div className="form-group">
+              <label>Type *</label>
+              <div className="type-selector">
+                <label className={`type-option ${form.type === 'Veg' ? 'selected' : ''}`}>
+                  <input type="radio" name="type" value="Veg" checked={form.type === 'Veg'} onChange={handleChange} />
+                  <FaLeaf /> Veg
+                </label>
+                <label className={`type-option ${form.type === 'Non-Veg' ? 'selected' : ''}`}>
+                  <input type="radio" name="type" value="Non-Veg" checked={form.type === 'Non-Veg'} onChange={handleChange} />
+                  <FaDrumstickBite /> Non-Veg
+                </label>
               </div>
             </div>
             
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Type *</label>
-                <div className="type-selector">
-                  <label className={`type-option ${form.type === 'Veg' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="type"
-                      value="Veg"
-                      checked={form.type === 'Veg'}
-                      onChange={handleChange}
-                    />
-                    <FaLeaf className="veg-icon" /> Veg
-                  </label>
-                  <label className={`type-option ${form.type === 'Non-Veg' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="type"
-                      value="Non-Veg"
-                      checked={form.type === 'Non-Veg'}
-                      onChange={handleChange}
-                    />
-                    <FaDrumstickBite className="non-veg-icon" /> Non-Veg
-                  </label>
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Category *</label>
-                <div className="category-select-container">
-                  <select 
-                    name="category" 
-                    value={form.category} 
-                    onChange={handleChange}
-                    className="form-select"
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((cat, index) => (
-                      <option key={index} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                  <button 
-                    type="button"
-                    className="add-category-btn"
-                    onClick={handleAddCategory}
-                  >
-                    <FaPlus /> New
-                  </button>
-                </div>
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">Price (₹) *</label>
-                <input
-                  type="number"
-                  name="price"
-                  placeholder="Enter price"
-                  value={form.price}
-                  onChange={handleChange}
-                  className="form-input"
-                  required
-                  min="0"
-                  step="0.01"
-                />
+            <div className="form-group">
+              <label>Category *</label>
+              <div className="category-select-container">
+                <select name="category" value={form.category} onChange={handleChange} className="form-select" required>
+                  <option value="">Select Category</option>
+                  {categories.map((cat, index) => (
+                    <option key={index} value={cat}>{cat}</option>
+                  ))}
+                </select>
+                <button type="button" className="add-category-btn" onClick={handleAddCategory}>
+                  <FaPlus /> New
+                </button>
               </div>
             </div>
-
-            <button 
-              type="submit"
-              className="submit-btn"
-              disabled={!backendConnected}
-            >
-              <FaSave />
-              {editingIndex !== null ? ' Update Dish' : ' Add Dish'}
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* Search and Filter Bar */}
-      <div className="search-filter-bar">
-        <div className="search-container">
-          <FaSearch className="search-icon" />
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search by dish name or category..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button 
-              className="clear-search-btn"
-              onClick={() => setSearchTerm('')}
-            >
-              <FaTimes />
-            </button>
-          )}
-        </div>
-
-        <div className="filter-controls">
-          <div className="filter-group">
-            <FaFilter className="filter-icon" />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Types</option>
-              <option value="Veg">Veg Only</option>
-              <option value="Non-Veg">Non-Veg Only</option>
-            </select>
           </div>
-
-          <div className="filter-group">
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="filter-select"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat, index) => (
-                <option key={index} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Categories Summary */}
-      {categories.length > 0 && (
-        <div className="categories-section">
-          <h3 className="section-title">
-            <FaTags /> Categories ({categories.length})
-          </h3>
-          <div className="categories-grid">
-            {categories.map((category, index) => (
-              <div key={index} className="category-card">
-                <span className="category-name">{category}</span>
-                <span className="category-count">
-                  {categoryCounts[category] || 0} items
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Results Info */}
-      <div className="results-info">
-        <div className="results-left">
-          <p>
-            {filteredMenuItems.length === 0 ? 
-              "No menu items match your filters" : 
-              `Showing ${filteredMenuItems.length} of ${menuItems.length} menu items`
-            }
-          </p>
-        </div>
-        <div className="results-right">
-          <span className="time-info">
-            Last updated: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-        </div>
-      </div>
-
-      {/* Menu Items Grid */}
-      {filteredMenuItems.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">🍽️</div>
-          <h2 className="empty-title">
-            {searchTerm || filterType !== 'all' || filterCategory !== 'all' 
-              ? "No matching items found" 
-              : "No Menu Items Yet"}
-          </h2>
-          <p className="empty-subtitle">
-            {searchTerm || filterType !== 'all' || filterCategory !== 'all'
-              ? "Try adjusting your filters"
-              : "Start by adding your first dish to the menu"}
-          </p>
-          {!searchTerm && filterType === 'all' && filterCategory === 'all' && (
-            <div className="empty-tips">
-              <h4>💡 Tips:</h4>
-              <ul>
-                <li>Add high-quality images for better presentation</li>
-                <li>Create categories to organize your menu</li>
-                <li>Use clear and descriptive dish names</li>
-                <li>Price your items competitively</li>
-              </ul>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="menu-grid">
-          {filteredMenuItems.map((item, index) => (
-            <div key={item._id || index} className="menu-card">
-              <div className="card-image-container">
-                <img
-                  src={item.imageUrl ? item.imageUrl : getPlaceholderImage(item.name)}
-                  alt={item.name}
-                  className="card-image"
-                  onError={(e) => {
-                    e.target.src = getPlaceholderImage(item.name);
-                  }}
-                />
-                <div className={`card-type-badge ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
-                  {item.type === 'Veg' ? <FaLeaf /> : <FaDrumstickBite />}
-                  {item.type === 'Veg' ? ' Veg' : ' Non-Veg'}
-                </div>
-              </div>
-              
-              <div className="card-content">
-                <div className="card-header">
-                  <h3 className="dish-name">{item.name}</h3>
-                  <span className="dish-price">₹{item.price}</span>
-                </div>
-                
-                <div className="card-meta">
-                  <div className="meta-item">
-                    <FaTags className="meta-icon" />
-                    <span className="meta-value">{item.category}</span>
+          
+          <div className="form-row">
+            <div className="form-group image-group">
+              <label>Dish Image {editingIndex === null && '*'}</label>
+              <div className="image-upload-container">
+                <input id="imageInput" type="file" accept="image/*" onChange={handleImageChange} className="file-input" required={editingIndex === null} />
+                <div className="file-input-label"><FaImage /> Choose Image</div>
+                {form.imagePreview && (
+                  <div className="image-preview">
+                    <img src={form.imagePreview} alt="Preview" className="preview-image" />
+                    <button type="button" className="remove-image-btn" onClick={() => setForm(prev => ({ ...prev, image: null, imagePreview: null }))}>
+                      <FaTimes />
+                    </button>
                   </div>
-                </div>
+                )}
               </div>
-
-              <div className="card-actions">
-                <button 
-                  onClick={() => handleEdit(index)}
-                  className="action-btn edit-btn"
-                >
-                  <FaEdit /> Edit
-                </button>
-                <button 
-                  onClick={() => handleDelete(index)}
-                  className="action-btn delete-btn"
-                >
-                  <FaTrash /> Delete
-                </button>
-              </div>
+              <small>Supported: JPG, PNG, GIF, WebP (max 5MB)</small>
             </div>
-          ))}
+          </div>
+
+          <button type="submit" className="submit-btn" disabled={!backendConnected}>
+            <FaSave /> {editingIndex !== null ? ' Update Dish' : ' Add Dish'}
+          </button>
+        </form>
+      </div>
+
+      {/* Search and Filter Section */}
+      <div className="summary-section">
+        <div className="section-header">
+          <h2><FaSearch /> Search & Filter</h2>
+          <div className="header-actions">
+            <button className="refresh-btn-small" onClick={fetchMenu}>
+              <FaSpinner className={loading ? 'spinner' : ''} /> Refresh
+            </button>
+          </div>
+        </div>
+        
+        <div className="filters-section">
+          <div className="search-wrapper">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search by dish name or category..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button className="clear-search" onClick={() => setSearchTerm('')}>
+                <FaTimes />
+              </button>
+            )}
+          </div>
+
+          <div className="filter-controls">
+            <div className="filter-group">
+              <label><FaFilter /> Type:</label>
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="filter-select">
+                <option value="all">All Types</option>
+                <option value="Veg">Veg Only</option>
+                <option value="Non-Veg">Non-Veg Only</option>
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label><FaTags /> Category:</label>
+              <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="filter-select">
+                <option value="all">All Categories</option>
+                {categories.map((cat, index) => (
+                  <option key={index} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="results-info">
+            <span>
+              {filteredMenuItems.length === 0 ? 
+                "No menu items match your filters" : 
+                `Showing ${filteredMenuItems.length} of ${menuItems.length} menu items`
+              }
+            </span>
+            <span className="time-info">
+              Last updated: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Categories Section */}
+      {categories.length > 0 && (
+        <div className="summary-section">
+          <div className="section-header" onClick={() => toggleSection('categories')}>
+            <h2><FaTags /> Categories ({categories.length})</h2>
+            <button className="expand-toggle">
+              {expandedSections.categories ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+          </div>
+          
+          {expandedSections.categories && (
+            <div className="categories-grid">
+              {categories.map((category, index) => (
+                <div key={index} className="category-card">
+                  <span className="category-name">{category}</span>
+                  <span className="category-count">{categoryCounts[category] || 0} items</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* Menu Items Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('menu')}>
+          <h2><FaUtensils /> Menu Items</h2>
+          <button className="expand-toggle">
+            {expandedSections.menu ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
+        </div>
+        
+        {expandedSections.menu && (
+          <div className="menu-content">
+            {filteredMenuItems.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🍽️</div>
+                <h3>
+                  {searchTerm || filterType !== 'all' || filterCategory !== 'all' 
+                    ? "No matching items found" 
+                    : "No Menu Items Yet"}
+                </h3>
+                <p>
+                  {searchTerm || filterType !== 'all' || filterCategory !== 'all'
+                    ? "Try adjusting your filters"
+                    : "Start by adding your first dish to the menu"}
+                </p>
+              </div>
+            ) : (
+              <div className="menu-grid">
+                {filteredMenuItems.map((item, index) => (
+                  <div key={item._id || index} className="menu-card">
+                    <div className="card-image-container">
+                      <img
+                        src={item.imageUrl ? item.imageUrl : getPlaceholderImage(item.name)}
+                        alt={item.name}
+                        className="card-image"
+                        onError={(e) => {
+                          e.target.src = getPlaceholderImage(item.name);
+                        }}
+                      />
+                      <div className={`card-type-badge ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
+                        {item.type === 'Veg' ? <FaLeaf /> : <FaDrumstickBite />}
+                        {item.type === 'Veg' ? ' Veg' : ' Non-Veg'}
+                      </div>
+                    </div>
+                    
+                    <div className="card-content">
+                      <div className="card-header">
+                        <h3 className="dish-name">{item.name}</h3>
+                        <span className="dish-price">₹{item.price}</span>
+                      </div>
+                      <div className="card-meta">
+                        <div className="meta-item">
+                          <FaTags className="meta-icon" />
+                          <span className="meta-value">{item.category}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card-actions">
+                      <button onClick={() => handleEdit(index)} className="action-btn edit-btn">
+                        <FaEdit /> Edit
+                      </button>
+                      <button onClick={() => handleDelete(index)} className="action-btn delete-btn">
+                        <FaTrash /> Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="setmenu-footer">
+        <p>
+          {restaurantData?.restaurantName || restaurant?.restaurantName} Menu Management • 
+          <span className="footer-code"> {restaurantData?.restaurantCode || restaurant?.restaurantCode}</span> • 
+          Today: {formattedToday}
+        </p>
+        <p className="footer-note">
+          All menu items are restaurant-specific and accessible only to authorized staff
+        </p>
+      </div>
     </div>
   );
 }

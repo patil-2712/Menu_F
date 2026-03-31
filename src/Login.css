@@ -3,13 +3,13 @@
 /* Wrapper */
 .login-wrapper {
   min-height: 100vh;
-
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   overflow-y: auto;
   position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 /* Main Container */
@@ -69,11 +69,7 @@
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.5px;
-}
-
-.brand-name span {
-  font-weight: 300;
-  opacity: 0.9;
+  color: white;
 }
 
 .brand-tagline {
@@ -81,6 +77,7 @@
   line-height: 1.5;
   margin-bottom: 32px;
   opacity: 0.95;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .brand-features {
@@ -99,6 +96,7 @@
   padding: 8px 12px;
   border-radius: 8px;
   backdrop-filter: blur(10px);
+  color: white;
 }
 
 .feature-icon {
@@ -116,6 +114,7 @@
   line-height: 1.6;
   opacity: 0.9;
   margin: 0;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* Right Side - Login Form */
@@ -401,6 +400,75 @@
   background: #d1fae5;
 }
 
+/* Select Dropdown Styling */
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.select-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+  color: #9ca3af;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.form-select {
+  width: 100%;
+  padding: 12px 12px 12px 44px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  transition: all 0.3s;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-select.error {
+  border-color: #dc2626;
+}
+
+.form-select:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  font-size: 12px;
+  color: #9ca3af;
+  pointer-events: none;
+  transition: transform 0.2s;
+}
+
+.form-select:focus + .select-arrow {
+  transform: rotate(180deg);
+}
+
+.role-description-hint {
+  display: block;
+  font-size: 11px;
+  color: #6c757d;
+  margin-top: 6px;
+  padding-left: 8px;
+  border-left: 2px solid #667eea;
+}
+
 /* Input Wrapper */
 .input-wrapper {
   position: relative;
@@ -424,6 +492,7 @@
   font-size: 14px;
   transition: all 0.3s;
   background: white;
+  color: #333;
 }
 
 .form-input:focus {
@@ -441,6 +510,10 @@
   cursor: not-allowed;
 }
 
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
 .toggle-password {
   position: absolute;
   right: 12px;
@@ -451,6 +524,7 @@
   padding: 4px;
   border-radius: 4px;
   transition: all 0.2s;
+  color: #6c757d;
 }
 
 .toggle-password:hover {
@@ -492,17 +566,14 @@
 
 .meter-fill.weak {
   background: #dc2626;
-  width: 33%;
 }
 
 .meter-fill.good {
   background: #f59e0b;
-  width: 66%;
 }
 
 .meter-fill.strong {
   background: #10b981;
-  width: 100%;
 }
 
 /* Form Options */
@@ -530,6 +601,7 @@
 
 .checkbox-label {
   user-select: none;
+  color: #6c757d;
 }
 
 .forgot-password-link {
@@ -632,7 +704,7 @@
 }
 
 /* ============================================ */
-/* MOBILE OPTIMIZATIONS - SCROLLABLE FIX */
+/* MOBILE OPTIMIZATIONS - FIXED VISIBILITY */
 /* ============================================ */
 
 /* For tablets and smaller screens */
@@ -652,15 +724,17 @@
     padding: 32px 24px;
     overflow-y: visible;
     max-height: none;
+    background: white;
   }
   
   .login-wrapper {
     align-items: flex-start;
     padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
 }
 
-/* For mobile phones */
+/* For mobile phones - FIXED TEXT COLORS */
 @media (max-width: 768px) {
   .login-wrapper {
     padding: 12px;
@@ -673,11 +747,77 @@
     max-height: none;
     border-radius: 20px;
     overflow: visible;
+    background: white;
   }
   
   .login-form-container {
     padding: 24px 20px;
     overflow-y: visible;
+    background: white;
+  }
+  
+  /* Ensure all text is dark on white background */
+  .form-header h2 {
+    color: #333;
+  }
+  
+  .form-header p {
+    color: #666;
+  }
+  
+  .form-label {
+    color: #333;
+  }
+  
+  .form-input {
+    color: #333;
+    background: white;
+  }
+  
+  .form-input::placeholder {
+    color: #9ca3af;
+  }
+  
+  .form-select {
+    color: #333;
+    background: white;
+  }
+  
+  .form-select option {
+    color: #333;
+    background: white;
+  }
+  
+  .checkbox-label {
+    color: #6c757d;
+  }
+  
+  .register-prompt {
+    color: #6c757d;
+  }
+  
+  .role-name {
+    color: #333;
+  }
+  
+  .role-description {
+    color: #6c757d;
+  }
+  
+  .section-label {
+    color: #333;
+  }
+  
+  .preview-name {
+    color: #333;
+  }
+  
+  .preview-label {
+    color: #6c757d;
+  }
+  
+  .preview-slug {
+    color: #6c757d;
   }
   
   /* Reduce spacing for mobile */
@@ -754,7 +894,17 @@
     font-size: 16px; /* Prevents zoom on iOS */
   }
   
+  .form-select {
+    padding: 12px 12px 12px 44px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
   .input-icon {
+    left: 12px;
+    font-size: 16px;
+  }
+  
+  .select-icon {
     left: 12px;
     font-size: 16px;
   }
@@ -812,6 +962,14 @@
   .error-message {
     font-size: 12px;
   }
+  
+  /* Dropdown options styling */
+  .form-select option {
+    padding: 10px;
+    font-size: 14px;
+    color: #333;
+    background: white;
+  }
 }
 
 /* For very small phones (iPhone SE, etc.) */
@@ -858,7 +1016,17 @@
     font-size: 15px;
   }
   
+  .form-select {
+    padding: 10px 10px 10px 40px;
+    font-size: 15px;
+  }
+  
   .input-icon {
+    left: 10px;
+    font-size: 14px;
+  }
+  
+  .select-icon {
     left: 10px;
     font-size: 14px;
   }
@@ -884,6 +1052,10 @@
   
   .register-link {
     font-size: 12px;
+  }
+  
+  .role-description-hint {
+    font-size: 10px;
   }
 }
 
@@ -923,123 +1095,6 @@
   .form-group {
     margin-bottom: 14px;
   }
-}
-/* Add this to your existing Login.css file */
-
-/* Select Dropdown Styling */
-.select-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.select-icon {
-  position: absolute;
-  left: 12px;
-  font-size: 18px;
-  color: #9ca3af;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.form-select {
-  width: 100%;
-  padding: 12px 12px 12px 44px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 14px;
-  background: white;
-  cursor: pointer;
-  appearance: none;
-  transition: all 0.3s;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-select:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.form-select.error {
-  border-color: #dc2626;
-}
-
-.form-select:disabled {
-  background: #f9fafb;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.select-arrow {
-  position: absolute;
-  right: 12px;
-  font-size: 12px;
-  color: #9ca3af;
-  pointer-events: none;
-  transition: transform 0.2s;
-}
-
-.form-select:focus + .select-arrow {
-  transform: rotate(180deg);
-}
-
-.role-description-hint {
-  display: block;
-  font-size: 11px;
-  color: #6c757d;
-  margin-top: 6px;
-  padding-left: 8px;
-  border-left: 2px solid #667eea;
-}
-
-/* Mobile Optimization for Dropdown */
-@media (max-width: 768px) {
-  .form-select {
-    padding: 12px 12px 12px 44px;
-    font-size: 16px; /* Prevents zoom on iOS */
-  }
-  
-  .select-icon {
-    left: 12px;
-    font-size: 16px;
-  }
-  
-  .select-arrow {
-    right: 12px;
-    font-size: 12px;
-  }
-  
-  .role-description-hint {
-    font-size: 10px;
-    margin-top: 4px;
-  }
-}
-
-/* For very small phones */
-@media (max-width: 480px) {
-  .form-select {
-    padding: 10px 10px 10px 40px;
-    font-size: 15px;
-  }
-  
-  .select-icon {
-    left: 10px;
-    font-size: 14px;
-  }
-  
-  .select-arrow {
-    right: 10px;
-    font-size: 10px;
-  }
-}
-
-/* Dropdown options styling */
-.form-select option {
-  padding: 10px;
-  font-size: 14px;
 }
 
 /* Remove default focus outline for better custom styling */
