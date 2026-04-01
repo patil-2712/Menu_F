@@ -1,3 +1,4 @@
+// MyOrderPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
@@ -20,16 +21,17 @@ import {
   FaShare,
   FaMapMarkerAlt,
   FaPhone,
-  FaEnvelope
+  FaEnvelope,
+  FaSignOutAlt,
+  FaUserCircle,
+  FaHome
 } from 'react-icons/fa';
 import './MyOrderPage.css';
 
 const MyOrderPage = () => {
-  // CHANGE: Use orderId instead of billNumber
   const { restaurantSlug, orderId } = useParams();
   const navigate = useNavigate();
   
-  // Get backend URL from environment variable or use Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   console.log('🔧 MyOrderPage using backend:', API_URL);
@@ -50,8 +52,9 @@ const MyOrderPage = () => {
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [imageErrors, setImageErrors] = useState({});
+  const [userName, setUserName] = useState('');
+  const [userRole, setUserRole] = useState('');
 
-  // Helper function to get full image URL
   const getImageUrl = (imageName) => {
     if (!imageName) return '/placeholder.jpg';
     if (imageName.startsWith('http')) return imageName;
@@ -72,12 +75,16 @@ const MyOrderPage = () => {
     orderId: ''
   });
 
-  // Fetch order from backend using orderId (_id)
+  useEffect(() => {
+    const role = localStorage.getItem('userRole') || 'guest';
+    const name = localStorage.getItem('userName') || 'Guest';
+    setUserRole(role);
+    setUserName(name);
+  }, []);
+
   const fetchOrderFromBackend = async () => {
     try {
       console.log(`🔍 Fetching order with ID: ${orderId} for ${restaurantSlug}`);
-      
-      // CHANGED: Use full URL with API_URL
       const orderResponse = await axios.get(`${API_URL}/api/order/${orderId}`);
       
       if (orderResponse.data) {
@@ -86,18 +93,14 @@ const MyOrderPage = () => {
       }
     } catch (error) {
       console.error('Error fetching order by _id:', error);
-      
-      // If fetching by _id fails, try fetching by billNumber as fallback
       try {
         console.log('Trying to fetch by bill number as fallback...');
-        // CHANGED: Use full URL with API_URL
         const restaurantResponse = await axios.get(`${API_URL}/api/restaurant/by-slug/${restaurantSlug}`);
         const restaurantCode = restaurantResponse.data?.restaurantCode;
         
         if (restaurantCode) {
-          // CHANGED: Use full URL with API_URL
           const fallbackResponse = await axios.get(
-            `${API_URL}/api/order/${restaurantCode}/${orderId}` // orderId might be a billNumber in this case
+            `${API_URL}/api/order/${restaurantCode}/${orderId}`
           );
           
           if (fallbackResponse.data) {
@@ -108,25 +111,21 @@ const MyOrderPage = () => {
       } catch (fallbackErr) {
         console.error('Fallback fetch also failed:', fallbackErr);
       }
-      
       return null;
     }
   };
 
-  // Initialize page
   useEffect(() => {
     const initializePage = async () => {
       try {
         setLoading(true);
         
-        // Check localStorage first
         const savedOrder = localStorage.getItem(`currentOrder_${restaurantSlug}`);
         let foundOrder = null;
         
         if (savedOrder) {
           try {
             const parsedOrder = JSON.parse(savedOrder);
-            // Check if the saved order matches either _id or billNumber
             if (parsedOrder._id === orderId || parsedOrder.billNumber == orderId) {
               foundOrder = parsedOrder;
               console.log('Order found in localStorage:', foundOrder);
@@ -136,7 +135,6 @@ const MyOrderPage = () => {
           }
         }
         
-        // If not in localStorage, fetch from backend
         if (!foundOrder && orderId) {
           foundOrder = await fetchOrderFromBackend();
         }
@@ -148,13 +146,8 @@ const MyOrderPage = () => {
         }
         
         setOrder(foundOrder);
-        
-        // Fetch restaurant details
         await fetchRestaurantDetails();
-        
-        // Fetch menu items for add items modal
         await fetchMenuItems();
-        
         setLoading(false);
         
       } catch (error) {
@@ -169,10 +162,8 @@ const MyOrderPage = () => {
     }
   }, [restaurantSlug, orderId]);
 
-  // Fetch restaurant details
   const fetchRestaurantDetails = async () => {
     try {
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/restaurant/by-slug/${restaurantSlug}`);
       setRestaurant(response.data);
       console.log('Restaurant details fetched:', response.data);
@@ -181,10 +172,8 @@ const MyOrderPage = () => {
     }
   };
 
-  // Fetch menu items
   const fetchMenuItems = async () => {
     try {
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/menu/restaurant/${restaurantSlug}`);
       const items = response.data || [];
       setMenuItems(items);
@@ -203,7 +192,6 @@ const MyOrderPage = () => {
     }
   };
 
-  // Filter menu items
   useEffect(() => {
     let result = menuItems;
     
@@ -223,7 +211,6 @@ const MyOrderPage = () => {
     setFilteredItems(result);
   }, [activeCategory, searchTerm, menuItems]);
 
-  // Format currency
   const formatCurrency = (amount) => {
     if (typeof amount !== 'number' || isNaN(amount)) {
       amount = 0;
@@ -234,7 +221,6 @@ const MyOrderPage = () => {
     });
   };
 
-  // Calculate totals
   const getDisplayTotals = () => {
     if (!order) return { subtotal: 0, gst: 0, total: 0 };
     
@@ -245,7 +231,6 @@ const MyOrderPage = () => {
     return { subtotal, gst, total };
   };
 
-  // Convert number to words (Indian Rupees)
   const numberToWords = (num) => {
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
       'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -288,7 +273,6 @@ const MyOrderPage = () => {
     return words.trim().replace(/\s+/g, ' ');
   };
 
-  // Add menu item to new items
   const addMenuItemToOrder = (menuItem) => {
     setNewItems(prev => {
       const existingItem = prev.find(item => item.itemId === menuItem._id);
@@ -315,7 +299,6 @@ const MyOrderPage = () => {
     });
   };
 
-  // Remove menu item from new items
   const removeMenuItemFromOrder = (menuItemId) => {
     setNewItems(prev => {
       const updatedItems = prev
@@ -335,7 +318,6 @@ const MyOrderPage = () => {
     });
   };
 
-  // Save new items to existing order
   const handleSaveNewItems = async () => {
     if (newItems.length === 0) {
       setShowAddItemsModal(false);
@@ -407,7 +389,6 @@ const MyOrderPage = () => {
         total: newTotal
       };
 
-      // CHANGED: Use full URL with API_URL
       const response = await axios.put(
         `${API_URL}/api/order/${order._id}`,
         updatePayload
@@ -416,7 +397,6 @@ const MyOrderPage = () => {
       const updatedOrder = response.data.order || response.data;
       
       setOrder(updatedOrder);
-      
       localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(updatedOrder));
       
       setShowAddItemsModal(false);
@@ -434,7 +414,6 @@ const MyOrderPage = () => {
     }
   };
 
-  // Star Rating Component
   const StarRating = ({ rating, onRatingChange, category }) => {
     return (
       <div className="star-rating">
@@ -451,7 +430,6 @@ const MyOrderPage = () => {
     );
   };
 
-  // Handle star click
   const handleStarClick = (category, rating) => {
     setFeedbackForm(prev => ({
       ...prev,
@@ -459,7 +437,6 @@ const MyOrderPage = () => {
     }));
   };
 
-  // Handle feedback submit
   const handleFeedbackSubmit = async (e) => {
     e.preventDefault();
     setSubmittingFeedback(true);
@@ -484,7 +461,6 @@ const MyOrderPage = () => {
         customerPhone: ''
       };
 
-      // CHANGED: Use full URL with API_URL
       const response = await axios.post(`${API_URL}/api/feedback/submit`, finalFeedback);
       
       if (response.status === 201) {
@@ -500,7 +476,6 @@ const MyOrderPage = () => {
     }
   };
 
-  // Download PDF with professional bill format
   const handleDownloadPDF = () => {
     if (!order) return;
 
@@ -508,37 +483,26 @@ const MyOrderPage = () => {
     const { subtotal, gst, total } = getDisplayTotals();
     const gstPercentage = order.gstPercentage || restaurant?.gstPercentage || 18;
     
-    // Clear any existing content and start fresh
     doc.deletePage(1);
     doc.addPage();
-    
-    // Set up document with monospace font for bill style
     doc.setFont('courier', 'normal');
     
-    let y = 25; // Starting Y position
+    let y = 25;
     
-    // 1. Restaurant Header - ALL CAPS as in screenshot
     doc.setFontSize(24);
     doc.setFont('courier', 'bold');
     doc.setTextColor(0, 0, 0);
     doc.text(restaurant?.restaurantName?.toUpperCase() || 'RESTAURANT NAME', 105, y, { align: 'center' });
     y += 8;
     
-    // 2. Complete Address - ALL CAPS
     doc.setFontSize(10);
     doc.setFont('courier', 'normal');
-    const address = [
-      restaurant?.nearestPlace,
-      restaurant?.city,
-      restaurant?.state,
-      restaurant?.country
-    ].filter(Boolean).join(', ').toUpperCase();
+    const address = [restaurant?.nearestPlace, restaurant?.city, restaurant?.state, restaurant?.country]
+      .filter(Boolean).join(', ').toUpperCase();
     doc.text(address || 'ADDRESS NOT AVAILABLE', 105, y, { align: 'center' });
     y += 5;
     
-    // 3. Contact Information - Phone and Email
-    const contactInfo = [];
-    if (restaurant?.mobile) contactInfo.push(restaurant.mobile);
+    const contactInfo = restaurant?.mobile ? [restaurant.mobile] : [];
     doc.text(contactInfo.join(' | ') || '', 105, y, { align: 'center' });
     y += 5;
     
@@ -547,64 +511,41 @@ const MyOrderPage = () => {
       y += 5;
     }
     
-    // 4. Separator Line
     y += 2;
     doc.setDrawColor(0, 0, 0);
     doc.line(14, y, 196, y);
     y += 8;
     
-    // 5. Bill Number
     doc.setFontSize(14);
     doc.setFont('courier', 'bold');
     doc.text(`BILL NO: ${order.billNumber}`, 105, y, { align: 'center' });
     y += 8;
     
-    // 6. Business Information Section
     doc.setFontSize(11);
     doc.setFont('courier', 'normal');
     
-    // GST Number
     if (restaurant?.gstNumber) {
       doc.text(`GSTIN: ${restaurant.gstNumber}`, 20, y);
       y += 6;
     }
     
-    // GST Rate
     if (gstPercentage) {
       doc.text(`GST Rate: ${gstPercentage}%`, 20, y);
       y += 6;
     }
     
-    // FSSAI License
     if (restaurant?.foodLicense) {
       doc.text(`FSSAI License: ${restaurant.foodLicense}`, 20, y);
       y += 6;
     }
     
-    // Mobile
-    if (restaurant?.mobile) {
-      doc.text(`Mobile: ${restaurant.mobile}`, 20, y);
-      y += 6;
-    }
-    
-    // Email
-    if (restaurant?.email) {
-      doc.text(`Email: ${restaurant.email}`, 20, y);
-      y += 6;
-    }
-    
-    // Location
     doc.text(`Location: ${address || 'N/A'}`, 20, y);
     y += 8;
     
-    // 7. Location Details Grid - City, State, Country table
     doc.setFontSize(10);
     doc.setFont('courier', 'bold');
     
-    // Draw table header
-    const col1 = 20;
-    const col2 = 80;
-    const col3 = 140;
+    const col1 = 20, col2 = 80, col3 = 140;
     
     doc.text('CITY', col1, y);
     doc.text('STATE', col2, y);
@@ -613,7 +554,6 @@ const MyOrderPage = () => {
     doc.line(14, y, 196, y);
     y += 4;
     
-    // Draw table values
     doc.setFont('courier', 'normal');
     doc.text((restaurant?.city || 'N/A').toUpperCase(), col1, y);
     doc.text((restaurant?.state || 'N/A').toUpperCase(), col2, y);
@@ -622,7 +562,6 @@ const MyOrderPage = () => {
     doc.line(14, y, 196, y);
     y += 8;
     
-    // 8. Bill Meta Information - Date, Time, Customer, Table
     doc.setFontSize(11);
     doc.setFont('courier', 'normal');
     
@@ -630,23 +569,17 @@ const MyOrderPage = () => {
     doc.text(`TIME: ${order.time}`, 120, y);
     y += 6;
     
-    doc.text(`CUSTOMER NAME: ${(order.customerName || 'GUEST').toUpperCase()}`, 20, y);
+    doc.text(`CUSTOMER: ${(order.customerName || 'GUEST').toUpperCase()}`, 20, y);
     doc.text(`TABLE: ${order.tableNumber ? `TABLE ${order.tableNumber}` : 'TAKEAWAY'}`, 120, y);
     y += 8;
     
-    // 9. Items Table Header
     doc.setFillColor(0, 0, 0);
     doc.setTextColor(255, 255, 255);
     doc.setFont('courier', 'bold');
     doc.setFontSize(10);
-    
-    // Draw header background
-    doc.setFillColor(0, 0, 0);
     doc.rect(14, y - 4, 182, 7, 'F');
-    
-    // Header text
     doc.text('#', 16, y);
-    doc.text('ITEM DESCRIPTION', 30, y);
+    doc.text('ITEM', 30, y);
     doc.text('QTY', 110, y);
     doc.text('PRICE', 135, y);
     doc.text('TOTAL', 170, y);
@@ -655,19 +588,16 @@ const MyOrderPage = () => {
     doc.setFont('courier', 'normal');
     y += 6;
     
-    // 10. Table Rows
     order.items.forEach((item, index) => {
       if (y > 250) {
         doc.addPage();
         y = 20;
-        
-        // Repeat header on new page
         doc.setFillColor(0, 0, 0);
         doc.setTextColor(255, 255, 255);
         doc.setFont('courier', 'bold');
         doc.rect(14, y - 4, 182, 7, 'F');
         doc.text('#', 16, y);
-        doc.text('ITEM DESCRIPTION', 30, y);
+        doc.text('ITEM', 30, y);
         doc.text('QTY', 110, y);
         doc.text('PRICE', 135, y);
         doc.text('TOTAL', 170, y);
@@ -687,64 +617,57 @@ const MyOrderPage = () => {
       y += 6;
     });
     
-    // 11. Totals Section
     y += 4;
     doc.line(14, y, 196, y);
     y += 6;
     
-    // Subtotal
     doc.setFont('courier', 'normal');
     doc.text('Subtotal:', 120, y);
     doc.text(`${formatCurrency(subtotal)}`, 180, y, { align: 'right' });
     y += 6;
     
-    // GST
     doc.text(`GST @ ${gstPercentage}%:`, 120, y);
     doc.text(`${formatCurrency(gst)}`, 180, y, { align: 'right' });
     y += 6;
     
-    // Grand Total
     doc.setFont('courier', 'bold');
     doc.setFontSize(12);
     doc.text('Grand Total:', 120, y);
     doc.text(`${formatCurrency(total)}`, 180, y, { align: 'right' });
     y += 8;
     
-    // 12. Amount in words - UPPERCASE as in screenshot
     doc.setFont('courier', 'normal');
     doc.setFontSize(9);
     const amountInWords = numberToWords(total).toUpperCase();
     doc.text(`AMOUNT IN WORDS: ${amountInWords}`, 14, y);
-    y += 8;
     
-    // Save PDF
     doc.save(`Invoice_${order.billNumber}_${restaurant?.restaurantName || 'Restaurant'}.pdf`);
   };
 
-  // Get item quantity in new items
   const getItemQuantity = (menuItemId) => {
     const itemInOrder = newItems.find(item => item.itemId === menuItemId);
     return itemInOrder ? itemInOrder.quantity : 0;
   };
 
-  // Calculate new items total
   const getNewItemsTotal = () => {
     return newItems.reduce((sum, item) => sum + item.total, 0);
   };
 
-  // Handle go back to menu
   const handleGoBackToMenu = () => {
     localStorage.removeItem(`currentOrder_${restaurantSlug}`);
     navigate(`/${restaurantSlug}/menu`);
   };
 
-  // Get category display name
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/');
+  };
+
   const getCategoryDisplayName = (category) => {
     if (!category) return 'Uncategorized';
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
   };
 
-  // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -755,13 +678,11 @@ const MyOrderPage = () => {
     });
   };
 
-  // Format GST number with proper spacing
   const formatGSTNumber = (gst) => {
     if (!gst) return 'N/A';
     return gst;
   };
 
-  // Get full address
   const getFullAddress = () => {
     if (!restaurant) return '';
     const parts = [
@@ -773,7 +694,8 @@ const MyOrderPage = () => {
     return parts.join(', ');
   };
 
-  // Loading state
+  const gstPercentage = order?.gstPercentage || restaurant?.gstPercentage || 18;
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -783,34 +705,26 @@ const MyOrderPage = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="error-container">
         <div className="error-icon">📄</div>
         <h2>Bill Not Found</h2>
         <p>{error}</p>
-        <button 
-          className="action-btn"
-          onClick={handleGoBackToMenu}
-        >
+        <button className="action-btn" onClick={handleGoBackToMenu}>
           <FaArrowLeft /> Back to Menu
         </button>
       </div>
     );
   }
 
-  // No order found
   if (!order || !order.items || order.items.length === 0) {
     return (
       <div className="error-container">
         <div className="error-icon">📄</div>
         <h2>No Order Found</h2>
         <p>You haven't placed any order yet.</p>
-        <button 
-          className="action-btn"
-          onClick={handleGoBackToMenu}
-        >
+        <button className="action-btn" onClick={handleGoBackToMenu}>
           <FaArrowLeft /> Back to Menu
         </button>
       </div>
@@ -818,14 +732,15 @@ const MyOrderPage = () => {
   }
 
   const { subtotal, gst, total } = getDisplayTotals();
-  const newItemsTotal = getNewItemsTotal();
   const amountInWords = numberToWords(total);
-  const gstPercentage = order.gstPercentage || restaurant?.gstPercentage || 18;
 
   return (
-    <div className="modern-order-container">
+    <div className="bill-container">
+      {/* Header with Back Button */}
+     
+
       {/* Main Bill Card */}
-      <div className="order-card">
+      <div className="bill-card">
         {/* Restaurant Header */}
         <div className="restaurant-header">
           <h1 className="restaurant-name">
@@ -834,7 +749,7 @@ const MyOrderPage = () => {
           <div className="restaurant-address">
             <FaMapMarkerAlt className="icon" /> {getFullAddress()}
           </div>
-          <div className="restaurant-contact-row">
+          <div className="restaurant-contact">
             {restaurant?.mobile && (
               <span className="contact-item">
                 <FaPhone className="icon" /> {restaurant.mobile}
@@ -848,143 +763,52 @@ const MyOrderPage = () => {
           </div>
         </div>
 
-        {/* Bill Title */}
-        <div className="bill-header">
-          <div className="bill-title-wrapper">
-            <div className="bill-number-wrapper">
-              <span className="bill-number-label">Bill No:</span>
-              <span className="bill-number-value">{order.billNumber}</span>
-            </div>
-          </div>
+        {/* Divider */}
+        <div className="divider"></div>
+
+        {/* Bill Info */}
+        <div className="bill-info">
+          <div className="bill-number">Bill No: {order.billNumber}</div>
+          <div className="bill-date">Date: {order.date} | Time: {order.time}</div>
         </div>
 
-        {/* Complete Business Information */}
-        <div className="business-info-section">
-          {/* GST Information */}
-          {restaurant?.gstNumber && (
-            <div className="business-info-row">
-              <span className="business-label">
-                <FaIdCard className="icon" /> GSTIN:
-              </span>
-              <span className="business-value gst-number">{formatGSTNumber(restaurant.gstNumber)}</span>
-            </div>
-          )}
-          
-          {/* GST Percentage */}
-          {gstPercentage > 0 && (
-            <div className="business-info-row">
-              <span className="business-label">
-                <FaPercent className="icon" /> GST Rate:
-              </span>
-              <span className="business-value gst-rate">{gstPercentage}%</span>
-              <span className="gst-badge">INPUT TAX CREDIT AVAILABLE</span>
-            </div>
-          )}
-          
-          {/* Food License */}
-          {restaurant?.foodLicense && (
-            <div className="business-info-row">
-              <span className="business-label">
-                <FaUtensils className="icon" /> FSSAI License:
-              </span>
-              <span className="business-value license-number">{restaurant.foodLicense}</span>
-            </div>
-          )}
-          
-          {/* Mobile Number */}
-          {restaurant?.mobile && (
-            <div className="business-info-row">
-              <span className="business-label">
-                <FaPhone className="icon" /> Mobile:
-              </span>
-              <span className="business-value">{restaurant.mobile}</span>
-            </div>
-          )}
-          
-          {/* Email */}
-          {restaurant?.email && (
-            <div className="business-info-row">
-              <span className="business-label">
-                <FaEnvelope className="icon" /> Email:
-              </span>
-              <span className="business-value">{restaurant.email}</span>
-            </div>
-          )}
-          
-          {/* Location Details */}
-          <div className="business-info-row location-row">
-            <span className="business-label">
-              <FaMapMarkerAlt className="icon" /> Location:
-            </span>
-            <span className="business-value location-value">
-              {getFullAddress()}
-            </span>
-          </div>
-          
-          {/* City, State, Country separate for clarity */}
-          <div className="location-details-grid">
-            {restaurant?.city && (
-              <div className="location-detail-item">
-                <span className="detail-label">City:</span>
-                <span className="detail-value">{restaurant.city}</span>
-              </div>
-            )}
-            {restaurant?.state && (
-              <div className="location-detail-item">
-                <span className="detail-label">State:</span>
-                <span className="detail-value">{restaurant.state}</span>
-              </div>
-            )}
-            {restaurant?.country && (
-              <div className="location-detail-item">
-                <span className="detail-label">Country:</span>
-                <span className="detail-value">{restaurant.country}</span>
-              </div>
-            )}
-          </div>
+        {/* Customer Info */}
+        <div className="customer-info">
+          <div>Customer: {order.customerName || 'Guest'}</div>
+          <div>Table: {order.tableNumber || 'Takeaway'}</div>
         </div>
 
-        {/* Bill Meta Information */}
-        <div className="bill-meta-grid">
-          <div className="meta-item">
-            <span className="meta-label">Invoice Date</span>
-            <span className="meta-value">{order.date}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Invoice Time</span>
-            <span className="meta-value">{order.time}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Customer Name</span>
-            <span className="meta-value">{order.customerName || 'Guest'}</span>
-          </div>
-          <div className="meta-item">
-            <span className="meta-label">Table/Order Type</span>
-            <span className="meta-value">{order.tableNumber ? `Table ${order.tableNumber}` : 'Takeaway'}</span>
-          </div>
+        {/* GST Info */}
+        <div className="gst-info">
+          {restaurant?.gstNumber && <div>GSTIN: {formatGSTNumber(restaurant.gstNumber)}</div>}
+          <div>GST Rate: {gstPercentage}%</div>
+          {restaurant?.foodLicense && <div>FSSAI: {restaurant.foodLicense}</div>}
         </div>
+
+        {/* Divider */}
+        <div className="divider"></div>
 
         {/* Items Table */}
         <table className="items-table">
           <thead>
             <tr>
-              <th style={{ width: '8%' }}>#</th>
-              <th style={{ width: '42%' }}>Item Description</th>
-              <th style={{ width: '12%' }}>Qty</th>
-              <th style={{ width: '18%' }}>Unit Price</th>
-              <th style={{ width: '20%' }}>Total</th>
-             </tr>
+              <th className="text-left">Item</th>
+              <th className="text-center">Qty</th>
+              <th className="text-right">Price</th>
+              <th className="text-right">Total</th>
+            </tr>
           </thead>
           <tbody>
             {order.items.map((item, index) => {
               const itemTotal = item.total || item.price * item.quantity;
               return (
                 <tr key={index}>
-                  <td className="text-center">{index + 1}</td>
-                  <td>
-                    <div className="item-name">{item.name}</div>
-                    <div className="item-meta">
-                      <span className={`item-type-indicator ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}></span>
+                  <td className="text-left">
+                    {item.name}
+                    <div className="item-type">
+                      <span className={`type-indicator ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
+                        {item.type === 'Veg' ? '🟢' : '🔴'}
+                      </span>
                       {item.category}
                     </div>
                   </td>
@@ -997,155 +821,130 @@ const MyOrderPage = () => {
           </tbody>
         </table>
 
-        {/* Totals Section */}
-        <div className="totals-section">
+        {/* Divider */}
+        <div className="divider"></div>
+
+        {/* Totals */}
+        <div className="totals">
           <div className="total-row">
-            <span className="total-label">Subtotal:</span>
-            <span className="total-value">₹{formatCurrency(subtotal)}</span>
+            <span>Subtotal:</span>
+            <span>₹{formatCurrency(subtotal)}</span>
           </div>
-          <div className="total-row gst-row">
-            <span className="total-label">
-              GST @ {gstPercentage}%:
-            </span>
-            <span className="total-value">₹{formatCurrency(gst)}</span>
+          <div className="total-row">
+            <span>GST ({gstPercentage}%):</span>
+            <span>₹{formatCurrency(gst)}</span>
           </div>
           <div className="total-row grand-total">
-            <span className="total-label">Grand Total:</span>
-            <span className="total-value">₹{formatCurrency(total)}</span>
+            <span><strong>Grand Total:</strong></span>
+            <span><strong>₹{formatCurrency(total)}</strong></span>
           </div>
         </div>
 
         {/* Amount in Words */}
         <div className="amount-words">
-          <span className="words-label">Amount in words:</span>
-          <span className="words-value">{amountInWords}</span>
+          <span>Amount in words:</span>
+          <span>{amountInWords}</span>
+        </div>
+
+        {/* Thank You Message */}
+        <div className="thank-you">
+          <p>🙏 Thank you for dining with us!</p>
+          <p>😊 Please visit again!</p>
         </div>
 
         {/* Action Buttons */}
         <div className="action-buttons">
-          <button 
-            className="action-btn add-items-btn"
-            onClick={() => setShowAddItemsModal(true)}
-          >
+          <button className="action-btn add-btn" onClick={() => setShowAddItemsModal(true)}>
             <FaPlus /> Add Items
           </button>
-          
-          <button 
-            className="action-btn print-btn"
-            onClick={handleDownloadPDF}
-          >
+          <button className="action-btn print-btn" onClick={handleDownloadPDF}>
             <FaDownload /> Download PDF
           </button>
-          
-          <button 
-            className="action-btn share-btn"
-            onClick={() => {
-              const message = `*${restaurant?.restaurantName || 'Restaurant'}*\n` +
-                `Bill No: ${order.billNumber}\n` +
-                `Date: ${order.date}\n` +
-                `Customer: ${order.customerName || 'Guest'}\n` +
-                `Table: ${order.tableNumber || 'Takeaway'}\n` +
-                `Subtotal: ₹${formatCurrency(subtotal)}\n` +
-                `GST @ ${gstPercentage}%: ₹${formatCurrency(gst)}\n` +
-                `*Total: ₹${formatCurrency(total)}*\n\n` +
-                `📍 ${getFullAddress()}\n` +
-                (restaurant?.mobile ? `📞 ${restaurant.mobile}\n` : '') +
-                (restaurant?.gstNumber ? `GST: ${restaurant.gstNumber}\n` : '') +
-                (restaurant?.foodLicense ? `FSSAI: ${restaurant.foodLicense}\n` : '') +
-                `\nThank you for your order!`;
-              const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-              window.open(url, '_blank');
-            }}
-          >
+          <button className="action-btn share-btn" onClick={() => {
+            const message = `*${restaurant?.restaurantName || 'Restaurant'}*\n` +
+              `Bill No: ${order.billNumber}\n` +
+              `Date: ${order.date} | Time: ${order.time}\n` +
+              `Customer: ${order.customerName || 'Guest'}\n` +
+              `Table: ${order.tableNumber || 'Takeaway'}\n` +
+              `--------------------------------\n` +
+              `${order.items.map(item => `${item.name} x${item.quantity} = ₹${(item.price * item.quantity).toFixed(2)}`).join('\n')}\n` +
+              `--------------------------------\n` +
+              `Subtotal: ₹${formatCurrency(subtotal)}\n` +
+              `GST (${gstPercentage}%): ₹${formatCurrency(gst)}\n` +
+              `*Grand Total: ₹${formatCurrency(total)}*\n\n` +
+              `📍 ${getFullAddress()}\n` +
+              (restaurant?.mobile ? `📞 ${restaurant.mobile}\n` : '') +
+              (restaurant?.gstNumber ? `GST: ${restaurant.gstNumber}\n` : '') +
+              `\nThank you for your order!`;
+            const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+          }}>
             <FaWhatsapp /> Share
           </button>
         </div>
-
-        {/* Feedback Section */}
-        {!feedbackSubmitted && (
-          <div className="feedback-section">
-            {!showFeedbackForm ? (
-              <button 
-                className="feedback-btn"
-                onClick={() => setShowFeedbackForm(true)}
-              >
-                📝 Rate Your Experience
-              </button>
-            ) : (
-              <div className="feedback-form-card">
-                <h3>Rate Your Experience</h3>
-                
-                <form onSubmit={handleFeedbackSubmit}>
-                  <div className="rating-category">
-                    <label>Service Quality</label>
-                    <StarRating 
-                      rating={feedbackForm.serviceRating}
-                      onRatingChange={handleStarClick}
-                      category="serviceRating"
-                    />
-                  </div>
-                  
-                  <div className="rating-category">
-                    <label>Food Quality</label>
-                    <StarRating 
-                      rating={feedbackForm.foodRating}
-                      onRatingChange={handleStarClick}
-                      category="foodRating"
-                    />
-                  </div>
-                  
-                  <div className="rating-category">
-                    <label>Cleanliness</label>
-                    <StarRating 
-                      rating={feedbackForm.cleanlinessRating}
-                      onRatingChange={handleStarClick}
-                      category="cleanlinessRating"
-                    />
-                  </div>
-                  
-                  <div className="comments-section">
-                    <textarea
-                      value={feedbackForm.comments}
-                      onChange={(e) => setFeedbackForm(prev => ({...prev, comments: e.target.value}))}
-                      placeholder="Share your thoughts..."
-                      rows={3}
-                    />
-                  </div>
-                  
-                  <div className="feedback-actions">
-                    <button 
-                      type="button" 
-                      className="feedback-cancel-btn"
-                      onClick={() => setShowFeedbackForm(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      type="submit" 
-                      className="feedback-submit-btn"
-                      disabled={submittingFeedback}
-                    >
-                      {submittingFeedback ? 'Submitting...' : 'Submit'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </div>
-        )}
-
-        {feedbackSubmitted && (
-          <div className="thank-you-feedback">
-            <div className="thank-you-icon">🎉</div>
-            <h3>Thank You for Your Feedback!</h3>
-          </div>
-        )}
-        
-        {/* Display Order ID for reference */}
-        <div className="order-id-reference">
-          <small>Order ID: {order._id}</small>
-        </div>
       </div>
+
+      {/* Feedback Section */}
+      {!feedbackSubmitted && (
+        <div className="feedback-section">
+          {!showFeedbackForm ? (
+            <button className="feedback-btn" onClick={() => setShowFeedbackForm(true)}>
+              <FaStar /> Rate Your Experience
+            </button>
+          ) : (
+            <div className="feedback-form">
+              <h3>Rate Your Experience</h3>
+              <form onSubmit={handleFeedbackSubmit}>
+                <div className="rating-group">
+                  <label>Service Quality</label>
+                  <StarRating 
+                    rating={feedbackForm.serviceRating}
+                    onRatingChange={handleStarClick}
+                    category="serviceRating"
+                  />
+                </div>
+                <div className="rating-group">
+                  <label>Food Quality</label>
+                  <StarRating 
+                    rating={feedbackForm.foodRating}
+                    onRatingChange={handleStarClick}
+                    category="foodRating"
+                  />
+                </div>
+                <div className="rating-group">
+                  <label>Cleanliness</label>
+                  <StarRating 
+                    rating={feedbackForm.cleanlinessRating}
+                    onRatingChange={handleStarClick}
+                    category="cleanlinessRating"
+                  />
+                </div>
+                <textarea
+                  value={feedbackForm.comments}
+                  onChange={(e) => setFeedbackForm(prev => ({...prev, comments: e.target.value}))}
+                  placeholder="Share your thoughts..."
+                  rows={3}
+                />
+                <div className="feedback-actions">
+                  <button type="button" className="cancel-btn" onClick={() => setShowFeedbackForm(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="submit-btn" disabled={submittingFeedback}>
+                    {submittingFeedback ? 'Submitting...' : 'Submit'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </div>
+      )}
+
+      {feedbackSubmitted && (
+        <div className="feedback-success">
+          <FaCheckCircle className="success-icon" />
+          <h3>Thank You for Your Feedback!</h3>
+        </div>
+      )}
 
       {/* Add Items Modal */}
       {showAddItemsModal && (
@@ -1160,22 +959,17 @@ const MyOrderPage = () => {
           <div className="add-items-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Items to Bill #{order.billNumber}</h3>
-              <button 
-                className="close-modal-btn"
-                onClick={() => {
-                  setShowAddItemsModal(false);
-                  setNewItems([]);
-                  setSearchTerm('');
-                  setActiveCategory('all');
-                }}
-                disabled={addingItems}
-              >
+              <button className="close-modal-btn" onClick={() => {
+                setShowAddItemsModal(false);
+                setNewItems([]);
+                setSearchTerm('');
+                setActiveCategory('all');
+              }} disabled={addingItems}>
                 <FaTimes />
               </button>
             </div>
 
             <div className="modal-content">
-              {/* Search */}
               <div className="modal-search">
                 <FaSearch className="search-icon" />
                 <input
@@ -1187,104 +981,78 @@ const MyOrderPage = () => {
                 />
               </div>
 
-              {/* Categories */}
               <div className="modal-categories">
                 <button
-                  className={`modal-category-btn ${activeCategory === 'all' ? 'active' : ''}`}
+                  className={`category-chip ${activeCategory === 'all' ? 'active' : ''}`}
                   onClick={() => setActiveCategory('all')}
                 >
                   All ({menuItems.length})
                 </button>
-                
                 {categories.map((category, index) => (
                   <button
                     key={index}
-                    className={`modal-category-btn ${activeCategory === category.toLowerCase() ? 'active' : ''}`}
+                    className={`category-chip ${activeCategory === category.toLowerCase() ? 'active' : ''}`}
                     onClick={() => setActiveCategory(category.toLowerCase())}
                   >
                     {getCategoryDisplayName(category)} 
-                    ({menuItems.filter(item => 
-                      item.category && 
-                      item.category.trim().toLowerCase() === category.toLowerCase()
-                    ).length})
+                    ({menuItems.filter(item => item.category?.trim().toLowerCase() === category.toLowerCase()).length})
                   </button>
                 ))}
               </div>
 
-              {/* Menu Items */}
               <div className="modal-items-grid">
                 {filteredItems.length > 0 ? (
                   filteredItems.map(item => {
                     const quantity = getItemQuantity(item._id);
-                    
                     return (
-                      <div key={item._id} className="modal-item-card">
-                        <div className="modal-item-image-container">
+                      <div key={item._id} className="menu-item-card">
+                        <div className="item-image-container">
                           {!imageErrors[item._id] ? (
                             <img
                               src={getImageUrl(item.image)}
                               alt={item.name}
-                              className="modal-item-image"
+                              className="item-image"
                               onError={() => handleImageError(item._id)}
                             />
                           ) : (
-                            <div className="modal-image-fallback">
-                              <span>{item.name.charAt(0)}</span>
-                            </div>
+                            <div className="image-fallback">{item.name.charAt(0)}</div>
                           )}
-                          <span className={`modal-item-type-badge ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
+                          <span className={`item-type ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
                             {item.type === 'Veg' ? '🟢' : '🔴'}
                           </span>
                         </div>
-                        
-                        <div className="modal-item-info">
+                        <div className="item-info">
                           <h4>{item.name}</h4>
-                          <div className="modal-item-meta">
-                            <span className="modal-item-category">{item.category}</span>
-                            <span className="modal-item-price">₹{item.price.toFixed(2)}</span>
+                          <div className="item-meta-row">
+                            <span className="item-category">{item.category}</span>
+                            <span className="item-price">₹{item.price.toFixed(2)}</span>
                           </div>
                         </div>
-                        
-                        <div className="modal-item-actions">
-                          <button 
-                            onClick={() => removeMenuItemFromOrder(item._id)}
-                            className="modal-qty-btn"
-                            disabled={quantity === 0 || addingItems}
-                          >
-                            −
-                          </button>
-                          <span className="modal-qty-display">{quantity}</span>
-                          <button 
-                            onClick={() => addMenuItemToOrder(item)}
-                            className="modal-qty-btn"
-                            disabled={addingItems}
-                          >
-                            +
-                          </button>
+                        <div className="item-actions">
+                          <button onClick={() => removeMenuItemFromOrder(item._id)} className="qty-btn" disabled={quantity === 0 || addingItems}>−</button>
+                          <span className="qty-display">{quantity}</span>
+                          <button onClick={() => addMenuItemToOrder(item)} className="qty-btn" disabled={addingItems}>+</button>
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <div className="no-modal-items">
-                    <p>No items found</p>
-                  </div>
+                  <div className="no-items">No items found</div>
                 )}
               </div>
 
-              {/* New Items Summary */}
               {newItems.length > 0 && (
                 <div className="new-items-summary">
                   <h4>Items to Add:</h4>
                   {newItems.map((item, index) => (
-                    <div key={index} className="new-item">
+                    <div key={index} className="new-item-row">
                       <span>{item.name} × {item.quantity}</span>
                       <span>₹{formatCurrency(item.total)}</span>
                     </div>
                   ))}
-                  <div className="new-items-total">
+                  <div className="new-total">
                     <span>Additional Total:</span>
-                    <span>₹{formatCurrency(newItemsTotal)}</span>
+                    <span>₹{formatCurrency(getNewItemsTotal())}</span>
                   </div>
                   <div className="gst-note">
                     <FaPercent /> GST @ {gstPercentage}% will be applied
@@ -1292,25 +1060,16 @@ const MyOrderPage = () => {
                 </div>
               )}
 
-              {/* Modal Actions */}
               <div className="modal-actions">
-                <button 
-                  onClick={() => {
-                    setShowAddItemsModal(false);
-                    setNewItems([]);
-                    setSearchTerm('');
-                    setActiveCategory('all');
-                  }}
-                  className="modal-cancel-btn"
-                  disabled={addingItems}
-                >
+                <button onClick={() => {
+                  setShowAddItemsModal(false);
+                  setNewItems([]);
+                  setSearchTerm('');
+                  setActiveCategory('all');
+                }} className="modal-cancel" disabled={addingItems}>
                   Cancel
                 </button>
-                <button 
-                  onClick={handleSaveNewItems}
-                  className="modal-confirm-btn"
-                  disabled={newItems.length === 0 || addingItems}
-                >
+                <button onClick={handleSaveNewItems} className="modal-confirm" disabled={newItems.length === 0 || addingItems}>
                   {addingItems ? 'Adding...' : `Add ${newItems.length} Item${newItems.length !== 1 ? 's' : ''}`}
                 </button>
               </div>
