@@ -7,8 +7,6 @@ import {
   FaPlus, 
   FaSearch, 
   FaTimes, 
-  FaPrint, 
-  FaMoneyBillWave, 
   FaStar,
   FaArrowLeft,
   FaWhatsapp,
@@ -16,15 +14,11 @@ import {
   FaIdCard,
   FaUtensils,
   FaCheckCircle,
-  FaBuilding,
   FaDownload,
-  FaShare,
   FaMapMarkerAlt,
   FaPhone,
   FaEnvelope,
-  FaSignOutAlt,
-  FaUserCircle,
-  FaHome
+  FaSignOutAlt
 } from 'react-icons/fa';
 import './MyOrderPage.css';
 
@@ -52,8 +46,6 @@ const MyOrderPage = () => {
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [imageErrors, setImageErrors] = useState({});
-  const [userName, setUserName] = useState('');
-  const [userRole, setUserRole] = useState('');
 
   const getImageUrl = (imageName) => {
     if (!imageName) return '/placeholder.jpg';
@@ -74,13 +66,6 @@ const MyOrderPage = () => {
     comments: '',
     orderId: ''
   });
-
-  useEffect(() => {
-    const role = localStorage.getItem('userRole') || 'guest';
-    const name = localStorage.getItem('userName') || 'Guest';
-    setUserRole(role);
-    setUserName(name);
-  }, []);
 
   const fetchOrderFromBackend = async () => {
     try {
@@ -736,8 +721,15 @@ const MyOrderPage = () => {
 
   return (
     <div className="bill-container">
-      {/* Header with Back Button */}
-     
+      {/* Header Bar */}
+      <div className="bill-header-bar">
+        <button className="back-button" onClick={handleGoBackToMenu}>
+          <FaArrowLeft /> Back to Menu
+        </button>
+        <button className="logout-button" onClick={handleLogout}>
+          <FaSignOutAlt /> Logout
+        </button>
+      </div>
 
       {/* Main Bill Card */}
       <div className="bill-card">
@@ -768,58 +760,55 @@ const MyOrderPage = () => {
 
         {/* Bill Info */}
         <div className="bill-info">
-          <div className="bill-number">Bill No: {order.billNumber}</div>
-          <div className="bill-date">Date: {order.date} | Time: {order.time}</div>
+          <span className="bill-number">Bill No: {order.billNumber}</span>
+          <span>Date: {order.date}</span>
+          <span>Time: {order.time}</span>
         </div>
 
         {/* Customer Info */}
         <div className="customer-info">
-          <div>Customer: {order.customerName || 'Guest'}</div>
-          <div>Table: {order.tableNumber || 'Takeaway'}</div>
+          <span>Customer: {order.customerName || 'Guest'}</span>
+          <span>Table: {order.tableNumber || 'Takeaway'}</span>
         </div>
 
         {/* GST Info */}
         <div className="gst-info">
-          {restaurant?.gstNumber && <div>GSTIN: {formatGSTNumber(restaurant.gstNumber)}</div>}
-          <div>GST Rate: {gstPercentage}%</div>
-          {restaurant?.foodLicense && <div>FSSAI: {restaurant.foodLicense}</div>}
+          {restaurant?.gstNumber && <span>GSTIN: {formatGSTNumber(restaurant.gstNumber)}</span>}
+          <span>GST Rate: {gstPercentage}%</span>
+          {restaurant?.foodLicense && <span>FSSAI: {restaurant.foodLicense}</span>}
         </div>
 
         {/* Divider */}
         <div className="divider"></div>
 
-        {/* Items Table */}
-        <table className="items-table">
-          <thead>
-            <tr>
-              <th className="text-left">Item</th>
-              <th className="text-center">Qty</th>
-              <th className="text-right">Price</th>
-              <th className="text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items.map((item, index) => {
-              const itemTotal = item.total || item.price * item.quantity;
-              return (
-                <tr key={index}>
-                  <td className="text-left">
-                    {item.name}
-                    <div className="item-type">
-                      <span className={`type-indicator ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
-                        {item.type === 'Veg' ? '🟢' : '🔴'}
-                      </span>
-                      {item.category}
-                    </div>
-                  </td>
-                  <td className="text-center">{item.quantity}</td>
-                  <td className="text-right">₹{formatCurrency(item.price)}</td>
-                  <td className="text-right">₹{formatCurrency(itemTotal)}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* Items Container - Div based layout for better mobile */}
+        <div className="items-container">
+          <div className="items-header">
+            <div className="item-details">Item</div>
+            <div className="item-qty">Qty</div>
+            <div className="item-price">Price</div>
+            <div className="item-total">Total</div>
+          </div>
+          {order.items.map((item, index) => {
+            const itemTotal = item.total || item.price * item.quantity;
+            return (
+              <div key={index} className="item-row">
+                <div className="item-details">
+                  <div className="item-name">{item.name}</div>
+                  <div className="item-meta">
+                    <span className={`item-type-badge ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
+                      {item.type === 'Veg' ? '🟢 Veg' : '🔴 Non-Veg'}
+                    </span>
+                    <span className="item-category">{item.category}</span>
+                  </div>
+                </div>
+                <div className="item-qty">{item.quantity}</div>
+                <div className="item-price">₹{formatCurrency(item.price)}</div>
+                <div className="item-total">₹{formatCurrency(itemTotal)}</div>
+              </div>
+            );
+          })}
+        </div>
 
         {/* Divider */}
         <div className="divider"></div>
