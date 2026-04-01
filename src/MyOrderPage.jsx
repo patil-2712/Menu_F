@@ -782,33 +782,55 @@ const MyOrderPage = () => {
         <div className="divider"></div>
 
         {/* Items Container - Div based layout for better mobile */}
-        <div className="items-container">
-          <div className="items-header">
-            <div className="item-details">Item</div>
-            <div className="item-qty">Qty</div>
-            <div className="item-price">Price</div>
-            <div className="item-total">Total</div>
+        {/* Items Container */}
+<div className="items-container">
+  {/* Desktop Header - hidden on mobile */}
+  <div className="items-header">
+    <div className="item-details">Item</div>
+    <div className="item-qty">Qty</div>
+    <div className="item-price">Price</div>
+    <div className="item-total">Total</div>
+  </div>
+  
+  {order.items.map((item, index) => {
+    const itemTotal = item.total || item.price * item.quantity;
+    return (
+      <div key={index} className="item-row">
+        {/* Item Name and Details */}
+        <div className="item-details">
+          <div className="item-name">{item.name}</div>
+          <div className="item-meta">
+            <span className={`item-type-badge ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
+              {item.type === 'Veg' ? '🟢 Veg' : '🔴 Non-Veg'}
+            </span>
+            <span className="item-category">{item.category}</span>
           </div>
-          {order.items.map((item, index) => {
-            const itemTotal = item.total || item.price * item.quantity;
-            return (
-              <div key={index} className="item-row">
-                <div className="item-details">
-                  <div className="item-name">{item.name}</div>
-                  <div className="item-meta">
-                    <span className={`item-type-badge ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
-                      {item.type === 'Veg' ? '🟢 Veg' : '🔴 Non-Veg'}
-                    </span>
-                    <span className="item-category">{item.category}</span>
-                  </div>
-                </div>
-                <div className="item-qty">{item.quantity}</div>
-                <div className="item-price">₹{formatCurrency(item.price)}</div>
-                <div className="item-total">₹{formatCurrency(itemTotal)}</div>
-              </div>
-            );
-          })}
         </div>
+        
+        {/* Desktop View - Qty, Price, Total */}
+        <div className="item-qty">{item.quantity}</div>
+        <div className="item-price">₹{formatCurrency(item.price)}</div>
+        <div className="item-total">₹{formatCurrency(itemTotal)}</div>
+        
+        {/* Mobile View - Qty, Price, Total as cards */}
+        <div className="item-details-row">
+          <div className="item-detail-item">
+            <span className="item-detail-label">Qty</span>
+            <span className="item-detail-value item-qty-value">{item.quantity}</span>
+          </div>
+          <div className="item-detail-item">
+            <span className="item-detail-label">Price</span>
+            <span className="item-detail-value item-price-value">₹{formatCurrency(item.price)}</span>
+          </div>
+          <div className="item-detail-item">
+            <span className="item-detail-label">Total</span>
+            <span className="item-detail-value item-total-value">₹{formatCurrency(itemTotal)}</span>
+          </div>
+        </div>
+      </div>
+    );
+  })}
+</div>
 
         {/* Divider */}
         <div className="divider"></div>
