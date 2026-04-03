@@ -303,102 +303,100 @@ const MyOrderPage = () => {
     });
   };
 
-  const handleSaveNewItems = async () => {
-    if (newItems.length === 0) {
-      setShowAddItemsModal(false);
-      return;
-    }
+const handleSaveNewItems = async () => {
+  if (newItems.length === 0) {
+    setShowAddItemsModal(false);
+    return;
+  }
 
-    setAddingItems(true);
+  setAddingItems(true);
+  
+  try {
+    console.log('🔄 Adding new items to existing order...');
+    
+    // Get restaurantCode from localStorage or restaurant object
+    const restaurantCode = restaurant?.restaurantCode || localStorage.getItem('restaurantCode');
+    const billNumber = order.billNumber;
+    
+    if (!restaurantCode) {
+      throw new Error('Restaurant code not found');
+    }
+    
+    // Prepare items to add
+    const itemsToAdd = newItems.map(newItem => ({
+      name: newItem.name,
+      price: newItem.price,
+      quantity: newItem.quantity,
+      category: newItem.category,
+      type: newItem.type,
+      gstPercentage: newItem.gstPercentage || gstPercentage,
+      itemId: newItem.itemId
+    }));
+    
+    // Add items one by one using the add-item endpoint
+    for (const item of itemsToAdd) {
+      console.log(`Adding item: ${item.name} x${item.quantity}`);
+      
+      const response = await axios.post(
+        `${API_URL}/api/order/${restaurantCode}/${billNumber}/items`,
+        item,
+        {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000
+        }
+      );
+      
+      if (!response.data.success) {
+        throw new Error(`Failed to add item: ${item.name}`);
+      }
+    }
+    
+    // IMPORTANT: Fetch the updated order from backend
+    // First try by _id, then by bill number
+    let updatedOrderData = null;
     
     try {
-      console.log('🔄 Adding new items to existing order...');
-      
-      const existingItemsMap = {};
-      order.items.forEach(item => {
-        existingItemsMap[item.itemId] = item;
-      });
-      
-      const combinedItems = [];
-      
-      order.items.forEach(item => {
-        combinedItems.push({
-          itemId: item.itemId,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          category: item.category,
-          type: item.type,
-          gstPercentage: item.gstPercentage,
-          total: item.total || item.price * item.quantity,
-          itemStatus: item.itemStatus
-        });
-      });
-      
-      newItems.forEach(newItem => {
-        if (existingItemsMap[newItem.itemId]) {
-          const existingItemIndex = combinedItems.findIndex(
-            item => item.itemId === newItem.itemId
-          );
-          if (existingItemIndex >= 0) {
-            combinedItems[existingItemIndex].quantity += newItem.quantity;
-            combinedItems[existingItemIndex].total = 
-              combinedItems[existingItemIndex].price * 
-              combinedItems[existingItemIndex].quantity;
-          }
-        } else {
-          combinedItems.push({
-            itemId: newItem.itemId,
-            name: newItem.name,
-            price: newItem.price,
-            quantity: newItem.quantity,
-            category: newItem.category,
-            type: newItem.type,
-            gstPercentage: newItem.gstPercentage || order.gstPercentage || restaurant?.gstPercentage || 18,
-            total: newItem.total,
-            itemStatus: newItem.itemStatus || 'pending'
-          });
-        }
-      });
-      
-      const newSubtotal = combinedItems.reduce((sum, item) => 
-        sum + (item.price * item.quantity), 0
-      );
-      const newGstAmount = newSubtotal * (order.gstPercentage || restaurant?.gstPercentage || 18) / 100;
-      const newTotal = newSubtotal + newGstAmount;
-
-      const updatePayload = {
-        items: combinedItems,
-        subtotal: newSubtotal,
-        gstAmount: newGstAmount,
-        total: newTotal
-      };
-
-      const response = await axios.put(
-        `${API_URL}/api/order/${order._id}`,
-        updatePayload
-      );
-
-      const updatedOrder = response.data.order || response.data;
-      
-      setOrder(updatedOrder);
-      localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(updatedOrder));
-      
-      setShowAddItemsModal(false);
-      setNewItems([]);
-      setSearchTerm('');
-      setActiveCategory('all');
-      
-      alert('✅ New items added to your order successfully!');
-      
+      // Try fetching by order ID
+      const orderResponse = await axios.get(`${API_URL}/api/order/${order._id}`);
+      if (orderResponse.data) {
+        updatedOrderData = orderResponse.data;
+      }
     } catch (err) {
-      console.error('❌ Error updating order:', err);
-      alert(`Failed to add items: ${err.response?.data?.error || err.message}`);
-    } finally {
-      setAddingItems(false);
+      console.log('Fetch by _id failed, trying by bill number...');
+      // Try fetching by restaurant code and bill number
+      const orderResponse = await axios.get(
+        `${API_URL}/api/order/${restaurantCode}/${billNumber}`
+      );
+      if (orderResponse.data) {
+        updatedOrderData = orderResponse.data;
+      }
     }
-  };
-
+    
+    if (updatedOrderData) {
+      console.log('✅ Updated order fetched:', updatedOrderData);
+      setOrder(updatedOrderData);
+      // Update localStorage
+      localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(updatedOrderData));
+    } else {
+      // If fetch fails, refresh the page data
+      await fetchOrderFromBackend();
+      await fetchRestaurantDetails();
+    }
+    
+    setShowAddItemsModal(false);
+    setNewItems([]);
+    setSearchTerm('');
+    setActiveCategory('all');
+    
+    alert('✅ New items added to your order successfully!');
+    
+  } catch (err) {
+    console.error('❌ Error updating order:', err);
+    alert(`Failed to add items: ${err.response?.data?.error || err.message}`);
+  } finally {
+    setAddingItems(false);
+  }
+};
   const StarRating = ({ rating, onRatingChange, category }) => {
     return (
       <div className="star-rating">
