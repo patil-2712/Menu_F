@@ -1074,28 +1074,30 @@ const Border = () => {
                                   </div>
                                 </div>
 
-                                <table className="items-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Item</th>
-                                      <th>Qty</th>
-                                      <th>Price</th>
-                                      <th>GST%</th>
-                                      <th>Total</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {order.items.map((item, i) => (
-                                      <tr key={i}>
-                                        <td className="item-name">{item.name}</td>
-                                        <td className="item-qty">{item.quantity}</td>
-                                        <td className="item-price">₹{item.price.toFixed(2)}</td>
-                                        <td className="item-gst">{item.gstPercentage}%</td>
-                                        <td className="item-total">₹{(item.price * item.quantity).toFixed(2)}</td>
+                                <div className="items-table-container">
+                                  <table className="items-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Price</th>
+                                        <th>GST%</th>
+                                        <th>Total</th>
                                       </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                                    </thead>
+                                    <tbody>
+                                      {order.items.map((item, i) => (
+                                        <tr key={i}>
+                                          <td className="item-name">{item.name}</td>
+                                          <td className="item-qty">{item.quantity}</td>
+                                          <td className="item-price">₹{item.price.toFixed(2)}</td>
+                                          <td className="item-gst">{item.gstPercentage}%</td>
+                                          <td className="item-total">₹{(item.price * item.quantity).toFixed(2)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
 
                                 <div className="totals-section">
                                   <div className="total-row">
