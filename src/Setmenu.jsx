@@ -154,27 +154,34 @@ function Setmenu() {
   };
 
   // Handle image upload
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!validTypes.includes(file.type)) {
-        setError('Please select a valid image file (JPEG, PNG, GIF, WebP)');
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Image size should be less than 5MB');
-        return;
-      }
-
-      setForm(prev => ({
-        ...prev,
-        image: file,
-        imagePreview: URL.createObjectURL(file)
-      }));
+ const handleImageChange = (e) => {
+  const file = e.target.files[0];
+  console.log("File selected:", file); // Debug log
+  
+  if (file) {
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please select a valid image file (JPEG, PNG, GIF, WebP)');
+      return;
     }
-  };
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size should be less than 5MB');
+      return;
+    }
+
+    // Create preview
+    const previewUrl = URL.createObjectURL(file);
+    
+    setForm(prev => ({
+      ...prev,
+      image: file,
+      imagePreview: previewUrl
+    }));
+    
+    console.log("Image preview created:", previewUrl);
+  }
+};
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -671,22 +678,42 @@ function Setmenu() {
           </div>
           
           <div className="form-row">
-            <div className="form-group image-group">
-              <label>Dish Image {editingIndex === null && '*'}</label>
-              <div className="image-upload-container">
-                <input id="imageInput" type="file" accept="image/*" onChange={handleImageChange} className="file-input" required={editingIndex === null} />
-                <div className="file-input-label"><FaImage /> Choose Image</div>
-                {form.imagePreview && (
-                  <div className="image-preview">
-                    <img src={form.imagePreview} alt="Preview" className="preview-image" />
-                    <button type="button" className="remove-image-btn" onClick={() => setForm(prev => ({ ...prev, image: null, imagePreview: null }))}>
-                      <FaTimes />
-                    </button>
-                  </div>
-                )}
-              </div>
-              <small>Supported: JPG, PNG, GIF, WebP (max 5MB)</small>
-            </div>
+           <div className="form-group image-group">
+  <label>Dish Image {editingIndex === null && <span className="required-star">*</span>}</label>
+  <div className="image-upload-container">
+    {/* Hidden file input */}
+    <input 
+      id="imageInput" 
+      type="file" 
+      accept="image/jpeg,image/png,image/gif,image/webp" 
+      onChange={handleImageChange}
+      style={{ display: 'none' }}
+    />
+    
+    {/* Label that triggers file input - No JavaScript needed! */}
+    <label htmlFor="imageInput" className="file-input-label">
+      <FaImage /> {form.imagePreview ? 'Change Image' : 'Select Image from Computer'}
+    </label>
+    
+    {form.imagePreview && (
+      <div className="image-preview">
+        <img src={form.imagePreview} alt="Preview" className="preview-image" />
+        <button 
+          type="button" 
+          className="remove-image-btn" 
+          onClick={() => {
+            setForm(prev => ({ ...prev, image: null, imagePreview: null }));
+            const fileInput = document.getElementById('imageInput');
+            if (fileInput) fileInput.value = '';
+          }}
+        >
+          <FaTimes />
+        </button>
+      </div>
+    )}
+  </div>
+  <small>Click "Select Image from Computer" to open file browser</small>
+</div>
           </div>
 
           <button type="submit" className="submit-btn" disabled={!backendConnected}>
