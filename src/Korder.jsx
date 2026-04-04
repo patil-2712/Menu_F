@@ -1,3 +1,4 @@
+// Korder.jsx - Complete fixed version with proper colors and always visible items
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -25,7 +26,10 @@ import {
   FaClipboardList,
   FaStar,
   FaChartBar,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaHourglassHalf,
+  FaFire,
+  FaCheckDouble
 } from 'react-icons/fa';
 import './Korder.css';
 
@@ -45,8 +49,6 @@ const Korder = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [updatingItems, setUpdatingItems] = useState({});
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [userName, setUserName] = useState('');
-  const [userRole, setUserRole] = useState('');
   const [expandedSections, setExpandedSections] = useState({
     stats: true,
     orders: true
@@ -60,11 +62,7 @@ const Korder = () => {
   const checkAuthentication = () => {
     const userRole = localStorage.getItem('userRole');
     const token = localStorage.getItem('token');
-    const name = localStorage.getItem('userName') || 'Kitchen Staff';
     const storedRestaurantSlug = localStorage.getItem('restaurantSlug');
-    
-    setUserRole(userRole);
-    setUserName(name);
     
     if (!token) {
       setError('Session expired. Please login again.');
@@ -155,7 +153,6 @@ const Korder = () => {
       if (response.data && response.data.success) {
         const processedOrders = response.data.orders.map(order => ({
           ...order,
-          expanded: true,
           formattedDate: formatDate(order.date),
           items: Array.isArray(order.items) ? order.items.map(item => ({
             ...item,
@@ -263,17 +260,6 @@ const Korder = () => {
     }
   };
 
-  const getStatusPriority = (status) => {
-    const statusLower = (status || '').toLowerCase();
-    switch (statusLower) {
-      case 'pending': return 1;
-      case 'preparing': return 2;
-      case 'completed': return 3;
-      case 'cancelled': return 4;
-      default: return 5;
-    }
-  };
-
   const getStatusClass = (status) => {
     const statusLower = (status || '').toLowerCase();
     switch (statusLower) {
@@ -295,25 +281,6 @@ const Korder = () => {
     }
   };
 
-  const toggleOrderExpansion = (orderId) => {
-    setOrders(prevOrders =>
-      prevOrders.map(order =>
-        order._id === orderId 
-          ? { ...order, expanded: !order.expanded }
-          : order
-      )
-    );
-  };
-
-  const toggleAllExpansions = (expand) => {
-    setOrders(prevOrders =>
-      prevOrders.map(order => ({
-        ...order,
-        expanded: expand
-      }))
-    );
-  };
-
   const filteredOrders = orders.filter(order => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -326,10 +293,10 @@ const Korder = () => {
   });
 
   const sortedOrders = [...filteredOrders].sort((a, b) => {
-    const statusA = getStatusPriority(a.status);
-    const statusB = getStatusPriority(b.status);
+    const statusA = a.status === 'pending' ? 1 : a.status === 'preparing' ? 2 : 3;
+    const statusB = b.status === 'pending' ? 1 : b.status === 'preparing' ? 2 : 3;
     if (statusA !== statusB) return statusA - statusB;
-    return a.billNumber - b.billNumber;
+    return b.billNumber - a.billNumber;
   });
 
   const statistics = {
@@ -353,32 +320,6 @@ const Korder = () => {
     }));
   };
 
-  // Navigation Functions - Complete with all pages
-  const handleNavigateToAdmin = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/admin`);
-  };
-
-  const handleNavigateToAnalytics = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/analytics`);
-  };
-
-  const handleNavigateToRecords = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/records`);
-  };
-
-  const handleNavigateToFeedback = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/feedback`);
-  };
-
-  const handleNavigateToDashboard = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/dashboard`);
-  };
-
   const handleNavigateToSetMenu = () => {
     setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/setmenu`);
@@ -399,25 +340,13 @@ const Korder = () => {
     navigate(`/${restaurantSlug}/totalbill`);
   };
   
-  // FIXED: Immediate logout without refresh needed
   const handleLogout = () => {
-    console.log("🔓 Logging out from Korder...");
-    
-    // Clear auto-refresh interval
     if (autoRefreshInterval) {
       clearInterval(autoRefreshInterval);
     }
-    
-    // Clear all localStorage
     localStorage.clear();
-    
-    // Clear sessionStorage if any
     sessionStorage.clear();
-    
-    // Force immediate navigation with replace
     navigate("/", { replace: true });
-    
-    // Hard reload to ensure complete cleanup
     setTimeout(() => {
       window.location.href = "/";
     }, 50);
@@ -427,7 +356,6 @@ const Korder = () => {
     fetchKitchenOrders();
   };
 
-  // Navigation items for mobile - Complete with all pages
   const navItems = [
     { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
     { icon: FaUtensils, label: 'Set Menu', action: handleNavigateToSetMenu }
@@ -498,17 +426,14 @@ const Korder = () => {
         </div>
       </div>
 
-      {/* Desktop Navigation Tabs - Complete with all pages */}
+      {/* Desktop Navigation Tabs */}
       <div className="navigation-tabs desktop-only">
-       
-       <button className="nav-tab active" onClick={handleNavigateToKorder}>
+        <button className="nav-tab active" onClick={handleNavigateToKorder}>
           <FaClipboardList /> KOT
         </button>
         <button className="nav-tab" onClick={handleNavigateToSetMenu}>
           <FaUtensils /> Set Menu
         </button>
-       
-        
       </div>
 
       {/* Error Display */}
@@ -558,13 +483,6 @@ const Korder = () => {
                 <p className="stat-number">{statistics.completedItems}</p>
               </div>
             </div>
-            <div className="stat-card total-stat">
-              <div className="stat-icon">🍽️</div>
-              <div className="stat-content">
-                <h3>Total Items</h3>
-                <p className="stat-number">{statistics.totalItems}</p>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -612,25 +530,13 @@ const Korder = () => {
         </div>
       </div>
 
-      {/* Orders Section */}
+      {/* Orders Section - Items Always Visible */}
       <div className="summary-section">
         <div className="section-header" onClick={() => toggleSection('orders')}>
           <h2><FaClipboardList /> Active Orders</h2>
-          <div className="header-actions">
-            {orders.length > 0 && (
-              <>
-                <button className="action-small-btn" onClick={() => toggleAllExpansions(true)}>
-                  Expand All
-                </button>
-                <button className="action-small-btn" onClick={() => toggleAllExpansions(false)}>
-                  Collapse All
-                </button>
-              </>
-            )}
-            <button className="expand-toggle">
-              {expandedSections.orders ? <FaChevronUp /> : <FaChevronDown />}
-            </button>
-          </div>
+          <button className="expand-toggle">
+            {expandedSections.orders ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
         </div>
         
         {expandedSections.orders && (
@@ -647,126 +553,150 @@ const Korder = () => {
               </div>
             ) : (
               <div className="orders-grid">
-                {sortedOrders.map(order => (
-                  <div key={order._id} className="order-card">
-                    <div 
-                      className="order-header"
-                      onClick={() => toggleOrderExpansion(order._id)}
-                    >
-                      <div className="order-info">
-                        <div className="order-bill">
-                          <span className="bill-label">Bill #</span>
-                          <span className="bill-number">{order.billNumber}</span>
+                {sortedOrders.map(order => {
+                  const completedCount = order.items.filter(item => item.itemStatus === 'completed').length;
+                  const totalCount = order.items.length;
+                  const progressPercent = (completedCount / totalCount) * 100;
+                  
+                  return (
+                    <div key={order._id} className={`order-card ${getStatusClass(order.status)}`}>
+                      {/* Order Header */}
+                      <div className="order-header">
+                        <div className="order-header-left">
+                          <div className="order-bill-info">
+                            <span className="bill-label">Bill #</span>
+                            <span className="bill-number">{order.billNumber}</span>
+                          </div>
+                          <div className="order-meta">
+                            <span className="order-time">
+                              <FaClock /> {formatTime(order.time)}
+                            </span>
+                            <span className="order-customer">
+                              {order.customerName || 'Walk-in'}
+                            </span>
+                            {order.tableNumber && (
+                              <span className="table-badge">
+                                Table {order.tableNumber}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="order-time">
-                          <FaClock /> {formatTime(order.time)}
-                        </div>
-                        <div className="order-customer">
-                          <span>{order.customerName || 'Walk-in'}</span>
-                          {order.tableNumber && <span className="table-number">Table {order.tableNumber}</span>}
+                        <div className="order-header-right">
+                          <div className={`order-status-badge ${getStatusClass(order.status)}`}>
+                            {order.status === 'pending' && <FaHourglassHalf />}
+                            {order.status === 'preparing' && <FaFire />}
+                            {order.status === 'completed' && <FaCheckCircle />}
+                            <span>
+                              {order.status === 'pending' && ' Pending'}
+                              {order.status === 'preparing' && ' Preparing'}
+                              {order.status === 'completed' && ' Completed'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="order-status">
-                        <span className={`status-badge ${getStatusClass(order.status)}`}>
-                          {order.status === 'pending' && '⏳ Pending'}
-                          {order.status === 'preparing' && '👨‍🍳 Preparing'}
-                          {order.status === 'completed' && '✅ Completed'}
-                        </span>
-                        <div className="expand-icon">
-                          {order.expanded ? <FaChevronUp /> : <FaChevronDown />}
-                        </div>
-                      </div>
-                    </div>
 
-                    {order.expanded && (
-                      <div className="order-details">
-                        <div className="items-progress">
-                          <div className="progress-text">
-                            {order.items.filter(item => item.itemStatus === 'completed').length} of {order.items.length} items completed
-                          </div>
-                          <div className="progress-bar">
-                            <div 
-                              className="progress-fill"
-                              style={{ 
-                                width: `${(order.items.filter(item => item.itemStatus === 'completed').length / order.items.length) * 100}%` 
-                              }}
-                            ></div>
-                          </div>
+                      {/* Progress Bar */}
+                      <div className="order-progress">
+                        <div className="progress-info">
+                          <span className="progress-text">
+                            {completedCount} of {totalCount} items completed
+                          </span>
+                          <span className="progress-percent">
+                            {Math.round(progressPercent)}%
+                          </span>
                         </div>
-                        
-                        <div className="items-list">
-                          {order.items.map((item) => {
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill"
+                            style={{ width: `${progressPercent}%` }}
+                          ></div>
+                        </div>
+                      </div>
+
+                      {/* Items List - Always Visible */}
+                      <div className="order-items-container">
+                        <div className="items-scrollable">
+                          {order.items.map((item, idx) => {
                             const isUpdating = updatingItems[`${order._id}-${item._id}`];
+                            const itemStatus = item.itemStatus || 'pending';
+                            
                             return (
                               <div 
-                                key={item._id || item.itemId} 
-                                className={`order-item ${getItemStatusClass(item.itemStatus)}`}
+                                key={item._id || idx} 
+                                className={`item-box ${getItemStatusClass(itemStatus)}`}
                               >
-                                <div className="item-details">
-                                  <span className="item-quantity">{item.quantity}x</span>
-                                  <span className="item-name">{item.name}</span>
-                                  <span className="item-status-icon">
-                                    {item.itemStatus === 'completed' ? '✅' : 
-                                     item.itemStatus === 'preparing' ? '👨‍🍳' : '⏳'}
-                                  </span>
-                                </div>
-                                
-                                <div className="item-actions">
-                                  <select
-                                    className={`status-select ${getItemStatusClass(item.itemStatus)}`}
-                                    value={item.itemStatus || 'pending'}
-                                    onChange={(e) => 
-                                      handleIndividualItemStatusChange(order._id, item._id || item.itemId, e.target.value)
-                                    }
-                                    disabled={isUpdating}
-                                  >
-                                    <option value="pending">⏳ Pending</option>
-                                    <option value="preparing">👨‍🍳 Preparing</option>
-                                    <option value="completed">✅ Completed</option>
-                                  </select>
-                                  {isUpdating && <FaSpinner className="spinner-small" />}
-                                </div>
-
-                                {item.note && (
-                                  <div className="item-note">
-                                    📝 {item.note}
+                                <div className="item-box-content">
+                                  <div className="item-info">
+                                    <div className="item-quantity-badge">
+                                      {item.quantity}x
+                                    </div>
+                                    <div className="item-name-details">
+                                      <span className="item-name">{item.name}</span>
+                                      {item.note && (
+                                        <span className="item-note-text">
+                                          📝 {item.note}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="item-status-icon">
+                                      {itemStatus === 'pending' && '⏳'}
+                                      {itemStatus === 'preparing' && '👨‍🍳'}
+                                      {itemStatus === 'completed' && '✅'}
+                                    </div>
                                   </div>
-                                )}
+                                  
+                                  <div className="item-actions">
+                                    <select
+                                      className={`item-status-select ${getItemStatusClass(itemStatus)}`}
+                                      value={itemStatus}
+                                      onChange={(e) => 
+                                        handleIndividualItemStatusChange(order._id, item._id, e.target.value)
+                                      }
+                                      disabled={isUpdating}
+                                    >
+                                      <option value="pending">⏳ Pending</option>
+                                      <option value="preparing">👨‍🍳 Preparing</option>
+                                      <option value="completed">✅ Completed</option>
+                                    </select>
+                                    {isUpdating && <FaSpinner className="spinner-small" />}
+                                  </div>
+                                </div>
                               </div>
                             );
                           })}
                         </div>
-
-                        <div className="order-footer-actions">
+                        
+                        {/* Batch Actions */}
+                        <div className="batch-actions-footer">
                           <button 
-                            className="action-btn preparing-btn"
+                            className="batch-action-btn preparing-btn"
                             onClick={() => {
                               order.items.forEach(item => {
                                 if (item.itemStatus === 'pending') {
-                                  handleIndividualItemStatusChange(order._id, item._id || item.itemId, 'preparing');
+                                  handleIndividualItemStatusChange(order._id, item._id, 'preparing');
                                 }
                               });
                             }}
                           >
-                            Mark All as Preparing
+                            <FaFire /> Mark All as Preparing
                           </button>
                           <button 
-                            className="action-btn completed-btn"
+                            className="batch-action-btn completed-btn"
                             onClick={() => {
                               order.items.forEach(item => {
                                 if (item.itemStatus !== 'completed') {
-                                  handleIndividualItemStatusChange(order._id, item._id || item.itemId, 'completed');
+                                  handleIndividualItemStatusChange(order._id, item._id, 'completed');
                                 }
                               });
                             }}
                           >
-                            Mark All as Completed
+                            <FaCheckDouble /> Mark All as Completed
                           </button>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

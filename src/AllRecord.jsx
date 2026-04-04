@@ -777,9 +777,7 @@ const AllRecord = () => {
                         <td>
                           <div className="customer-info">
                             <strong>{order.customerName || 'Guest'}</strong>
-                            {order.gstNumber && (
-                              <small className="gst-number">GST: {order.gstNumber}</small>
-                            )}
+                           
                           </div>
                         </td>
                         <td className="table-number">{order.tableNumber || '-'}</td>
