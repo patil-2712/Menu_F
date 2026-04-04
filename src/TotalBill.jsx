@@ -604,7 +604,7 @@ const TotalBill = () => {
                       .sort((a, b) => b.billNumber - a.billNumber)
                       .map((order) => (
                         <tr key={order._id}>
-                          <td >
+                          <td className="bill-number">
                             #{order.billNumber}
                            </td>
                           <td>{getStatusBadge(order.status)}</td>
