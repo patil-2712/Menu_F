@@ -543,7 +543,7 @@
 
 .orders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
   gap: 20px;
 }
 
@@ -638,7 +638,7 @@
 .items-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   margin-bottom: 15px;
 }
 
@@ -653,11 +653,41 @@
   background: #f7fafc;
   font-weight: 600;
   color: #4a5568;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Column alignments */
+.items-table th:first-child,
+.items-table td:first-child {
+  text-align: left;
+}
+
+.items-table th:nth-child(2),
+.items-table td:nth-child(2) {
+  text-align: center;
+}
+
+.items-table th:nth-child(3),
+.items-table td:nth-child(3) {
+  text-align: right;
+}
+
+.items-table th:nth-child(4),
+.items-table td:nth-child(4) {
+  text-align: center;
+}
+
+.items-table th:nth-child(5),
+.items-table td:nth-child(5) {
+  text-align: right;
 }
 
 .item-name {
   font-weight: 500;
   color: #2d3748;
+  word-break: break-word;
 }
 
 .item-qty {
@@ -1066,7 +1096,7 @@
   }
   
   .orders-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   }
 }
 
@@ -1120,6 +1150,37 @@
   
   .orders-grid {
     grid-template-columns: 1fr;
+  }
+  
+  /* Mobile: Keep table as table (no boxes) */
+  .items-table {
+    display: table;
+    width: 100%;
+  }
+  
+  .items-table thead {
+    display: table-header-group;
+  }
+  
+  .items-table tbody {
+    display: table-row-group;
+  }
+  
+  .items-table tr {
+    display: table-row;
+  }
+  
+  .items-table th,
+  .items-table td {
+    display: table-cell;
+    padding: 6px 4px;
+    font-size: 0.7rem;
+  }
+  
+  /* Make table scrollable horizontally on mobile */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   .item-row {
@@ -1188,8 +1249,8 @@
   
   .items-table th,
   .items-table td {
-    padding: 6px 4px;
-    font-size: 0.7rem;
+    padding: 4px 3px;
+    font-size: 0.65rem;
   }
 }
 
@@ -1224,3 +1285,4 @@
     border: 1px solid #e2e8f0;
   }
 }
+

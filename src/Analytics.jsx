@@ -180,6 +180,25 @@ const Analytics = () => {
     setOrders([]);
   };
 
+  // FIXED: Immediate logout without refresh needed
+  const handleLogout = () => {
+    console.log("🔓 Logging out from Analytics...");
+    
+    // Clear all localStorage
+    localStorage.clear();
+    
+    // Clear sessionStorage if any
+    sessionStorage.clear();
+    
+    // Force immediate navigation with replace
+    navigate("/", { replace: true });
+    
+    // Hard reload to ensure complete cleanup
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 50);
+  };
+
   // Get available years from orders
   const availableYears = [...new Set(orders.map(order => new Date(order.date).getFullYear()))].sort((a, b) => b - a);
 
@@ -304,11 +323,6 @@ const Analytics = () => {
   const { salesData, topItems, filteredOrders, statusCounts } = processChartData();
 
   // Navigation handlers
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/");
-  };
-
   const handleBackToDashboard = () => {
     navigate(`/${restaurantSlug}/dashboard`);
   };
@@ -327,8 +341,6 @@ const Analytics = () => {
     setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/feedback`);
   };
-
- 
 
   const handleRefresh = () => {
     const token = localStorage.getItem("token");
@@ -394,7 +406,6 @@ const Analytics = () => {
     { icon: FaChartLine, label: 'Analytics', action: handleRefresh },
     { icon: FaDatabase, label: 'Records', action: handleNavigateToRecords },
     { icon: FaEye, label: 'Feedback', action: handleNavigateToFeedback },
-  
   ];
 
   if (!isAuthenticated && loading) {

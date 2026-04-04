@@ -203,8 +203,12 @@ function App() {
   const [initialized, setInitialized] = useState(false);
 
   const logout = () => {
+    console.log("🔓 Logging out from App...");
     localStorage.clear();
+    sessionStorage.clear();
     setToken("");
+    // Force hard redirect
+    window.location.href = "/";
   }
 
   useEffect(() => {

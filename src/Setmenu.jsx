@@ -309,10 +309,23 @@ function Setmenu() {
     if (fileInput) fileInput.value = null;
   };
 
-  // Logout
+  // FIXED: Immediate logout without refresh needed
   const handleLogout = () => {
+    console.log("🔓 Logging out from Setmenu...");
+    
+    // Clear all localStorage
     localStorage.clear();
-    navigate('/');
+    
+    // Clear sessionStorage if any
+    sessionStorage.clear();
+    
+    // Force immediate navigation with replace
+    navigate("/", { replace: true });
+    
+    // Hard reload to ensure complete cleanup
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 50);
   };
 
   // Retry backend connection
@@ -388,8 +401,6 @@ function Setmenu() {
   const navItems = [
     { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
     { icon: FaUtensils, label: 'Set Menu', action: handleNavigateToSetMenu }
-   
-    
   ];
 
   // Initialize component

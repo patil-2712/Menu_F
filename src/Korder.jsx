@@ -1,4 +1,3 @@
-// Korder.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -52,6 +51,7 @@ const Korder = () => {
     stats: true,
     orders: true
   });
+  let autoRefreshInterval = null;
 
   useEffect(() => {
     checkAuthentication();
@@ -94,10 +94,14 @@ const Korder = () => {
 
   useEffect(() => {
     if (restaurantData && autoRefresh) {
-      const interval = setInterval(() => {
+      autoRefreshInterval = setInterval(() => {
         fetchKitchenOrders();
       }, 30000);
-      return () => clearInterval(interval);
+      return () => {
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval);
+        }
+      };
     }
   }, [restaurantData, autoRefresh]);
 
@@ -395,9 +399,28 @@ const Korder = () => {
     navigate(`/${restaurantSlug}/totalbill`);
   };
   
+  // FIXED: Immediate logout without refresh needed
   const handleLogout = () => {
+    console.log("🔓 Logging out from Korder...");
+    
+    // Clear auto-refresh interval
+    if (autoRefreshInterval) {
+      clearInterval(autoRefreshInterval);
+    }
+    
+    // Clear all localStorage
     localStorage.clear();
-    navigate('/');
+    
+    // Clear sessionStorage if any
+    sessionStorage.clear();
+    
+    // Force immediate navigation with replace
+    navigate("/", { replace: true });
+    
+    // Hard reload to ensure complete cleanup
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 50);
   };
 
   const handleRefresh = () => {
@@ -406,10 +429,8 @@ const Korder = () => {
 
   // Navigation items for mobile - Complete with all pages
   const navItems = [
-     { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
+    { icon: FaClipboardList, label: 'KOT', action: handleNavigateToKorder },
     { icon: FaUtensils, label: 'Set Menu', action: handleNavigateToSetMenu }
-   
-    
   ];
 
   const today = new Date();

@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { FaArrowLeft, FaSignInAlt, FaShoppingCart, FaSearch, FaTimes, FaPercent, FaIdCard, FaUtensils } from 'react-icons/fa';
+import { useNavigate, useParams } from 'react-router-dom';
+import { FaShoppingCart, FaSearch, FaTimes, FaUtensils } from 'react-icons/fa';
 import './Publicmenu.css';
 
 const Publicmenu = () => {
   const { restaurantSlug } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   
-  // Get backend URL from environment variable or use Render URL
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   console.log('🔧 Publicmenu using backend:', API_URL);
@@ -30,29 +28,14 @@ const Publicmenu = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [restaurant, setRestaurant] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [isAddingToExistingOrder, setIsAddingToExistingOrder] = useState(false);
-  const [existingOrder, setExistingOrder] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
 
-  // Helper function to get full image URL
   const getImageUrl = (imageName) => {
-    if (!imageName) {
-      return 'https://via.placeholder.com/300x200?text=No+Image';
-    }
-    
-    if (imageName.startsWith('http')) {
-      return imageName;
-    }
-    
-    if (imageName.startsWith('/uploads/')) {
-      return imageName;
-    }
-    
-    if (imageName.startsWith('/')) {
-      return imageName;
-    }
-    
-    return `/uploads/menu/${imageName}`;
+    if (!imageName) return null;
+    if (imageName.startsWith('http')) return imageName;
+    if (imageName.startsWith('/uploads/')) return `${API_URL}${imageName}`;
+    if (imageName.startsWith('/')) return `${API_URL}${imageName}`;
+    return `${API_URL}/uploads/menu/${imageName}`;
   };
 
   const handleImageError = (itemId) => {
@@ -60,27 +43,20 @@ const Publicmenu = () => {
     setImageErrors(prev => ({ ...prev, [itemId]: true }));
   };
 
-  // Test backend connection
   const testBackendConnection = async () => {
     try {
       console.log('Testing backend connection...');
-      
-      // CHANGED: Use full URL with API_URL
-      const response = await axios.get(`${API_URL}/api/test`, { timeout: 3000 });
-      console.log(`✅ Backend reachable at: ${API_URL}/api/test`);
+      await axios.get(`${API_URL}/api/test`, { timeout: 3000 });
+      console.log(`✅ Backend reachable`);
       return true;
-      
     } catch (error) {
       console.error('Connection error:', error.message);
       return false;
     }
   };
 
-  // Fetch restaurant details
   const fetchRestaurantDetails = async () => {
     try {
-      console.log(`Fetching restaurant: ${restaurantSlug}`);
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/restaurant/by-slug/${restaurantSlug}`);
       setRestaurant(response.data);
       return response.data;
@@ -91,12 +67,9 @@ const Publicmenu = () => {
     }
   };
 
-  // Fetch menu items
   const fetchMenuItems = async () => {
     try {
       setLoading(true);
-      console.log(`Fetching menu for: ${restaurantSlug}`);
-      // CHANGED: Use full URL with API_URL
       const response = await axios.get(`${API_URL}/api/menu/restaurant/${restaurantSlug}`);
       
       if (response.data && Array.isArray(response.data)) {
@@ -111,7 +84,6 @@ const Publicmenu = () => {
         const uniqueCategories = [...new Set(processedItems.map(item => item.category).filter(Boolean))];
         setCategories(uniqueCategories);
       }
-      
     } catch (err) {
       console.error('Error fetching menu:', err);
       setError('Failed to load menu');
@@ -120,22 +92,13 @@ const Publicmenu = () => {
     }
   };
 
-  // Clear order when component mounts (for browser back button)
   useEffect(() => {
-    // Clear the current order from localStorage when component mounts
     localStorage.removeItem(`currentOrder_${restaurantSlug}`);
-    
-    // Reset all order-related state
     setOrderItems([]);
     setCustomerName('');
     setTableNumber('');
-    setIsAddingToExistingOrder(false);
-    setExistingOrder(null);
-    
-    console.log('🧹 Cleared order on component mount - starting fresh');
   }, [restaurantSlug]);
 
-  // Initialize
   useEffect(() => {
     const initializePage = async () => {
       if (!restaurantSlug) {
@@ -146,7 +109,7 @@ const Publicmenu = () => {
 
       const isConnected = await testBackendConnection();
       if (!isConnected) {
-        setError('Cannot connect to server. Make sure backend is running.');
+        setError('Cannot connect to server');
         setLoading(false);
         return;
       }
@@ -158,7 +121,6 @@ const Publicmenu = () => {
     initializePage();
   }, [restaurantSlug]);
 
-  // Filter items
   useEffect(() => {
     let result = menuItems;
     
@@ -177,17 +139,14 @@ const Publicmenu = () => {
     setFilteredItems(result);
   }, [activeCategory, searchTerm, menuItems]);
 
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Add to order
   const addToOrder = (item) => {
     setOrderItems(prev => {
       const existingItem = prev.find(i => i._id === item._id);
@@ -201,7 +160,6 @@ const Publicmenu = () => {
     });
   };
 
-  // Remove from order
   const removeFromOrder = (itemId) => {
     setOrderItems(prev =>
       prev.map(item => item._id === itemId
@@ -211,12 +169,10 @@ const Publicmenu = () => {
     );
   };
 
-  // Calculations
   const getTotal = () => orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const getGstAmount = () => (getTotal() * (restaurant?.gstPercentage || 18)) / 100;
   const getGrandTotal = () => getTotal() + getGstAmount();
 
-  // Place order
   const handleOrder = async () => {
     if (!customerName.trim()) {
       setNameError(true);
@@ -265,29 +221,20 @@ const Publicmenu = () => {
         status: 'pending'
       };
 
-      // CHANGED: Use full URL with API_URL
       const response = await axios.post(`${API_URL}/api/order`, orderData);
       
       if (response.status === 201) {
-        // Store in localStorage for the order page
         localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(response.data.order));
-        
-        // Use _id instead of billNumber
         navigate(`/${restaurantSlug}/order/${response.data.order._id}`, { 
-          state: { 
-            order: response.data.order,
-            restaurant: restaurant 
-          } 
+          state: { order: response.data.order, restaurant: restaurant } 
         });
       }
     } catch (error) {
       console.error('Order error:', error);
-      
       let errorMessage = 'Order failed. Please try again.';
       if (error.response) {
         errorMessage = error.response.data.error || error.response.data.message || errorMessage;
       }
-      
       alert(errorMessage);
     } finally {
       setSubmitting(false);
@@ -307,51 +254,33 @@ const Publicmenu = () => {
     setCustomerName('');
     setTableNumber('');
     localStorage.removeItem(`currentOrder_${restaurantSlug}`);
-    setIsAddingToExistingOrder(false);
-    setExistingOrder(null);
   };
 
-  // Get categories for filter
   const allCategories = [
     { id: 'all', name: 'All Items' },
-    ...categories.map(cat => ({ 
-      id: cat.toLowerCase().replace(/\s+/g, '-'), 
-      name: cat 
-    }))
+    ...categories.map(cat => ({ id: cat.toLowerCase().replace(/\s+/g, '-'), name: cat }))
   ];
 
-  // Get item quantity
   const getItemQuantity = (itemId) => {
     const orderItem = orderItems.find(item => item._id === itemId);
     return orderItem ? orderItem.quantity : 0;
   };
 
-  // Render placeholder initials
   const getInitials = (name) => {
     return name ? name.charAt(0).toUpperCase() : '?';
   };
 
   return (
     <div className="luxury-menu">
-      {/* Debug info - remove in production */}
       {import.meta.env.DEV && (
         <div style={{ 
-          position: 'fixed', 
-          bottom: 10, 
-          right: 10, 
-          background: '#333', 
-          color: '#0f0', 
-          padding: '5px 10px', 
-          borderRadius: '5px',
-          fontSize: '12px',
-          zIndex: 9999,
-          fontFamily: 'monospace'
+          position: 'fixed', bottom: 10, right: 10, background: '#333', color: '#0f0', 
+          padding: '5px 10px', borderRadius: '5px', fontSize: '12px', zIndex: 9999, fontFamily: 'monospace'
         }}>
           API: {API_URL}
         </div>
       )}
 
-      {/* Error display */}
       {error && (
         <div className="error-banner">
           <p>{error}</p>
@@ -359,7 +288,6 @@ const Publicmenu = () => {
         </div>
       )}
 
-      {/* Cart Button */}
       {orderItems.length > 0 && (
         <button className="cart-button" onClick={() => setShowOrderSummary(true)}>
           <FaShoppingCart />
@@ -367,22 +295,17 @@ const Publicmenu = () => {
         </button>
       )}
 
-      {/* Header with Restaurant Info */}
       <header className="menu-header">
         <div className="header-content">
-          <h1 className="date ">{restaurant?.restaurantName || 'Loading...'}</h1>
+          <h1>{restaurant?.restaurantName || 'Loading...'}</h1>
           <p className="date">
             {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              month: 'long', 
-              day: 'numeric', 
-              year: 'numeric' 
+              weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
             })}
           </p>
         </div>
       </header>
 
-      {/* Search */}
       <div className="search-container">
         <FaSearch className="search-icon" />
         <input
@@ -399,7 +322,6 @@ const Publicmenu = () => {
         )}
       </div>
 
-      {/* Categories */}
       <nav className="menu-categories">
         {allCategories.map(category => (
           <button
@@ -412,7 +334,6 @@ const Publicmenu = () => {
         ))}
       </nav>
 
-      {/* Menu Items */}
       <main className="menu-items-container">
         {loading && (
           <div className="loading">
@@ -425,26 +346,32 @@ const Publicmenu = () => {
           filteredItems.map(item => {
             const quantity = getItemQuantity(item._id);
             const imageUrl = getImageUrl(item.imageUrl || item.image || item.imagePath);
+            const hasImage = imageUrl && !imageErrors[item._id];
             
             return (
               <div key={item._id} className="menu-item">
-                <div className="item-image-container">
-                  {!imageErrors[item._id] ? (
+                <div className="item-image-wrapper">
+                  {hasImage ? (
                     <img
                       src={imageUrl}
                       alt={item.name}
                       className="item-image"
                       onError={() => handleImageError(item._id)}
+                      loading="lazy"
                     />
                   ) : (
                     <div className="image-fallback">
-                      <span className="fallback-text">{getInitials(item.name)}</span>
+                      <div className="fallback-content">
+                        <FaUtensils className="fallback-icon" />
+                        <span className="fallback-text">{getInitials(item.name)}</span>
+                      </div>
                     </div>
                   )}
-                  <div className={`item-type ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
+                  <div className={`item-type-badge ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
                     {item.type === 'Veg' ? '🟢 Veg' : '🔴 Non-Veg'}
                   </div>
                 </div>
+                
                 <div className="item-details">
                   <div className="item-header">
                     <h3>{item.name}</h3>
@@ -456,13 +383,13 @@ const Publicmenu = () => {
                   <div className="item-actions">
                     <button 
                       onClick={() => removeFromOrder(item._id)} 
-                      className="quantity-btn minus-btn"
+                      className="quantity-btn"
                       disabled={quantity === 0}
                     >
                       −
                     </button>
                     <span className="quantity">{quantity}</span>
-                    <button onClick={() => addToOrder(item)} className="quantity-btn plus-btn">+</button>
+                    <button onClick={() => addToOrder(item)} className="quantity-btn">+</button>
                   </div>
                 </div>
               </div>
@@ -482,34 +409,76 @@ const Publicmenu = () => {
         )}
       </main>
 
-      {/* Order Summary Modal */}
       {showOrderSummary && (
         <div className="order-summary-overlay" onClick={() => setShowOrderSummary(false)}>
           <div className="order-summary" onClick={e => e.stopPropagation()}>
             <div className="summary-header">
-              <h2>
-                <FaShoppingCart /> Your Order
-              </h2>
+              <h2><FaShoppingCart /> Your Order</h2>
               <button className="close-btn" onClick={() => setShowOrderSummary(false)}>
                 <FaTimes />
               </button>
             </div>
             
-            <div className="order-items">
+            <div className="order-summary-content">
               {orderItems.length > 0 ? (
-                orderItems.map(item => (
-                  <div key={item._id} className="order-item">
-                    <div className="item-info">
-                      <span className="item-name">{item.name}</span>
-                      <span className="item-price">₹{item.price} × {item.quantity}</span>
+                <>
+                  <div className="order-items">
+                    {orderItems.map(item => (
+                      <div key={item._id} className="order-item">
+                        <div className="item-info">
+                          <span className="item-name">{item.name}</span>
+                          <span className="item-price">₹{item.price}</span>
+                          <span className="item-quantity-label">× {item.quantity}</span>
+                        </div>
+                        <div className="item-controls">
+                          <button onClick={() => removeFromOrder(item._id)} className="control-btn">−</button>
+                          <span className="item-quantity">{item.quantity}</span>
+                          <button onClick={() => addToOrder(item)} className="control-btn">+</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  
+                  
+                  <div className="order-totals">
+                    <div className="total-row">
+                      <span>Subtotal</span>
+                      <span>₹{getTotal().toFixed(2)}</span>
                     </div>
-                    <div className="item-controls">
-                      <button onClick={() => removeFromOrder(item._id)} className="control-btn">−</button>
-                      <span className="item-quantity">{item.quantity}</span>
-                      <button onClick={() => addToOrder(item)} className="control-btn">+</button>
+                    <div className="total-row">
+                      <span>GST ({restaurant?.gstPercentage || 18}%)</span>
+                      <span>₹{getGstAmount().toFixed(2)}</span>
+                    </div>
+                    <div className="total-row grand-total">
+                      <span>Total (incl. GST)</span>
+                      <span>₹{getGrandTotal().toFixed(2)}</span>
                     </div>
                   </div>
-                ))
+                  
+                  <div className="customer-info">
+                    <input
+                      type="text"
+                      placeholder="Your Name *"
+                      value={customerName}
+                      onChange={(e) => {
+                        setCustomerName(e.target.value);
+                        setNameError(false);
+                      }}
+                      className={nameError ? 'error' : ''}
+                    />
+                    {nameError && <small className="error-text">Please enter your name</small>}
+                    
+                    <input
+                      type="text"
+                      placeholder="Table Number (1-50) *"
+                      value={tableNumber}
+                      onChange={handleTableNumberChange}
+                      className={tableError ? 'error' : ''}
+                    />
+                    {tableError && <small className="error-text">Please enter valid table (1-50)</small>}
+                  </div>
+                </>
               ) : (
                 <div className="empty-order">
                   <p>Your order is empty</p>
@@ -519,85 +488,17 @@ const Publicmenu = () => {
             </div>
             
             {orderItems.length > 0 && (
-              <>
-                {/* GST Info */}
-                {restaurant && (
-                  <div className="gst-summary-card">
-                    {restaurant.gstNumber && (
-                      <div className="gst-info-row">
-                        <span>GST No:</span>
-                        <span className="gst-value">{restaurant.gstNumber}</span>
-                      </div>
-                    )}
-                    {restaurant.foodLicense && (
-                      <div className="gst-info-row">
-                        <span>Food License:</span>
-                        <span className="license-value">{restaurant.foodLicense}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <div className="order-totals">
-                  <div className="total-row">
-                    <span>Subtotal</span>
-                    <span>₹{getTotal().toFixed(2)}</span>
-                  </div>
-                  <div className="total-row gst-row">
-                    <span>
-                      GST ({restaurant?.gstPercentage || 18}%) 
-                      <FaPercent className="gst-icon-small" />
-                    </span>
-                    <span>₹{getGstAmount().toFixed(2)}</span>
-                  </div>
-                  <div className="total-row grand-total">
-                    <span>Total (incl. GST)</span>
-                    <span>₹{getGrandTotal().toFixed(2)}</span>
-                  </div>
-                </div>
-                
-                <div className="customer-info">
-                  <input
-                    type="text"
-                    placeholder="Your Name *"
-                    value={customerName}
-                    onChange={(e) => {
-                      setCustomerName(e.target.value);
-                      setNameError(false);
-                    }}
-                    className={nameError ? 'error' : ''}
-                  />
-                  {nameError && <small className="error-text">Please enter your name</small>}
-                  
-                  <input
-                    type="text"
-                    placeholder="Table Number (1-50) *"
-                    value={tableNumber}
-                    onChange={handleTableNumberChange}
-                    className={tableError ? 'error' : ''}
-                  />
-                  {tableError && <small className="error-text">Please enter valid table (1-50)</small>}
-                </div>
-                
-                <div className="order-actions">
-                  <button 
-                    onClick={handleOrder} 
-                    className="place-order-btn"
-                    disabled={submitting}
-                  >
-                    {submitting ? 'Placing Order...' : 'Place Order'}
-                  </button>
-                  <button onClick={clearOrder} className="clear-order-btn">
-                    Clear Order
-                  </button>
-                </div>
-              </>
+              <div className="order-actions">
+                <button onClick={handleOrder} className="place-order-btn" disabled={submitting}>
+                  {submitting ? 'Placing Order...' : 'Place Order'}
+                </button>
+                <button onClick={clearOrder} className="clear-order-btn">Clear Order</button>
+              </div>
             )}
           </div>
         </div>
       )}
       
-      {/* Mobile toggle */}
       {isMobile && orderItems.length > 0 && !showOrderSummary && (
         <button className="mobile-order-toggle" onClick={() => setShowOrderSummary(true)}>
           <FaShoppingCart /> View Order ({orderItems.reduce((sum, item) => sum + item.quantity, 0)} items)

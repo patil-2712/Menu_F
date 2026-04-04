@@ -719,15 +719,7 @@ const handleSaveNewItems = async () => {
 
   return (
     <div className="bill-container">
-      {/* Header Bar */}
-      <div className="bill-header-bar">
-        <button className="back-button" onClick={handleGoBackToMenu}>
-          <FaArrowLeft /> Back to Menu
-        </button>
-        <button className="logout-button" onClick={handleLogout}>
-          <FaSignOutAlt /> Logout
-        </button>
-      </div>
+      
 
       {/* Main Bill Card */}
       <div className="bill-card">
@@ -798,9 +790,7 @@ const handleSaveNewItems = async () => {
         <div className="item-details">
           <div className="item-name">{item.name}</div>
           <div className="item-meta">
-            <span className={`item-type-badge ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
-              {item.type === 'Veg' ? '🟢 Veg' : '🔴 Non-Veg'}
-            </span>
+           
             <span className="item-category">{item.category}</span>
           </div>
         </div>

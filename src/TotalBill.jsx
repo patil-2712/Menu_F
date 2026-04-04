@@ -329,9 +329,23 @@ const TotalBill = () => {
     navigate(`/${restaurantSlug}/totalbill`);
   };
   
+  // FIXED: Immediate logout without refresh needed
   const handleLogout = () => {
+    console.log("🔓 Logging out from TotalBill...");
+    
+    // Clear all localStorage
     localStorage.clear();
-    navigate('/');
+    
+    // Clear sessionStorage if any
+    sessionStorage.clear();
+    
+    // Force immediate navigation with replace
+    navigate("/", { replace: true });
+    
+    // Hard reload to ensure complete cleanup
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 50);
   };
 
   const handleRefresh = () => {
@@ -592,7 +606,7 @@ const TotalBill = () => {
                         <tr key={order._id}>
                           <td className="bill-number">
                             #{order.billNumber}
-                          </td>
+                           </td>
                           <td>{getStatusBadge(order.status)}</td>
                           <td className="order-time">
                             {order.time ? order.time.split(':').slice(0, 2).join(':') : '--:--'}

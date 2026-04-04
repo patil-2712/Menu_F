@@ -333,9 +333,23 @@ const Admin = () => {
     navigate(`/${restaurantSlug}/dashboard`);
   };
 
+  // FIXED: Immediate logout without refresh needed
   const handleLogout = () => {
+    console.log("🔓 Logging out from Admin...");
+    
+    // Clear all localStorage
     localStorage.clear();
-    navigate('/');
+    
+    // Clear sessionStorage if any
+    sessionStorage.clear();
+    
+    // Force immediate navigation with replace
+    navigate("/", { replace: true });
+    
+    // Hard reload to ensure complete cleanup
+    setTimeout(() => {
+      window.location.href = "/";
+    }, 50);
   };
 
   const copyToClipboard = (text) => {
