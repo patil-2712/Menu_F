@@ -1,4 +1,3 @@
-// MyOrderPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
@@ -18,7 +17,8 @@ import {
   FaMapMarkerAlt,
   FaPhone,
   FaEnvelope,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaSpinner
 } from 'react-icons/fa';
 import './MyOrderPage.css';
 
@@ -303,100 +303,92 @@ const MyOrderPage = () => {
     });
   };
 
-const handleSaveNewItems = async () => {
-  if (newItems.length === 0) {
-    setShowAddItemsModal(false);
-    return;
-  }
+  const handleSaveNewItems = async () => {
+    if (newItems.length === 0) {
+      setShowAddItemsModal(false);
+      return;
+    }
 
-  setAddingItems(true);
-  
-  try {
-    console.log('🔄 Adding new items to existing order...');
-    
-    // Get restaurantCode from localStorage or restaurant object
-    const restaurantCode = restaurant?.restaurantCode || localStorage.getItem('restaurantCode');
-    const billNumber = order.billNumber;
-    
-    if (!restaurantCode) {
-      throw new Error('Restaurant code not found');
-    }
-    
-    // Prepare items to add
-    const itemsToAdd = newItems.map(newItem => ({
-      name: newItem.name,
-      price: newItem.price,
-      quantity: newItem.quantity,
-      category: newItem.category,
-      type: newItem.type,
-      gstPercentage: newItem.gstPercentage || gstPercentage,
-      itemId: newItem.itemId
-    }));
-    
-    // Add items one by one using the add-item endpoint
-    for (const item of itemsToAdd) {
-      console.log(`Adding item: ${item.name} x${item.quantity}`);
-      
-      const response = await axios.post(
-        `${API_URL}/api/order/${restaurantCode}/${billNumber}/items`,
-        item,
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 10000
-        }
-      );
-      
-      if (!response.data.success) {
-        throw new Error(`Failed to add item: ${item.name}`);
-      }
-    }
-    
-    // IMPORTANT: Fetch the updated order from backend
-    // First try by _id, then by bill number
-    let updatedOrderData = null;
+    setAddingItems(true);
     
     try {
-      // Try fetching by order ID
-      const orderResponse = await axios.get(`${API_URL}/api/order/${order._id}`);
-      if (orderResponse.data) {
-        updatedOrderData = orderResponse.data;
+      console.log('🔄 Adding new items to existing order...');
+      
+      const restaurantCode = restaurant?.restaurantCode || localStorage.getItem('restaurantCode');
+      const billNumber = order.billNumber;
+      
+      if (!restaurantCode) {
+        throw new Error('Restaurant code not found');
       }
+      
+      const itemsToAdd = newItems.map(newItem => ({
+        name: newItem.name,
+        price: newItem.price,
+        quantity: newItem.quantity,
+        category: newItem.category,
+        type: newItem.type,
+        gstPercentage: newItem.gstPercentage || restaurant?.gstPercentage || 18,
+        itemId: newItem.itemId
+      }));
+      
+      for (const item of itemsToAdd) {
+        console.log(`Adding item: ${item.name} x${item.quantity}`);
+        
+        const response = await axios.post(
+          `${API_URL}/api/order/${restaurantCode}/${billNumber}/items`,
+          item,
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000
+          }
+        );
+        
+        if (!response.data.success) {
+          throw new Error(`Failed to add item: ${item.name}`);
+        }
+      }
+      
+      let updatedOrderData = null;
+      
+      try {
+        const orderResponse = await axios.get(`${API_URL}/api/order/${order._id}`);
+        if (orderResponse.data) {
+          updatedOrderData = orderResponse.data;
+        }
+      } catch (err) {
+        console.log('Fetch by _id failed, trying by bill number...');
+        const orderResponse = await axios.get(
+          `${API_URL}/api/order/${restaurantCode}/${billNumber}`
+        );
+        if (orderResponse.data) {
+          updatedOrderData = orderResponse.data;
+        }
+      }
+      
+      if (updatedOrderData) {
+        console.log('✅ Updated order fetched:', updatedOrderData);
+        setOrder(updatedOrderData);
+        localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(updatedOrderData));
+      } else {
+        await fetchOrderFromBackend();
+        await fetchRestaurantDetails();
+      }
+      
+      setShowAddItemsModal(false);
+      setNewItems([]);
+      setSearchTerm('');
+      setActiveCategory('all');
+      
+      alert('✅ New items added to your order successfully!');
+      
     } catch (err) {
-      console.log('Fetch by _id failed, trying by bill number...');
-      // Try fetching by restaurant code and bill number
-      const orderResponse = await axios.get(
-        `${API_URL}/api/order/${restaurantCode}/${billNumber}`
-      );
-      if (orderResponse.data) {
-        updatedOrderData = orderResponse.data;
-      }
+      console.error('❌ Error updating order:', err);
+      alert(`Failed to add items: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setAddingItems(false);
     }
-    
-    if (updatedOrderData) {
-      console.log('✅ Updated order fetched:', updatedOrderData);
-      setOrder(updatedOrderData);
-      // Update localStorage
-      localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(updatedOrderData));
-    } else {
-      // If fetch fails, refresh the page data
-      await fetchOrderFromBackend();
-      await fetchRestaurantDetails();
-    }
-    
-    setShowAddItemsModal(false);
-    setNewItems([]);
-    setSearchTerm('');
-    setActiveCategory('all');
-    
-    alert('✅ New items added to your order successfully!');
-    
-  } catch (err) {
-    console.error('❌ Error updating order:', err);
-    alert(`Failed to add items: ${err.response?.data?.error || err.message}`);
-  } finally {
-    setAddingItems(false);
-  }
-};
+  };
+
   const StarRating = ({ rating, onRatingChange, category }) => {
     return (
       <div className="star-rating">
@@ -719,8 +711,6 @@ const handleSaveNewItems = async () => {
 
   return (
     <div className="bill-container">
-      
-
       {/* Main Bill Card */}
       <div className="bill-card">
         {/* Restaurant Header */}
@@ -751,74 +741,52 @@ const handleSaveNewItems = async () => {
         {/* Bill Info */}
         <div className="bill-info">
           <span className="bill-number">Bill No: {order.billNumber}</span>
-          <span>Date: {order.date}</span>
-          <span>Time: {order.time}</span>
+          <span>📅 Date: {order.date}</span>
+          <span>🕒 Time: {order.time}</span>
         </div>
 
         {/* Customer Info */}
         <div className="customer-info">
-          <span>Customer: {order.customerName || 'Guest'}</span>
-          <span>Table: {order.tableNumber || 'Takeaway'}</span>
+          <span>👤 Customer: {order.customerName || 'Guest'}</span>
+          <span>🪑 Table: {order.tableNumber || 'Takeaway'}</span>
         </div>
 
         {/* GST Info */}
         <div className="gst-info">
-          {restaurant?.gstNumber && <span>GSTIN: {formatGSTNumber(restaurant.gstNumber)}</span>}
-          <span>GST Rate: {gstPercentage}%</span>
-          {restaurant?.foodLicense && <span>FSSAI: {restaurant.foodLicense}</span>}
+          {restaurant?.gstNumber && <span>📋 GSTIN: {formatGSTNumber(restaurant.gstNumber)}</span>}
+          <span>💰 GST Rate: {gstPercentage}%</span>
+          {restaurant?.foodLicense && <span>✅ FSSAI: {restaurant.foodLicense}</span>}
         </div>
 
         {/* Divider */}
         <div className="divider"></div>
 
-        {/* Items Container - Div based layout for better mobile */}
-        {/* Items Container */}
-<div className="items-container">
-  {/* Desktop Header - hidden on mobile */}
-  <div className="items-header">
-    <div className="item-details">Item</div>
-    <div className="item-qty">Qty</div>
-    <div className="item-price">Price</div>
-    <div className="item-total">Total</div>
-  </div>
-  
-  {order.items.map((item, index) => {
-    const itemTotal = item.total || item.price * item.quantity;
-    return (
-      <div key={index} className="item-row">
-        {/* Item Name and Details */}
-        <div className="item-details">
-          <div className="item-name">{item.name}</div>
-          <div className="item-meta">
-           
-            <span className="item-category">{item.category}</span>
-          </div>
+        {/* Items Table - Non-scrollable with Black Text */}
+        <div className="items-container">
+          <table className="items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {order.items.map((item, index) => {
+                const itemTotal = item.total || item.price * item.quantity;
+                return (
+                  <tr key={index}>
+                    <td className="item-name">{item.name}</td>
+                    <td className="item-qty">{item.quantity}</td>
+                    <td className="item-price">₹{formatCurrency(item.price)}</td>
+                    <td className="item-total">₹{formatCurrency(itemTotal)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-        
-        {/* Desktop View - Qty, Price, Total */}
-        <div className="item-qty">{item.quantity}</div>
-        <div className="item-price">₹{formatCurrency(item.price)}</div>
-        <div className="item-total">₹{formatCurrency(itemTotal)}</div>
-        
-        {/* Mobile View - Qty, Price, Total as cards */}
-        <div className="item-details-row">
-          <div className="item-detail-item">
-            <span className="item-detail-label">Qty</span>
-            <span className="item-detail-value item-qty-value">{item.quantity}</span>
-          </div>
-          <div className="item-detail-item">
-            <span className="item-detail-label">Price</span>
-            <span className="item-detail-value item-price-value">₹{formatCurrency(item.price)}</span>
-          </div>
-          <div className="item-detail-item">
-            <span className="item-detail-label">Total</span>
-            <span className="item-detail-value item-total-value">₹{formatCurrency(itemTotal)}</span>
-          </div>
-        </div>
-      </div>
-    );
-  })}
-</div>
 
         {/* Divider */}
         <div className="divider"></div>
@@ -839,11 +807,8 @@ const handleSaveNewItems = async () => {
           </div>
         </div>
 
-        {/* Amount in Words */}
-        <div className="amount-words">
-          <span>Amount in words:</span>
-          <span>{amountInWords}</span>
-        </div>
+        
+       
 
         {/* Thank You Message */}
         <div className="thank-you">

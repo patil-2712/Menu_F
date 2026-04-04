@@ -1,4 +1,4 @@
-/* MyOrderPage.css - Complete with Border page color scheme and mobile box view */
+/* MyOrderPage.css - Complete with non-scrollable table and all black text */
 
 * {
   margin: 0;
@@ -92,7 +92,8 @@
 
 /* Bill Card */
 .bill-card {
-  max-width: 550px;
+  max-width: 650px;
+  width: 100%;
   margin: 0 auto;
   background: white;
   border-radius: 20px;
@@ -112,7 +113,7 @@
   }
 }
 
-/* Restaurant Header - Border page colors */
+/* Restaurant Header - Gradient (colors kept, text white) */
 .restaurant-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -125,42 +126,46 @@
   margin-bottom: 10px;
   font-weight: bold;
   letter-spacing: 1px;
+  color: #ffffff;
+ 
 }
 
 .restaurant-address {
   font-size: 0.75rem;
-  opacity: 0.9;
   margin-bottom: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   flex-wrap: wrap;
+  color: #000000;
 }
 
 .restaurant-contact {
   font-size: 0.7rem;
-  opacity: 0.85;
   display: flex;
   justify-content: center;
   gap: 15px;
   flex-wrap: wrap;
+ 
 }
 
 .contact-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  color: #000000;
 }
 
 .icon {
   font-size: 0.7rem;
+  color: #000000;
 }
 
 /* Divider */
 .divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+  background: #e2e8f0;
   margin: 10px 20px;
 }
 
@@ -169,17 +174,22 @@
   display: flex;
   justify-content: space-between;
   padding: 12px 20px;
-  background: #f7fafc;
+ 
   font-size: 0.8rem;
-  color: #4a5568;
+  color: #000000;
   flex-wrap: wrap;
   gap: 10px;
+  
 }
 
 .bill-number {
-  font-weight: 600;
-  color: #667eea;
+  font-weight: 700;
+  color: #000000;
   font-family: monospace;
+  font-size: 0.9rem;
+ 
+  padding: 4px 12px;
+  border-radius: 20px;
 }
 
 /* Customer Info */
@@ -189,9 +199,26 @@
   padding: 10px 20px;
   background: white;
   font-size: 0.85rem;
-  color: #2d3748;
+  color: #000000;
   flex-wrap: wrap;
   gap: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.customer-info span:first-child {
+  font-weight: 600;
+  color: #000000;
+  
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.customer-info span:last-child {
+  font-weight: 600;
+  color: #000000;
+  
+  padding: 4px 12px;
+  border-radius: 20px;
 }
 
 /* GST Info */
@@ -199,146 +226,137 @@
   display: flex;
   justify-content: space-between;
   padding: 8px 20px;
-  background: #fafbfc;
+  
   font-size: 0.7rem;
-  color: #718096;
+  color: #000000;
   flex-wrap: wrap;
   gap: 8px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-/* Items Container */
+.gst-info span:first-child {
+  font-weight: 600;
+  color: #000000;
+
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.gst-info span:nth-child(2) {
+  font-weight: 600;
+  color: #000000;
+ 
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.gst-info span:last-child {
+  font-weight: 600;
+  color: #000000;
+
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* Items Container - NO SCROLL */
 .items-container {
   padding: 15px 20px;
+  overflow: visible;
 }
 
-/* Desktop Items Header */
-.items-header {
-  display: grid;
-  grid-template-columns: 2fr 0.8fr 1fr 1fr;
-  padding: 8px 0;
-  border-bottom: 2px solid #e2e8f0;
-  margin-bottom: 10px;
-  font-weight: 600;
-  font-size: 0.75rem;
-  color: #718096;
+/* Items Table - Standard Table with Black Text */
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.items-table thead {
+  background: #f1f5f9;
+}
+
+.items-table th {
+  padding: 10px 8px;
+  text-align: left;
+  font-weight: 700;
+  color: #000000;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  border-bottom: 2px solid #cbd5e0;
 }
 
-/* Item Row - Desktop */
-.item-row {
-  padding: 12px 0;
-  border-bottom: 1px solid #edf2f7;
-  transition: background 0.2s;
+.items-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+  color: #000000;
 }
 
-.item-row:last-child {
-  border-bottom: none;
+/* Column alignments */
+.items-table th:first-child,
+.items-table td:first-child {
+  text-align: left;
 }
 
-/* Desktop Layout */
-.item-details {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.items-table th:nth-child(2),
+.items-table td:nth-child(2) {
+  text-align: center;
 }
 
+.items-table th:nth-child(3),
+.items-table td:nth-child(3) {
+  text-align: right;
+}
+
+.items-table th:nth-child(4),
+.items-table td:nth-child(4) {
+  text-align: right;
+}
+
+/* Item Row Styling - ALL BLACK */
 .item-name {
   font-weight: 600;
-  color: #2d3748;
-  font-size: 0.9rem;
-}
-
-.item-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 0.65rem;
-  color: #a0aec0;
-}
-
-.item-category {
-  font-style: italic;
-}
-
-/* Desktop Columns */
-.item-qty,
-.item-price,
-.item-total {
+  color: #000000;
+  word-break: break-word;
   font-size: 0.85rem;
-  color: #4a5568;
-  text-align: right;
 }
 
 .item-qty {
   text-align: center;
+  color: #000000;
+  font-weight: 600;
+  min-width: 50px;
+}
+
+.item-price {
+  font-family: monospace;
+  text-align: right;
+  color: #000000;
+  font-weight: 500;
+  font-size: 0.85rem;
 }
 
 .item-total {
+  font-family: monospace;
+  text-align: right;
   font-weight: 600;
-  color: #2d3748;
-}
-
-/* Mobile Details Row - Box Style */
-.item-details-row {
-  display: none;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px dashed #e2e8f0;
-}
-
-.item-detail-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  background: #f7fafc;
-  padding: 10px 8px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s;
-}
-
-.item-detail-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.item-detail-label {
-  font-size: 0.6rem;
-  color: #a0aec0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.item-detail-value {
+  color: #000000;
   font-size: 0.9rem;
-  font-weight: 600;
-  color: #4a5568;
 }
 
-.item-qty-value {
-  color: #667eea;
-  font-weight: 700;
-  font-size: 1rem;
-}
-
-.item-price-value {
-  color: #38a169;
-}
-
-.item-total-value {
-  color: #2d3748;
-  font-weight: 700;
+/* Table row hover effect */
+.items-table tbody tr:hover {
+  background: #f8fafc;
 }
 
 /* Totals Section */
 .totals {
   padding: 15px 20px;
-  background: #f7fafc;
+  background: #f8fafc;
   margin: 10px 20px;
   border-radius: 12px;
+  border: 1px solid #e2e8f0;
 }
 
 .total-row {
@@ -346,7 +364,7 @@
   justify-content: space-between;
   padding: 6px 0;
   font-size: 0.85rem;
-  color: #4a5568;
+  color: #000000;
 }
 
 .grand-total {
@@ -354,24 +372,26 @@
   margin-top: 8px;
   padding-top: 8px;
   border-top: 2px solid #e2e8f0;
-  color: #2d3748;
+  color: #000000;
 }
 
 .grand-total strong {
-  color: #667eea;
+  color: #000000;
+  font-size: 1.05rem;
 }
 
 /* Amount in Words */
 .amount-words {
-  padding: 12px 20px;
-  background: #fef3c7;
+  padding: 10px 20px;
+  background: #f8fafc;
   margin: 10px 20px;
   border-radius: 10px;
   font-size: 0.7rem;
-  color: #92400e;
+  color: #000000;
   display: flex;
   flex-direction: column;
   gap: 5px;
+  border: 1px solid #e2e8f0;
 }
 
 .amount-words span:first-child {
@@ -379,6 +399,7 @@
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  color: #000000;
 }
 
 /* Thank You Message */
@@ -454,7 +475,7 @@
 
 /* Feedback Section */
 .feedback-section {
-  max-width: 550px;
+  max-width: 650px;
   margin: 20px auto 0;
 }
 
@@ -584,7 +605,7 @@
 
 /* Feedback Success */
 .feedback-success {
-  max-width: 550px;
+  max-width: 650px;
   margin: 20px auto 0;
   background: #c6f6d5;
   border-radius: 16px;
@@ -955,11 +976,10 @@
   font-size: 0.9rem;
 }
 
-/* Mobile Responsive - Border page style */
+/* Mobile Responsive */
 @media (max-width: 768px) {
   .bill-container {
     padding: 12px;
-    padding-bottom: 20px;
   }
   
   .bill-card {
@@ -967,52 +987,60 @@
     border-radius: 16px;
   }
   
-  /* Hide desktop header on mobile */
-  .items-header {
-    display: none;
-  }
-  
-  /* Show mobile box details row */
-  .item-details-row {
-    display: flex;
-  }
-  
-  /* Hide desktop columns on mobile */
-  .item-qty,
-  .item-price,
-  .item-total {
-    display: none;
-  }
-  
-  .item-row {
-    padding: 15px 0;
-    margin-bottom: 5px;
-  }
-  
   .restaurant-header {
     padding: 20px 15px;
   }
   
   .restaurant-name {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
+  }
+  
+  .restaurant-address {
+    font-size: 0.65rem;
+  }
+  
+  .restaurant-contact {
+    font-size: 0.6rem;
+    gap: 10px;
   }
   
   .bill-info,
   .customer-info,
   .gst-info {
-    flex-direction: column;
-    gap: 8px;
+    padding: 10px 15px;
+  }
+  
+  .items-container {
     padding: 12px 15px;
+    overflow: visible;
+  }
+  
+  .items-table {
+    min-width: 100%;
+  }
+  
+  .items-table th,
+  .items-table td {
+    padding: 8px 6px;
+  }
+  
+  .item-name {
+    font-size: 0.8rem;
+  }
+  
+  .item-qty {
+    font-size: 0.75rem;
+    padding: 2px 8px;
   }
   
   .totals {
-    margin: 10px 15px;
     padding: 12px 15px;
+    margin: 10px 15px;
   }
   
   .amount-words {
-    margin: 10px 15px;
     padding: 10px 15px;
+    margin: 10px 15px;
   }
   
   .thank-you {
@@ -1028,61 +1056,20 @@
   
   .action-btn {
     width: 100%;
-    padding: 10px 14px;
   }
   
-  /* Mobile item detail boxes styling */
-  .item-detail-item {
-    padding: 8px 6px;
-  }
-  
-  .item-detail-label {
-    font-size: 0.55rem;
-  }
-  
-  .item-detail-value {
-    font-size: 0.8rem;
-  }
-  
-  .item-qty-value {
-    font-size: 0.9rem;
-  }
-  
-  /* Modal mobile adjustments */
   .modal-items-grid {
     grid-template-columns: 1fr;
-    max-height: 350px;
   }
   
   .modal-categories {
-    gap: 8px;
     overflow-x: auto;
     flex-wrap: nowrap;
     padding-bottom: 10px;
   }
   
   .category-chip {
-    font-size: 0.7rem;
-    padding: 5px 12px;
     white-space: nowrap;
-  }
-  
-  .menu-item-card {
-    padding: 10px;
-  }
-  
-  .item-image-container {
-    width: 50px;
-    height: 50px;
-  }
-  
-  .item-info h4 {
-    font-size: 0.85rem;
-  }
-  
-  .feedback-section,
-  .feedback-success {
-    margin-top: 15px;
   }
 }
 
@@ -1092,56 +1079,49 @@
   }
   
   .restaurant-header {
-    padding: 18px 12px;
+    padding: 15px 12px;
   }
   
   .restaurant-name {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
   
   .restaurant-address {
-    font-size: 0.7rem;
+    font-size: 0.55rem;
   }
   
   .restaurant-contact {
-    font-size: 0.65rem;
-    gap: 10px;
+    font-size: 0.5rem;
+    gap: 8px;
   }
   
   .bill-info,
   .customer-info,
   .gst-info {
+    font-size: 0.7rem;
+    padding: 8px 12px;
+  }
+  
+  .bill-number {
     font-size: 0.75rem;
-    padding: 10px 12px;
   }
   
-  .item-name {
-    font-size: 0.85rem;
-  }
-  
-  .item-meta {
-    font-size: 0.6rem;
-  }
-  
-  /* Mobile box detail items */
-  .item-details-row {
-    gap: 8px;
-  }
-  
-  .item-detail-item {
-    padding: 6px 4px;
-  }
-  
-  .item-detail-label {
-    font-size: 0.5rem;
-  }
-  
-  .item-detail-value {
+  .items-table {
     font-size: 0.7rem;
   }
   
-  .item-qty-value {
-    font-size: 0.8rem;
+  .items-table th,
+  .items-table td {
+    padding: 6px 4px;
+  }
+  
+  .item-name {
+    font-size: 0.7rem;
+  }
+  
+  .item-qty {
+    font-size: 0.65rem;
+    padding: 2px 6px;
   }
   
   .totals {
@@ -1149,19 +1129,19 @@
   }
   
   .total-row {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
   }
   
   .grand-total {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
   
   .amount-words {
-    font-size: 0.65rem;
+    font-size: 0.55rem;
   }
   
   .thank-you p {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
   
   .feedback-form {
@@ -1170,39 +1150,6 @@
   
   .star {
     font-size: 1.2rem;
-  }
-  
-  .modal-header {
-    padding: 15px;
-  }
-  
-  .modal-header h3 {
-    font-size: 0.9rem;
-  }
-  
-  .modal-content {
-    padding: 15px;
-  }
-  
-  .modal-items-grid {
-    gap: 10px;
-  }
-  
-  .menu-item-card {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  
-  .item-actions {
-    width: 100%;
-    justify-content: center;
-    margin-top: 5px;
-  }
-  
-  .qty-btn {
-    width: 28px;
-    height: 28px;
-    font-size: 0.9rem;
   }
 }
 
@@ -1216,51 +1163,17 @@
   .action-buttons,
   .feedback-section,
   .feedback-success,
-  .modal-overlay,
-  .add-btn,
-  .print-btn,
-  .share-btn {
+  .modal-overlay {
     display: none;
   }
   
   .bill-card {
     box-shadow: none;
     border: 1px solid #e2e8f0;
-    max-width: 100%;
   }
   
   .restaurant-header {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  
-  .items-header {
-    display: grid;
-  }
-  
-  .item-details-row {
-    display: none;
-  }
-  
-  .item-qty,
-  .item-price,
-  .item-total {
-    display: block;
-  }
-}
-
-/* Animation for new items */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.menu-item-card {
-  animation: fadeIn 0.3s ease;
 }
