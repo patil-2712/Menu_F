@@ -18,7 +18,11 @@ import {
   FaPhone,
   FaEnvelope,
   FaSignOutAlt,
-  FaSpinner
+  FaSpinner,
+  FaGlassWhiskey,
+  FaRegStickyNote,
+  FaReceipt,
+  FaCommentDots
 } from 'react-icons/fa';
 import './MyOrderPage.css';
 
@@ -46,6 +50,11 @@ const MyOrderPage = () => {
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [imageErrors, setImageErrors] = useState({});
+  const [showRequestMenu, setShowRequestMenu] = useState(false);
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupIcon, setPopupIcon] = useState('');
 
   const getImageUrl = (imageName) => {
     if (!imageName) return '/placeholder.jpg';
@@ -379,11 +388,11 @@ const MyOrderPage = () => {
       setSearchTerm('');
       setActiveCategory('all');
       
-      alert('✅ New items added to your order successfully!');
+      showPopup('✅ Items added successfully!', 'success');
       
     } catch (err) {
       console.error('❌ Error updating order:', err);
-      alert(`Failed to add items: ${err.response?.data?.error || err.message}`);
+      showPopup(`Failed to add items: ${err.response?.data?.error || err.message}`, 'error');
     } finally {
       setAddingItems(false);
     }
@@ -441,11 +450,11 @@ const MyOrderPage = () => {
       if (response.status === 201) {
         setFeedbackSubmitted(true);
         setShowFeedbackForm(false);
-        alert('✅ Feedback submitted successfully!');
+        showPopup('✅ Feedback submitted successfully!', 'success');
       }
     } catch (err) {
       console.error('❌ Error submitting feedback:', err);
-      alert(`Failed to submit feedback: ${err.response?.data?.error || err.message}`);
+      showPopup(`Failed to submit feedback: ${err.response?.data?.error || err.message}`, 'error');
     } finally {
       setSubmittingFeedback(false);
     }
@@ -671,6 +680,79 @@ const MyOrderPage = () => {
 
   const gstPercentage = order?.gstPercentage || restaurant?.gstPercentage || 18;
 
+  // Show popup notification
+  const showPopup = (message, type = 'success') => {
+    setPopupMessage(message);
+    setPopupIcon(type === 'success' ? '✅' : '❌');
+    setShowSuccessPopup(true);
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+      setShowSuccessPopup(false);
+    }, 3000);
+  };
+
+  // Handle request options with backend integration
+  const handleRequestOption = async (option) => {
+    let requestType = '';
+    let requestMessage = '';
+    let popupTitle = '';
+
+    switch(option) {
+      case 'water':
+        requestType = 'water';
+        requestMessage = 'Customer requested bottle of water';
+        popupTitle = '💧 Water Request Sent!';
+        break;
+      case 'tissue':
+        requestType = 'tissue';
+        requestMessage = 'Customer requested tissue paper';
+        popupTitle = '🧻 Tissue Request Sent!';
+        break;
+      case 'bill':
+        requestType = 'bill';
+        requestMessage = 'Customer requested the bill';
+        popupTitle = '🧾 Bill Request Sent!';
+        break;
+      default:
+        return;
+    }
+
+    setSubmittingRequest(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      const requestData = {
+        orderId: order._id,
+        billNumber: order.billNumber,
+        restaurantSlug: restaurantSlug,
+        restaurantCode: restaurant?.restaurantCode,
+        customerName: order.customerName,
+        tableNumber: order.tableNumber,
+        requestType: requestType,
+        requestMessage: requestMessage
+      };
+
+      const response = await axios.post(`${API_URL}/api/order/customer-request/create`, requestData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        showPopup(`${popupTitle}\n\nTable: ${order.tableNumber}\nCustomer: ${order.customerName}\n\nStaff will attend to your request shortly.`, 'success');
+        setShowRequestMenu(false);
+      }
+    } catch (err) {
+      console.error('Error sending request:', err);
+      showPopup(`Failed to send request: ${err.response?.data?.error || err.message}`, 'error');
+    } finally {
+      setSubmittingRequest(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -711,6 +793,74 @@ const MyOrderPage = () => {
 
   return (
     <div className="bill-container">
+      {/* Success Popup Notification */}
+      {showSuccessPopup && (
+        <div className="success-popup-overlay">
+          <div className="success-popup">
+            <div className="popup-icon">{popupIcon}</div>
+            <div className="popup-message">{popupMessage}</div>
+            <button className="popup-close" onClick={() => setShowSuccessPopup(false)}>
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Request Button - Floating Action Button */}
+      <button 
+        className="request-fab"
+        onClick={() => setShowRequestMenu(!showRequestMenu)}
+        disabled={submittingRequest}
+      >
+        {submittingRequest ? <FaSpinner className="spinner" /> : <FaCommentDots />}
+      </button>
+
+      {/* Request Options Menu */}
+      {showRequestMenu && (
+        <div className="request-menu-overlay" onClick={() => setShowRequestMenu(false)}>
+          <div className="request-menu" onClick={(e) => e.stopPropagation()}>
+            <div className="request-menu-header">
+              <h3>Request Something?</h3>
+              <button className="close-request-menu" onClick={() => setShowRequestMenu(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="request-options">
+              <button 
+                className="request-option water"
+                onClick={() => handleRequestOption('water')}
+              >
+                <FaGlassWhiskey className="request-icon" />
+                <div className="request-text">
+                  <span className="request-title">Bottle of Water</span>
+                  <span className="request-desc">Request drinking water</span>
+                </div>
+              </button>
+              <button 
+                className="request-option tissue"
+                onClick={() => handleRequestOption('tissue')}
+              >
+                <FaRegStickyNote className="request-icon" />
+                <div className="request-text">
+                  <span className="request-title">Tissue Paper</span>
+                  <span className="request-desc">Request tissue paper</span>
+                </div>
+              </button>
+              <button 
+                className="request-option bill"
+                onClick={() => handleRequestOption('bill')}
+              >
+                <FaReceipt className="request-icon" />
+                <div className="request-text">
+                  <span className="request-title">Get Bill</span>
+                  <span className="request-desc">Request your bill</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Bill Card */}
       <div className="bill-card">
         {/* Restaurant Header */}
@@ -741,19 +891,12 @@ const MyOrderPage = () => {
         {/* Bill Info */}
         <div className="bill-info">
           <span className="bill-number">Bill No: {order.billNumber}</span>
-          <span>📅 Date: {order.date}</span>
-          <span>🕒 Time: {order.time}</span>
-        </div>
-
-        {/* Customer Info */}
-        <div className="customer-info">
-          <span>👤 Customer: {order.customerName || 'Guest'}</span>
-          <span>🪑 Table: {order.tableNumber || 'Takeaway'}</span>
+          <span>📅 Date: {order.date}</span><span>🕒 Time: {order.time}</span>
+          <span>👤 Customer: {order.customerName || 'Guest'}</span> <span>🪑 Table: {order.tableNumber || 'Takeaway'}</span>{restaurant?.gstNumber && <span>📋 GSTIN: {formatGSTNumber(restaurant.gstNumber)}</span>}
         </div>
 
         {/* GST Info */}
         <div className="gst-info">
-          {restaurant?.gstNumber && <span>📋 GSTIN: {formatGSTNumber(restaurant.gstNumber)}</span>}
           <span>💰 GST Rate: {gstPercentage}%</span>
           {restaurant?.foodLicense && <span>✅ FSSAI: {restaurant.foodLicense}</span>}
         </div>
@@ -788,9 +931,6 @@ const MyOrderPage = () => {
           </table>
         </div>
 
-        {/* Divider */}
-        <div className="divider"></div>
-
         {/* Totals */}
         <div className="totals">
           <div className="total-row">
@@ -806,9 +946,6 @@ const MyOrderPage = () => {
             <span><strong>₹{formatCurrency(total)}</strong></span>
           </div>
         </div>
-
-        
-       
 
         {/* Thank You Message */}
         <div className="thank-you">

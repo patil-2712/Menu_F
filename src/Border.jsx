@@ -1,4 +1,3 @@
-// Border.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -33,7 +32,12 @@ import {
   FaUtensils,
   FaClipboardList,
   FaStar,
-  FaEye
+  FaEye,
+  FaCommentDots,
+  FaCheckDouble,
+  FaReply,
+  FaGlassWhiskey,
+  FaRegStickyNote
 } from 'react-icons/fa';
 import './Border.css';
 
@@ -57,8 +61,26 @@ const Border = () => {
   const [expandedSections, setExpandedSections] = useState({
     stats: true,
     filters: true,
-    orders: true
+    orders: true,
+    requests: true
   });
+  
+  // Customer Requests State
+  const [customerRequests, setCustomerRequests] = useState([]);
+  const [requestsStats, setRequestsStats] = useState(null);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [staffResponse, setStaffResponse] = useState('');
+  
+  // Popup State
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupType, setPopupType] = useState('success'); // success, error, info
+  
+  // Auto-refresh state
+  const [newRequestAlert, setNewRequestAlert] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [editFormData, setEditFormData] = useState({
     customerName: '',
@@ -74,6 +96,20 @@ const Border = () => {
   });
   
   const printRefs = useRef({});
+  const refreshInterval = useRef(null);
+  const previousRequestsRef = useRef([]);
+
+  // Show popup notification
+  const showPopupNotification = (message, type = 'success') => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setShowPopup(true);
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+      setShowPopup(false);
+    }, 3000);
+  };
 
   // Fixed helper function to calculate discounted total
   const calculateDiscountedTotal = (total, discount, discountType) => {
@@ -132,8 +168,198 @@ const Border = () => {
       fetchRestaurantData();
       fetchOrders();
       fetchMenuItems();
+      fetchCustomerRequests();
+      
+      // Set up auto-refresh every 10 seconds
+      startAutoRefresh();
     }
+    
+    // Cleanup interval on component unmount
+    return () => {
+      if (refreshInterval.current) {
+        clearInterval(refreshInterval.current);
+      }
+    };
   }, [restaurantSlug]);
+
+  // Start auto-refresh timer
+  const startAutoRefresh = () => {
+    if (refreshInterval.current) {
+      clearInterval(refreshInterval.current);
+    }
+    
+    refreshInterval.current = setInterval(() => {
+      console.log('🔄 Auto-refreshing customer requests...');
+      checkForNewRequests();
+    }, 10000); // 10 seconds
+  };
+
+  // Check for new requests without full page reload
+  const checkForNewRequests = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API_URL}/api/order/customer-request/list/${restaurantSlug}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        const newRequestsData = response.data.requests;
+        const oldRequests = previousRequestsRef.current;
+        
+        // Find new pending requests
+        const newPendingRequests = newRequestsData.filter(
+          newReq => 
+            newReq.status === 'pending' && 
+            !oldRequests.some(oldReq => oldReq._id === newReq._id)
+        );
+        
+        if (newPendingRequests.length > 0) {
+          // Show popup for new requests
+          const requestTypes = newPendingRequests.map(r => 
+            r.requestType === 'water' ? '💧 Water' : 
+            r.requestType === 'tissue' ? '🧻 Tissue' : '🧾 Bill'
+          ).join(', ');
+          
+          const tableNumbers = [...new Set(newPendingRequests.map(r => r.tableNumber))].join(', ');
+          
+          const popupMsg = `🔔 New Customer Request${newPendingRequests.length > 1 ? 's' : ''}!\n\n📝 ${requestTypes}\n🪑 Table: ${tableNumbers}`;
+          
+          showPopupNotification(popupMsg, 'info');
+          
+          // Also show a temporary notification in the UI
+          setNewRequestAlert({
+            count: newPendingRequests.length,
+            message: `${newPendingRequests.length} new request${newPendingRequests.length > 1 ? 's' : ''} received!`,
+            requests: newPendingRequests
+          });
+          
+          // Hide notification after 5 seconds
+          setTimeout(() => {
+            setNewRequestAlert(null);
+          }, 5000);
+          
+          // Update the requests in UI without page reload
+          setCustomerRequests(newRequestsData);
+          setRequestsStats(response.data.stats);
+          
+          // Play notification sound (optional)
+          try {
+            const audio = new Audio('/notification.mp3');
+            audio.play().catch(e => console.log('Audio play failed:', e));
+          } catch (audioErr) {
+            console.log('Audio not supported');
+          }
+        }
+        
+        // Update previous requests reference
+        previousRequestsRef.current = newRequestsData;
+      }
+    } catch (err) {
+      console.error('Error checking for new requests:', err);
+    }
+  };
+
+  // Manual refresh without loading spinner
+  const handleSilentRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchCustomerRequestsSilent(),
+        fetchOrdersSilent()
+      ]);
+      showPopupNotification('Data refreshed successfully!', 'success');
+    } catch (err) {
+      console.error('Refresh error:', err);
+      showPopupNotification('Failed to refresh data', 'error');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Silent fetch for customer requests (no loading state)
+  const fetchCustomerRequestsSilent = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API_URL}/api/order/customer-request/list/${restaurantSlug}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        setCustomerRequests(response.data.requests);
+        setRequestsStats(response.data.stats);
+        previousRequestsRef.current = response.data.requests;
+      }
+    } catch (err) {
+      console.error('Error fetching customer requests:', err);
+    }
+  };
+
+  // Silent fetch for orders (no loading state)
+  const fetchOrdersSilent = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API_URL}/api/order/billing/${restaurantSlug}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+      
+      if (response.data && response.data.success) {
+        const grouped = {};
+        
+        response.data.orders.forEach(order => {
+          const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          const gstAmount = order.gstAmount || order.items.reduce((sum, item) => {
+            return sum + (item.price * item.quantity * (item.gstPercentage || 18) / 100);
+          }, 0);
+          const total = subtotal + gstAmount;
+          const discount = order.discount || 0;
+          const discountType = order.discountType || 'amount';
+          
+          const discountedTotal = calculateDiscountedTotal(total, discount, discountType);
+          
+          order.subtotal = parseFloat(subtotal.toFixed(2));
+          order.gstAmount = parseFloat(gstAmount.toFixed(2));
+          order.total = parseFloat(total.toFixed(2));
+          order.discount = parseFloat(discount);
+          order.discountType = discountType;
+          order.discountedTotal = parseFloat(discountedTotal);
+          
+          if (!grouped[order.date]) {
+            grouped[order.date] = [];
+          }
+          grouped[order.date].push(order);
+        });
+        
+        Object.keys(grouped).forEach(date => {
+          grouped[date].sort((a, b) => {
+            const statusPriority = {
+              'completed': 1,
+              'preparing': 2,
+              'pending': 3,
+              'cancelled': 4
+            };
+            const priorityA = statusPriority[a.status] || 5;
+            const priorityB = statusPriority[b.status] || 5;
+            if (priorityA !== priorityB) return priorityA - priorityB;
+            return b.billNumber - a.billNumber;
+          });
+        });
+        
+        setGroupedOrders(grouped);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    }
+  };
 
   const fetchRestaurantData = async () => {
     try {
@@ -262,6 +488,74 @@ const Border = () => {
     }
   };
 
+  // Fetch Customer Requests (with loading)
+  const fetchCustomerRequests = async () => {
+    try {
+      setLoadingRequests(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.get(
+        `${API_URL}/api/order/customer-request/list/${restaurantSlug}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      if (response.data.success) {
+        setCustomerRequests(response.data.requests);
+        setRequestsStats(response.data.stats);
+        previousRequestsRef.current = response.data.requests;
+      }
+    } catch (err) {
+      console.error('Error fetching customer requests:', err);
+      showPopupNotification('Failed to fetch customer requests', 'error');
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  // Update Request Status
+  const updateRequestStatus = async (requestId, status, responseMsg = '') => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const updateData = { status };
+      if (responseMsg) {
+        updateData.staffResponse = responseMsg;
+      }
+      
+      await axios.put(
+        `${API_URL}/api/order/customer-request/update/${requestId}`,
+        updateData,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      
+      // Refresh requests silently
+      await fetchCustomerRequestsSilent();
+      
+      // Show popup success message
+      const statusMessages = {
+        acknowledged: 'Request acknowledged successfully!',
+        completed: 'Request marked as completed!',
+        cancelled: 'Request cancelled!'
+      };
+      showPopupNotification(`✅ ${statusMessages[status] || 'Request updated'}`, 'success');
+      
+    } catch (err) {
+      console.error('Error updating request:', err);
+      showPopupNotification('Failed to update request', 'error');
+    }
+  };
+
+  const handleAcknowledgeWithResponse = async (request) => {
+    if (staffResponse.trim()) {
+      await updateRequestStatus(request._id, 'acknowledged', staffResponse);
+      setShowRequestModal(false);
+      setStaffResponse('');
+      setSelectedRequest(null);
+    } else {
+      showPopupNotification('Please enter a response message', 'error');
+    }
+  };
+
   // Filter orders
   const getFilteredGroupedOrders = () => {
     const filtered = {};
@@ -333,20 +627,14 @@ const Border = () => {
     navigate(`/${restaurantSlug}/totalbill`);
   };
   
-  // FIXED: Immediate logout without refresh needed
   const handleLogout = () => {
     console.log("🔓 Logging out from Border...");
-    
-    // Clear all localStorage
+    if (refreshInterval.current) {
+      clearInterval(refreshInterval.current);
+    }
     localStorage.clear();
-    
-    // Clear sessionStorage if any
     sessionStorage.clear();
-    
-    // Force immediate navigation with replace
     navigate("/", { replace: true });
-    
-    // Hard reload to ensure complete cleanup
     setTimeout(() => {
       window.location.href = "/";
     }, 50);
@@ -355,7 +643,7 @@ const Border = () => {
   const handlePrint = (orderId) => {
     const printContent = printRefs.current[orderId];
     if (!printContent) {
-      alert('Print content not found');
+      showPopupNotification('Print content not found', 'error');
       return;
     }
     
@@ -470,7 +758,7 @@ const Border = () => {
       const orderToUpdate = allOrders.find(order => order._id === orderId);
       
       if (!orderToUpdate) {
-        alert('❌ Order not found');
+        showPopupNotification('Order not found', 'error');
         return;
       }
 
@@ -485,7 +773,7 @@ const Border = () => {
       const filteredItems = validItems.filter(item => item.name && item.name !== 'Item' && item.price > 0);
 
       if (filteredItems.length === 0) {
-        alert('❌ Please add at least one valid item');
+        showPopupNotification('Please add at least one valid item', 'error');
         return;
       }
 
@@ -527,11 +815,11 @@ const Border = () => {
 
       await fetchOrders();
       setEditingOrder(null);
-      alert('✅ Order updated successfully!');
+      showPopupNotification('✅ Order updated successfully!', 'success');
       
     } catch (err) {
       console.error('❌ Error updating order:', err);
-      alert('❌ Failed to update order');
+      showPopupNotification('Failed to update order', 'error');
     }
   };
 
@@ -542,7 +830,7 @@ const Border = () => {
         const orderToDelete = allOrders.find(order => order._id === orderId);
         
         if (!orderToDelete) {
-          alert('❌ Order not found');
+          showPopupNotification('Order not found', 'error');
           return;
         }
         
@@ -554,10 +842,10 @@ const Border = () => {
         );
         
         fetchOrders();
-        alert('✅ Order deleted successfully!');
+        showPopupNotification('✅ Order deleted successfully!', 'success');
       } catch (err) {
         console.error('Error deleting order:', err);
-        alert('❌ Failed to delete order');
+        showPopupNotification('Failed to delete order', 'error');
       }
     }
   };
@@ -600,13 +888,14 @@ const Border = () => {
     }
   };
 
-  const handleRefresh = () => {
-    fetchOrders();
+  const handleManualRefresh = () => {
+    handleSilentRefresh();
   };
 
   const clearFilters = () => {
     setSearchTable('');
     setStatusFilter('all');
+    showPopupNotification('Filters cleared', 'info');
   };
 
   const toggleSection = (section) => {
@@ -622,11 +911,19 @@ const Border = () => {
 
   // Navigation items for mobile
   const navItems = [
-    
     { icon: FaWallet, label: 'Border', action: handleNavigateToBorder },
     { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill },
-  
   ];
+
+  // Get request type icon
+  const getRequestIcon = (type) => {
+    switch(type) {
+      case 'water': return '💧';
+      case 'tissue': return '🧻';
+      case 'bill': return '🧾';
+      default: return '💬';
+    }
+  };
 
   if (loading) {
     return (
@@ -639,6 +936,41 @@ const Border = () => {
 
   return (
     <div className="border-container">
+      {/* Popup Notification */}
+      {showPopup && (
+        <div className="popup-overlay">
+          <div className={`popup-notification ${popupType}`}>
+            <div className="popup-icon">
+              {popupType === 'success' && '✅'}
+              {popupType === 'error' && '❌'}
+              {popupType === 'info' && 'ℹ️'}
+            </div>
+            <div className="popup-content">
+              <p>{popupMessage}</p>
+            </div>
+            <button className="popup-close-btn" onClick={() => setShowPopup(false)}>
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* New Request Alert Notification */}
+      {newRequestAlert && (
+        <div className="new-request-alert">
+          <div className="alert-content">
+            <span className="alert-icon">🔔</span>
+            <div className="alert-text">
+              <strong>New Request!</strong>
+              <p>{newRequestAlert.message}</p>
+            </div>
+            <button className="alert-close" onClick={() => setNewRequestAlert(null)}>
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Menu Toggle */}
       <button 
         className="mobile-menu-toggle"
@@ -684,23 +1016,30 @@ const Border = () => {
           </p>
         </div>
         <div className="header-right desktop-only">
+          <button className="refresh-btn" onClick={handleManualRefresh} disabled={isRefreshing}>
+            {isRefreshing ? <FaSpinner className="spinner" /> : <FaSpinner />} Refresh
+          </button>
           <button className="logout-button" onClick={handleLogout}>
             <FaSignOutAlt /> Logout
           </button>
         </div>
       </div>
 
+      {/* Auto-refresh indicator */}
+      <div className="auto-refresh-indicator">
+        <span className="auto-refresh-text">
+          🔄 Auto-refreshing customer requests every 10 seconds
+        </span>
+      </div>
+
       {/* Desktop Navigation Tabs */}
       <div className="navigation-tabs desktop-only">
-       
-      
         <button className="nav-tab active" onClick={handleNavigateToBorder}>
           <FaWallet /> Border
         </button>
         <button className="nav-tab" onClick={handleNavigateToTotalBill}>
           <FaReceipt /> Total Bill
         </button>
-       
       </div>
 
       {/* Error Display */}
@@ -762,8 +1101,8 @@ const Border = () => {
         <div className="section-header" onClick={() => toggleSection('filters')}>
           <h2><FaSearch /> Filters & Search</h2>
           <div className="header-actions">
-            <button className="refresh-btn-small" onClick={handleRefresh}>
-              <FaSpinner className={loading ? 'spinner' : ''} /> Refresh
+            <button className="refresh-btn-small" onClick={handleManualRefresh}>
+              <FaSpinner className={isRefreshing ? 'spinner' : ''} /> Refresh
             </button>
             <button className="expand-toggle">
               {expandedSections.filters ? <FaChevronUp /> : <FaChevronDown />}
@@ -813,6 +1152,120 @@ const Border = () => {
                 </button>
               )}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Customer Requests Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('requests')}>
+          <h2><FaCommentDots /> Customer Requests</h2>
+          <div className="header-actions">
+            {requestsStats && requestsStats.pending > 0 && (
+              <span className="pending-badge">{requestsStats.pending} Pending</span>
+            )}
+            <button className="refresh-btn-small" onClick={fetchCustomerRequests}>
+              <FaSpinner className={loadingRequests ? 'spinner' : ''} /> Refresh
+            </button>
+            <button className="expand-toggle">
+              {expandedSections.requests ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+          </div>
+        </div>
+        
+        {expandedSections.requests && (
+          <div className="requests-content">
+            {loadingRequests ? (
+              <div className="loading-requests">
+                <div className="spinner-small"></div>
+                <p>Loading requests...</p>
+              </div>
+            ) : customerRequests.length === 0 ? (
+              <div className="no-requests">
+                <div className="no-requests-icon">💬</div>
+                <h3>No Customer Requests</h3>
+                <p>Customer requests will appear here when they need assistance</p>
+              </div>
+            ) : (
+              <div className="requests-grid">
+                {customerRequests.map(request => (
+                  <div key={request._id} className={`request-card ${request.status}`}>
+                    <div className="request-header">
+                      <div className="request-type-icon">
+                        {getRequestIcon(request.requestType)}
+                      </div>
+                      <div className="request-info">
+                        <h4>
+                          {request.requestType === 'water' ? 'Water Request' : 
+                           request.requestType === 'tissue' ? 'Tissue Paper Request' : 
+                           'Bill Request'}
+                        </h4>
+                        <div className="request-meta">
+                          <span className="bill-number">Bill #{request.billNumber}</span>
+                          <span className="table-number">Table {request.tableNumber}</span>
+                        </div>
+                      </div>
+                      <div className={`request-status-badge ${request.status}`}>
+                        {request.status === 'pending' && '⏳ Pending'}
+                        {request.status === 'acknowledged' && '👀 Acknowledged'}
+                        {request.status === 'completed' && '✅ Completed'}
+                      </div>
+                    </div>
+                    
+                    <div className="request-body">
+                      <div className="customer-info">
+                        <span className="customer-name">👤 {request.customerName}</span>
+                        <span className="request-time">
+                          🕒 {new Date(request.requestedAt).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div className="request-message">
+                        <FaCommentDots className="message-icon" />
+                        <p>{request.requestMessage}</p>
+                      </div>
+                      {request.staffResponse && (
+                        <div className="staff-response">
+                          <FaReply className="reply-icon" />
+                          <p><strong>Staff Response:</strong> {request.staffResponse}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="request-actions">
+                      {request.status === 'pending' && (
+                        <>
+                          <button 
+                            className="request-action-btn acknowledge"
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setShowRequestModal(true);
+                            }}
+                          >
+                            <FaCheckDouble /> Acknowledge & Respond
+                          </button>
+                        </>
+                      )}
+                      {request.status === 'acknowledged' && (
+                        <button 
+                          className="request-action-btn complete"
+                          onClick={() => updateRequestStatus(request._id, 'completed')}
+                        >
+                          <FaCheckCircle /> Mark Completed
+                        </button>
+                      )}
+                      {request.status === 'pending' && (
+                        <button 
+                          className="request-action-btn complete"
+                          onClick={() => updateRequestStatus(request._id, 'completed', 'Request fulfilled')}
+                        >
+                          <FaCheckCircle /> Direct Complete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1074,28 +1527,30 @@ const Border = () => {
                                   </div>
                                 </div>
 
-                                <table className="items-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Item</th>
-                                      <th>Qty</th>
-                                      <th>Price</th>
-                                      <th>GST%</th>
-                                      <th>Total</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {order.items.map((item, i) => (
-                                      <tr key={i}>
-                                        <td className="item-name">{item.name}</td>
-                                        <td className="item-qty">{item.quantity}</td>
-                                        <td className="item-price">₹{item.price.toFixed(2)}</td>
-                                        <td className="item-gst">{item.gstPercentage}%</td>
-                                        <td className="item-total">₹{(item.price * item.quantity).toFixed(2)}</td>
+                                <div className="table-responsive">
+                                  <table className="items-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Price</th>
+                                        <th>GST%</th>
+                                        <th>Total</th>
                                       </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                                    </thead>
+                                    <tbody>
+                                      {order.items.map((item, i) => (
+                                        <tr key={i}>
+                                          <td className="item-name">{item.name}</td>
+                                          <td className="item-qty">{item.quantity}</td>
+                                          <td className="item-price">₹{item.price.toFixed(2)}</td>
+                                          <td className="item-gst">{item.gstPercentage}%</td>
+                                          <td className="item-total">₹{(item.price * item.quantity).toFixed(2)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
 
                                 <div className="totals-section">
                                   <div className="total-row">
@@ -1172,6 +1627,49 @@ const Border = () => {
         )}
       </div>
 
+      {/* Response Modal */}
+      {showRequestModal && selectedRequest && (
+        <div className="modal-overlay" onClick={() => setShowRequestModal(false)}>
+          <div className="response-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Respond to Request</h3>
+              <button className="close-modal-btn" onClick={() => setShowRequestModal(false)}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="request-details">
+                <p><strong>Customer:</strong> {selectedRequest.customerName}</p>
+                <p><strong>Table:</strong> {selectedRequest.tableNumber}</p>
+                <p><strong>Bill No:</strong> #{selectedRequest.billNumber}</p>
+                <p><strong>Request:</strong> {selectedRequest.requestMessage}</p>
+              </div>
+              <div className="response-input-group">
+                <label>Staff Response:</label>
+                <textarea
+                  value={staffResponse}
+                  onChange={(e) => setStaffResponse(e.target.value)}
+                  placeholder="Enter your response message..."
+                  rows={3}
+                  className="response-textarea"
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={() => setShowRequestModal(false)}>
+                Cancel
+              </button>
+              <button 
+                className="submit-btn"
+                onClick={() => handleAcknowledgeWithResponse(selectedRequest)}
+              >
+                Send Response
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="border-footer">
         <p>
@@ -1180,7 +1678,7 @@ const Border = () => {
           Today: {today}
         </p>
         <p className="footer-note">
-          All orders are restaurant-specific and accessible only to authorized staff
+          Auto-refreshes customer requests every 10 seconds • All orders are restaurant-specific
         </p>
       </div>
     </div>

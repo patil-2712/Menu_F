@@ -23,6 +23,7 @@ const Publicmenu = () => {
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeTypeFilter, setActiveTypeFilter] = useState('all'); // 'all', 'veg', 'non-veg'
   const [searchTerm, setSearchTerm] = useState('');
   const [showOrderSummary, setShowOrderSummary] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -124,12 +125,21 @@ const Publicmenu = () => {
   useEffect(() => {
     let result = menuItems;
     
+    // Filter by category
     if (activeCategory !== 'all') {
       result = result.filter(item => 
         item.category && item.category.toLowerCase() === activeCategory.toLowerCase()
       );
     }
     
+    // Filter by Veg/Non-Veg
+    if (activeTypeFilter !== 'all') {
+      result = result.filter(item => 
+        item.type && item.type.toLowerCase() === activeTypeFilter.toLowerCase()
+      );
+    }
+    
+    // Filter by search term
     if (searchTerm) {
       result = result.filter(item => 
         item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -137,7 +147,7 @@ const Publicmenu = () => {
     }
     
     setFilteredItems(result);
-  }, [activeCategory, searchTerm, menuItems]);
+  }, [activeCategory, activeTypeFilter, searchTerm, menuItems]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -322,6 +332,28 @@ const Publicmenu = () => {
         )}
       </div>
 
+      {/* Veg/Non-Veg Filter Buttons */}
+      <div className="type-filter-container">
+        <button
+          className={`type-filter-btn ${activeTypeFilter === 'all' ? 'active' : ''}`}
+          onClick={() => setActiveTypeFilter('all')}
+        >
+          All 
+        </button>
+        <button
+          className={`type-filter-btn veg-btn ${activeTypeFilter === 'veg' ? 'active' : ''}`}
+          onClick={() => setActiveTypeFilter('veg')}
+        >
+          🟢 Veg 
+        </button>
+        <button
+          className={`type-filter-btn nonveg-btn ${activeTypeFilter === 'non-veg' ? 'active' : ''}`}
+          onClick={() => setActiveTypeFilter('non-veg')}
+        >
+          🔴 Non-Veg
+        </button>
+      </div>
+
       <nav className="menu-categories">
         {allCategories.map(category => (
           <button
@@ -399,9 +431,15 @@ const Publicmenu = () => {
           !loading && (
             <div className="no-items">
               <p>No menu items found</p>
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="clear-search-btn">
-                  Clear Search
+              {(searchTerm || activeTypeFilter !== 'all') && (
+                <button 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setActiveTypeFilter('all');
+                  }} 
+                  className="clear-search-btn"
+                >
+                  Clear Filters
                 </button>
               )}
             </div>
@@ -434,8 +472,6 @@ const Publicmenu = () => {
                       </div>
                     ))}
                   </div>
-                  
-                  
                   
                   <div className="order-totals">
                     <div className="total-row">
