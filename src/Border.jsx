@@ -33,11 +33,7 @@ import {
   FaClipboardList,
   FaStar,
   FaEye,
-  FaCommentDots,
-  FaCheckDouble,
-  FaReply,
-  FaGlassWhiskey,
-  FaRegStickyNote
+  FaCommentDots
 } from 'react-icons/fa';
 import './Border.css';
 
@@ -61,25 +57,13 @@ const Border = () => {
   const [expandedSections, setExpandedSections] = useState({
     stats: true,
     filters: true,
-    orders: true,
-    requests: true
+    orders: true
   });
-  
-  // Customer Requests State
-  const [customerRequests, setCustomerRequests] = useState([]);
-  const [requestsStats, setRequestsStats] = useState(null);
-  const [loadingRequests, setLoadingRequests] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [staffResponse, setStaffResponse] = useState('');
   
   // Popup State
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
-  const [popupType, setPopupType] = useState('success'); // success, error, info
-  
-  // Auto-refresh state
-  const [newRequestAlert, setNewRequestAlert] = useState(null);
+  const [popupType, setPopupType] = useState('success');
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const [editFormData, setEditFormData] = useState({
@@ -96,16 +80,12 @@ const Border = () => {
   });
   
   const printRefs = useRef({});
-  const refreshInterval = useRef(null);
-  const previousRequestsRef = useRef([]);
 
   // Show popup notification
   const showPopupNotification = (message, type = 'success') => {
     setPopupMessage(message);
     setPopupType(type);
     setShowPopup(true);
-    
-    // Auto hide after 3 seconds
     setTimeout(() => {
       setShowPopup(false);
     }, 3000);
@@ -168,198 +148,8 @@ const Border = () => {
       fetchRestaurantData();
       fetchOrders();
       fetchMenuItems();
-      fetchCustomerRequests();
-      
-      // Set up auto-refresh every 10 seconds
-      startAutoRefresh();
     }
-    
-    // Cleanup interval on component unmount
-    return () => {
-      if (refreshInterval.current) {
-        clearInterval(refreshInterval.current);
-      }
-    };
   }, [restaurantSlug]);
-
-  // Start auto-refresh timer
-  const startAutoRefresh = () => {
-    if (refreshInterval.current) {
-      clearInterval(refreshInterval.current);
-    }
-    
-    refreshInterval.current = setInterval(() => {
-      console.log('🔄 Auto-refreshing customer requests...');
-      checkForNewRequests();
-    }, 10000); // 10 seconds
-  };
-
-  // Check for new requests without full page reload
-  const checkForNewRequests = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_URL}/api/order/customer-request/list/${restaurantSlug}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        const newRequestsData = response.data.requests;
-        const oldRequests = previousRequestsRef.current;
-        
-        // Find new pending requests
-        const newPendingRequests = newRequestsData.filter(
-          newReq => 
-            newReq.status === 'pending' && 
-            !oldRequests.some(oldReq => oldReq._id === newReq._id)
-        );
-        
-        if (newPendingRequests.length > 0) {
-          // Show popup for new requests
-          const requestTypes = newPendingRequests.map(r => 
-            r.requestType === 'water' ? '💧 Water' : 
-            r.requestType === 'tissue' ? '🧻 Tissue' : '🧾 Bill'
-          ).join(', ');
-          
-          const tableNumbers = [...new Set(newPendingRequests.map(r => r.tableNumber))].join(', ');
-          
-          const popupMsg = `🔔 New Customer Request${newPendingRequests.length > 1 ? 's' : ''}!\n\n📝 ${requestTypes}\n🪑 Table: ${tableNumbers}`;
-          
-          showPopupNotification(popupMsg, 'info');
-          
-          // Also show a temporary notification in the UI
-          setNewRequestAlert({
-            count: newPendingRequests.length,
-            message: `${newPendingRequests.length} new request${newPendingRequests.length > 1 ? 's' : ''} received!`,
-            requests: newPendingRequests
-          });
-          
-          // Hide notification after 5 seconds
-          setTimeout(() => {
-            setNewRequestAlert(null);
-          }, 5000);
-          
-          // Update the requests in UI without page reload
-          setCustomerRequests(newRequestsData);
-          setRequestsStats(response.data.stats);
-          
-          // Play notification sound (optional)
-          try {
-            const audio = new Audio('/notification.mp3');
-            audio.play().catch(e => console.log('Audio play failed:', e));
-          } catch (audioErr) {
-            console.log('Audio not supported');
-          }
-        }
-        
-        // Update previous requests reference
-        previousRequestsRef.current = newRequestsData;
-      }
-    } catch (err) {
-      console.error('Error checking for new requests:', err);
-    }
-  };
-
-  // Manual refresh without loading spinner
-  const handleSilentRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await Promise.all([
-        fetchCustomerRequestsSilent(),
-        fetchOrdersSilent()
-      ]);
-      showPopupNotification('Data refreshed successfully!', 'success');
-    } catch (err) {
-      console.error('Refresh error:', err);
-      showPopupNotification('Failed to refresh data', 'error');
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  // Silent fetch for customer requests (no loading state)
-  const fetchCustomerRequestsSilent = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_URL}/api/order/customer-request/list/${restaurantSlug}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        setCustomerRequests(response.data.requests);
-        setRequestsStats(response.data.stats);
-        previousRequestsRef.current = response.data.requests;
-      }
-    } catch (err) {
-      console.error('Error fetching customer requests:', err);
-    }
-  };
-
-  // Silent fetch for orders (no loading state)
-  const fetchOrdersSilent = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_URL}/api/order/billing/${restaurantSlug}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000
-        }
-      );
-      
-      if (response.data && response.data.success) {
-        const grouped = {};
-        
-        response.data.orders.forEach(order => {
-          const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-          const gstAmount = order.gstAmount || order.items.reduce((sum, item) => {
-            return sum + (item.price * item.quantity * (item.gstPercentage || 18) / 100);
-          }, 0);
-          const total = subtotal + gstAmount;
-          const discount = order.discount || 0;
-          const discountType = order.discountType || 'amount';
-          
-          const discountedTotal = calculateDiscountedTotal(total, discount, discountType);
-          
-          order.subtotal = parseFloat(subtotal.toFixed(2));
-          order.gstAmount = parseFloat(gstAmount.toFixed(2));
-          order.total = parseFloat(total.toFixed(2));
-          order.discount = parseFloat(discount);
-          order.discountType = discountType;
-          order.discountedTotal = parseFloat(discountedTotal);
-          
-          if (!grouped[order.date]) {
-            grouped[order.date] = [];
-          }
-          grouped[order.date].push(order);
-        });
-        
-        Object.keys(grouped).forEach(date => {
-          grouped[date].sort((a, b) => {
-            const statusPriority = {
-              'completed': 1,
-              'preparing': 2,
-              'pending': 3,
-              'cancelled': 4
-            };
-            const priorityA = statusPriority[a.status] || 5;
-            const priorityB = statusPriority[b.status] || 5;
-            if (priorityA !== priorityB) return priorityA - priorityB;
-            return b.billNumber - a.billNumber;
-          });
-        });
-        
-        setGroupedOrders(grouped);
-        setError(null);
-      }
-    } catch (err) {
-      console.error('Error fetching orders:', err);
-    }
-  };
 
   const fetchRestaurantData = async () => {
     try {
@@ -377,7 +167,8 @@ const Border = () => {
       setRestaurantData({
         restaurantName: localStorage.getItem('restaurantName') || restaurantSlug,
         restaurantCode: localStorage.getItem('restaurantCode') || 'N/A',
-        gstNumber: 'N/A'
+        gstNumber: 'N/A',
+        gstPercentage: 18
       });
     }
   };
@@ -404,7 +195,7 @@ const Border = () => {
         response.data.orders.forEach(order => {
           const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
           const gstAmount = order.gstAmount || order.items.reduce((sum, item) => {
-            return sum + (item.price * item.quantity * (item.gstPercentage || 18) / 100);
+            return sum + (item.price * item.quantity * (item.gstPercentage || restaurantData?.gstPercentage || 18) / 100);
           }, 0);
           const total = subtotal + gstAmount;
           const discount = order.discount || 0;
@@ -488,71 +279,16 @@ const Border = () => {
     }
   };
 
-  // Fetch Customer Requests (with loading)
-  const fetchCustomerRequests = async () => {
+  // Manual refresh
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
     try {
-      setLoadingRequests(true);
-      const token = localStorage.getItem('token');
-      
-      const response = await axios.get(
-        `${API_URL}/api/order/customer-request/list/${restaurantSlug}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        setCustomerRequests(response.data.requests);
-        setRequestsStats(response.data.stats);
-        previousRequestsRef.current = response.data.requests;
-      }
+      await fetchOrders();
+      showPopupNotification('Orders refreshed successfully!', 'success');
     } catch (err) {
-      console.error('Error fetching customer requests:', err);
-      showPopupNotification('Failed to fetch customer requests', 'error');
+      showPopupNotification('Failed to refresh orders', 'error');
     } finally {
-      setLoadingRequests(false);
-    }
-  };
-
-  // Update Request Status
-  const updateRequestStatus = async (requestId, status, responseMsg = '') => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      const updateData = { status };
-      if (responseMsg) {
-        updateData.staffResponse = responseMsg;
-      }
-      
-      await axios.put(
-        `${API_URL}/api/order/customer-request/update/${requestId}`,
-        updateData,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      
-      // Refresh requests silently
-      await fetchCustomerRequestsSilent();
-      
-      // Show popup success message
-      const statusMessages = {
-        acknowledged: 'Request acknowledged successfully!',
-        completed: 'Request marked as completed!',
-        cancelled: 'Request cancelled!'
-      };
-      showPopupNotification(`✅ ${statusMessages[status] || 'Request updated'}`, 'success');
-      
-    } catch (err) {
-      console.error('Error updating request:', err);
-      showPopupNotification('Failed to update request', 'error');
-    }
-  };
-
-  const handleAcknowledgeWithResponse = async (request) => {
-    if (staffResponse.trim()) {
-      await updateRequestStatus(request._id, 'acknowledged', staffResponse);
-      setShowRequestModal(false);
-      setStaffResponse('');
-      setSelectedRequest(null);
-    } else {
-      showPopupNotification('Please enter a response message', 'error');
+      setIsRefreshing(false);
     }
   };
 
@@ -582,41 +318,6 @@ const Border = () => {
   };
 
   // Navigation Functions
-  const handleNavigateToAdmin = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/admin`);
-  };
-
-  const handleNavigateToAnalytics = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/analytics`);
-  };
-
-  const handleNavigateToRecords = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/records`);
-  };
-
-  const handleNavigateToFeedback = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/feedback`);
-  };
-
-  const handleNavigateToDashboard = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/dashboard`);
-  };
-
-  const handleNavigateToSetMenu = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/setmenu`);
-  };
-
-  const handleNavigateToKorder = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/Korder`);
-  };
-
   const handleNavigateToBorder = () => {
     setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/border`);
@@ -626,12 +327,14 @@ const Border = () => {
     setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/totalbill`);
   };
+
+  const handleNavigateToCustomerRequests = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/customer-requests`);
+  };
   
   const handleLogout = () => {
     console.log("🔓 Logging out from Border...");
-    if (refreshInterval.current) {
-      clearInterval(refreshInterval.current);
-    }
     localStorage.clear();
     sessionStorage.clear();
     navigate("/", { replace: true });
@@ -662,15 +365,18 @@ const Border = () => {
   };
 
   const handleEdit = (order) => {
+    const gstPercentage = restaurantData?.gstPercentage || 18;
+    
     setEditingOrder(order._id);
     setEditFormData({
       customerName: order.customerName || '',
       tableNumber: order.tableNumber || '',
-      items: order.items.map(item => ({
+      items: order.items.map((item, index) => ({
         ...item,
+        uniqueId: `existing_${item._id || item.itemId}_${index}`,
         itemId: item.itemId || item._id,
-        gstPercentage: item.gstPercentage || 18,
-        total: item.price * item.quantity
+        gstPercentage: item.gstPercentage || gstPercentage,
+        total: (item.price || 0) * (item.quantity || 1)
       })),
       subtotal: order.subtotal || 0,
       gstAmount: order.gstAmount || 0,
@@ -709,13 +415,14 @@ const Border = () => {
     } else if (name === 'menuItem') {
       const selectedMenuItem = menuItems.find(item => item._id === value);
       if (selectedMenuItem) {
+        const gstPercentage = restaurantData?.gstPercentage || 18;
         const updatedItems = [...editFormData.items];
         updatedItems[index] = {
           ...updatedItems[index],
           itemId: selectedMenuItem._id,
           name: selectedMenuItem.name,
           price: selectedMenuItem.price,
-          gstPercentage: 18,
+          gstPercentage: gstPercentage,
           quantity: updatedItems[index].quantity || 1,
           total: selectedMenuItem.price * (updatedItems[index].quantity || 1)
         };
@@ -726,7 +433,7 @@ const Border = () => {
       if (name === 'quantity' || name === 'price' || name === 'gstPercentage') {
         const numValue = parseFloat(value) || 0;
         updatedItems[index][name] = numValue;
-        updatedItems[index].total = updatedItems[index].quantity * updatedItems[index].price;
+        updatedItems[index].total = (updatedItems[index].price || 0) * (updatedItems[index].quantity || 1);
       } else {
         updatedItems[index][name] = value;
       }
@@ -737,7 +444,7 @@ const Border = () => {
   const updateOrderTotals = (items, discount, discountType) => {
     const newSubtotal = items.reduce((sum, item) => sum + (item.total || 0), 0);
     const newGstAmount = items.reduce((sum, item) => {
-      return sum + ((item.total || 0) * (item.gstPercentage || 18) / 100);
+      return sum + ((item.total || 0) * (item.gstPercentage || restaurantData?.gstPercentage || 18) / 100);
     }, 0);
     const newTotal = parseFloat((newSubtotal + newGstAmount).toFixed(2));
     const newDiscountedTotal = calculateDiscountedTotal(newTotal, discount, discountType);
@@ -767,7 +474,7 @@ const Border = () => {
         name: item.name?.trim() || `Item ${index + 1}`,
         price: Math.max(0, parseFloat(item.price) || 0),
         quantity: Math.max(1, parseInt(item.quantity) || 1),
-        gstPercentage: Math.max(0, Math.min(100, parseFloat(item.gstPercentage) || 18)),
+        gstPercentage: Math.max(0, Math.min(100, parseFloat(item.gstPercentage) || restaurantData?.gstPercentage || 18)),
       }));
 
       const filteredItems = validItems.filter(item => item.name && item.name !== 'Item' && item.price > 0);
@@ -779,7 +486,7 @@ const Border = () => {
 
       const subtotal = parseFloat(filteredItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2));
       const gstAmount = parseFloat(filteredItems.reduce((sum, item) => {
-        return sum + (item.price * item.quantity * (item.gstPercentage || 18) / 100);
+        return sum + (item.price * item.quantity * (item.gstPercentage || restaurantData?.gstPercentage || 18) / 100);
       }, 0).toFixed(2));
       const total = parseFloat((subtotal + gstAmount).toFixed(2));
       const discount = parseFloat(editFormData.discount) || 0;
@@ -850,21 +557,26 @@ const Border = () => {
     }
   };
 
+  // FIXED: Add item row with unique ID
   const addItemRow = () => {
+    const gstPercentage = restaurantData?.gstPercentage || 18;
+    const newItem = { 
+      uniqueId: `temp_${Date.now()}_${Math.random()}_${editFormData.items.length}`,
+      itemId: `temp_${Date.now()}_${Math.random()}_${editFormData.items.length}`,
+      name: '', 
+      quantity: 1, 
+      price: 0, 
+      gstPercentage: gstPercentage,
+      total: 0 
+    };
+    
     setEditFormData(prev => ({
       ...prev,
-      items: [...prev.items, { 
-        _id: `temp_${Date.now()}_${prev.items.length}`,
-        itemId: `temp_${Date.now()}_${prev.items.length}`,
-        name: '', 
-        quantity: 1, 
-        price: 0, 
-        gstPercentage: 18,
-        total: 0 
-      }]
+      items: [...prev.items, newItem]
     }));
   };
 
+  // FIXED: Remove item row by index
   const removeItemRow = (index) => {
     const updatedItems = editFormData.items.filter((_, i) => i !== index);
     updateOrderTotals(updatedItems, editFormData.discount, editFormData.discountType);
@@ -888,10 +600,6 @@ const Border = () => {
     }
   };
 
-  const handleManualRefresh = () => {
-    handleSilentRefresh();
-  };
-
   const clearFilters = () => {
     setSearchTable('');
     setStatusFilter('all');
@@ -911,19 +619,10 @@ const Border = () => {
 
   // Navigation items for mobile
   const navItems = [
-    { icon: FaWallet, label: 'Border', action: handleNavigateToBorder },
+    { icon: FaWallet, label: 'Border', action: handleNavigateToBorder, active: true },
     { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill },
+    { icon: FaCommentDots, label: 'Customer Requests', action: handleNavigateToCustomerRequests },
   ];
-
-  // Get request type icon
-  const getRequestIcon = (type) => {
-    switch(type) {
-      case 'water': return '💧';
-      case 'tissue': return '🧻';
-      case 'bill': return '🧾';
-      default: return '💬';
-    }
-  };
 
   if (loading) {
     return (
@@ -955,22 +654,6 @@ const Border = () => {
         </div>
       )}
 
-      {/* New Request Alert Notification */}
-      {newRequestAlert && (
-        <div className="new-request-alert">
-          <div className="alert-content">
-            <span className="alert-icon">🔔</span>
-            <div className="alert-text">
-              <strong>New Request!</strong>
-              <p>{newRequestAlert.message}</p>
-            </div>
-            <button className="alert-close" onClick={() => setNewRequestAlert(null)}>
-              <FaTimes />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Mobile Menu Toggle */}
       <button 
         className="mobile-menu-toggle"
@@ -992,7 +675,7 @@ const Border = () => {
             {navItems.map((item, index) => (
               <button 
                 key={index}
-                className="mobile-nav-item"
+                className={`mobile-nav-item ${item.active ? 'active' : ''}`}
                 onClick={item.action}
               >
                 <item.icon /> {item.label}
@@ -1025,13 +708,6 @@ const Border = () => {
         </div>
       </div>
 
-      {/* Auto-refresh indicator */}
-      <div className="auto-refresh-indicator">
-        <span className="auto-refresh-text">
-          🔄 Auto-refreshing customer requests every 10 seconds
-        </span>
-      </div>
-
       {/* Desktop Navigation Tabs */}
       <div className="navigation-tabs desktop-only">
         <button className="nav-tab active" onClick={handleNavigateToBorder}>
@@ -1039,6 +715,9 @@ const Border = () => {
         </button>
         <button className="nav-tab" onClick={handleNavigateToTotalBill}>
           <FaReceipt /> Total Bill
+        </button>
+        <button className="nav-tab" onClick={handleNavigateToCustomerRequests}>
+          <FaCommentDots /> Customer Requests
         </button>
       </div>
 
@@ -1156,120 +835,6 @@ const Border = () => {
         )}
       </div>
 
-      {/* Customer Requests Section */}
-      <div className="summary-section">
-        <div className="section-header" onClick={() => toggleSection('requests')}>
-          <h2><FaCommentDots /> Customer Requests</h2>
-          <div className="header-actions">
-            {requestsStats && requestsStats.pending > 0 && (
-              <span className="pending-badge">{requestsStats.pending} Pending</span>
-            )}
-            <button className="refresh-btn-small" onClick={fetchCustomerRequests}>
-              <FaSpinner className={loadingRequests ? 'spinner' : ''} /> Refresh
-            </button>
-            <button className="expand-toggle">
-              {expandedSections.requests ? <FaChevronUp /> : <FaChevronDown />}
-            </button>
-          </div>
-        </div>
-        
-        {expandedSections.requests && (
-          <div className="requests-content">
-            {loadingRequests ? (
-              <div className="loading-requests">
-                <div className="spinner-small"></div>
-                <p>Loading requests...</p>
-              </div>
-            ) : customerRequests.length === 0 ? (
-              <div className="no-requests">
-                <div className="no-requests-icon">💬</div>
-                <h3>No Customer Requests</h3>
-                <p>Customer requests will appear here when they need assistance</p>
-              </div>
-            ) : (
-              <div className="requests-grid">
-                {customerRequests.map(request => (
-                  <div key={request._id} className={`request-card ${request.status}`}>
-                    <div className="request-header">
-                      <div className="request-type-icon">
-                        {getRequestIcon(request.requestType)}
-                      </div>
-                      <div className="request-info">
-                        <h4>
-                          {request.requestType === 'water' ? 'Water Request' : 
-                           request.requestType === 'tissue' ? 'Tissue Paper Request' : 
-                           'Bill Request'}
-                        </h4>
-                        <div className="request-meta">
-                          <span className="bill-number">Bill #{request.billNumber}</span>
-                          <span className="table-number">Table {request.tableNumber}</span>
-                        </div>
-                      </div>
-                      <div className={`request-status-badge ${request.status}`}>
-                        {request.status === 'pending' && '⏳ Pending'}
-                        {request.status === 'acknowledged' && '👀 Acknowledged'}
-                        {request.status === 'completed' && '✅ Completed'}
-                      </div>
-                    </div>
-                    
-                    <div className="request-body">
-                      <div className="customer-info">
-                        <span className="customer-name">👤 {request.customerName}</span>
-                        <span className="request-time">
-                          🕒 {new Date(request.requestedAt).toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="request-message">
-                        <FaCommentDots className="message-icon" />
-                        <p>{request.requestMessage}</p>
-                      </div>
-                      {request.staffResponse && (
-                        <div className="staff-response">
-                          <FaReply className="reply-icon" />
-                          <p><strong>Staff Response:</strong> {request.staffResponse}</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="request-actions">
-                      {request.status === 'pending' && (
-                        <>
-                          <button 
-                            className="request-action-btn acknowledge"
-                            onClick={() => {
-                              setSelectedRequest(request);
-                              setShowRequestModal(true);
-                            }}
-                          >
-                            <FaCheckDouble /> Acknowledge & Respond
-                          </button>
-                        </>
-                      )}
-                      {request.status === 'acknowledged' && (
-                        <button 
-                          className="request-action-btn complete"
-                          onClick={() => updateRequestStatus(request._id, 'completed')}
-                        >
-                          <FaCheckCircle /> Mark Completed
-                        </button>
-                      )}
-                      {request.status === 'pending' && (
-                        <button 
-                          className="request-action-btn complete"
-                          onClick={() => updateRequestStatus(request._id, 'completed', 'Request fulfilled')}
-                        >
-                          <FaCheckCircle /> Direct Complete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* Orders Section */}
       <div className="summary-section">
         <div className="section-header" onClick={() => toggleSection('orders')}>
@@ -1363,63 +928,67 @@ const Border = () => {
                                 
                                 <div className="items-section">
                                   <label>Order Items:</label>
-                                  {editFormData.items.map((item, index) => (
-                                    <div key={index} className="item-row">
-                                      <select
-                                        name="menuItem"
-                                        value={item.itemId || ''}
-                                        onChange={(e) => handleEditChange(e, index)}
-                                        className="menu-select"
-                                      >
-                                        <option value="">Select Item</option>
-                                        {menuItems.map(menuItem => (
-                                          <option key={menuItem._id} value={menuItem._id}>
-                                            {menuItem.name} (₹{menuItem.price})
-                                          </option>
-                                        ))}
-                                      </select>
-                                      <input
-                                        type="number"
-                                        name="quantity"
-                                        min="1"
-                                        value={item.quantity}
-                                        onChange={(e) => handleEditChange(e, index)}
-                                        className="qty-input"
-                                        placeholder="Qty"
-                                      />
-                                      <input
-                                        type="number"
-                                        name="price"
-                                        min="0"
-                                        step="0.01"
-                                        value={item.price}
-                                        onChange={(e) => handleEditChange(e, index)}
-                                        className="price-input"
-                                        placeholder="Price"
-                                      />
-                                      <input
-                                        type="number"
-                                        name="gstPercentage"
-                                        min="0"
-                                        max="100"
-                                        step="0.1"
-                                        value={item.gstPercentage}
-                                        onChange={(e) => handleEditChange(e, index)}
-                                        className="gst-input"
-                                        placeholder="GST%"
-                                      />
-                                      <span className="item-total">
-                                        ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
-                                      </span>
-                                      <button 
-                                        type="button" 
-                                        onClick={() => removeItemRow(index)}
-                                        className="remove-item-btn"
-                                      >
-                                        <FaMinus />
-                                      </button>
-                                    </div>
-                                  ))}
+                                  {editFormData.items && editFormData.items.length > 0 ? (
+                                    editFormData.items.map((item, index) => (
+                                      <div key={item.uniqueId || index} className="item-row">
+                                        <select
+                                          name="menuItem"
+                                          value={item.itemId || ''}
+                                          onChange={(e) => handleEditChange(e, index)}
+                                          className="menu-select"
+                                        >
+                                          <option value="">Select Item</option>
+                                          {menuItems.map(menuItem => (
+                                            <option key={menuItem._id} value={menuItem._id}>
+                                              {menuItem.name} (₹{menuItem.price})
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <input
+                                          type="number"
+                                          name="quantity"
+                                          min="1"
+                                          value={item.quantity || 1}
+                                          onChange={(e) => handleEditChange(e, index)}
+                                          className="qty-input"
+                                          placeholder="Qty"
+                                        />
+                                        <input
+                                          type="number"
+                                          name="price"
+                                          min="0"
+                                          step="0.01"
+                                          value={item.price || 0}
+                                          onChange={(e) => handleEditChange(e, index)}
+                                          className="price-input"
+                                          placeholder="Price"
+                                        />
+                                        <input
+                                          type="number"
+                                          name="gstPercentage"
+                                          min="0"
+                                          max="100"
+                                          step="0.1"
+                                          value={item.gstPercentage || restaurantData?.gstPercentage || 18}
+                                          onChange={(e) => handleEditChange(e, index)}
+                                          className="gst-input"
+                                          placeholder="GST%"
+                                        />
+                                        <span className="item-total">
+                                          ₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}
+                                        </span>
+                                        <button 
+                                          type="button" 
+                                          onClick={() => removeItemRow(index)}
+                                          className="remove-item-btn"
+                                        >
+                                          <FaMinus />
+                                        </button>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="no-items-message">No items added. Click "Add Item" to add items.</div>
+                                  )}
                                   <button type="button" onClick={addItemRow} className="add-item-btn">
                                     <FaPlus /> Add Item
                                   </button>
@@ -1464,7 +1033,7 @@ const Border = () => {
                                     <span>₹{editFormData.subtotal.toFixed(2)}</span>
                                   </div>
                                   <div className="total-line">
-                                    <span>GST Amount:</span>
+                                    <span>GST Amount ({restaurantData?.gstPercentage || 18}%):</span>
                                     <span>₹{editFormData.gstAmount.toFixed(2)}</span>
                                   </div>
                                   <div className="total-line">
@@ -1544,7 +1113,7 @@ const Border = () => {
                                           <td className="item-name">{item.name}</td>
                                           <td className="item-qty">{item.quantity}</td>
                                           <td className="item-price">₹{item.price.toFixed(2)}</td>
-                                          <td className="item-gst">{item.gstPercentage}%</td>
+                                          <td className="item-gst">{item.gstPercentage || restaurantData?.gstPercentage || 18}%</td>
                                           <td className="item-total">₹{(item.price * item.quantity).toFixed(2)}</td>
                                         </tr>
                                       ))}
@@ -1558,7 +1127,7 @@ const Border = () => {
                                     <span>₹{order.subtotal.toFixed(2)}</span>
                                   </div>
                                   <div className="total-row">
-                                    <span>GST Amount:</span>
+                                    <span>GST Amount ({restaurantData?.gstPercentage || 18}%):</span>
                                     <span>₹{order.gstAmount.toFixed(2)}</span>
                                   </div>
                                   <div className="total-row">
@@ -1627,49 +1196,6 @@ const Border = () => {
         )}
       </div>
 
-      {/* Response Modal */}
-      {showRequestModal && selectedRequest && (
-        <div className="modal-overlay" onClick={() => setShowRequestModal(false)}>
-          <div className="response-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Respond to Request</h3>
-              <button className="close-modal-btn" onClick={() => setShowRequestModal(false)}>
-                <FaTimes />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="request-details">
-                <p><strong>Customer:</strong> {selectedRequest.customerName}</p>
-                <p><strong>Table:</strong> {selectedRequest.tableNumber}</p>
-                <p><strong>Bill No:</strong> #{selectedRequest.billNumber}</p>
-                <p><strong>Request:</strong> {selectedRequest.requestMessage}</p>
-              </div>
-              <div className="response-input-group">
-                <label>Staff Response:</label>
-                <textarea
-                  value={staffResponse}
-                  onChange={(e) => setStaffResponse(e.target.value)}
-                  placeholder="Enter your response message..."
-                  rows={3}
-                  className="response-textarea"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowRequestModal(false)}>
-                Cancel
-              </button>
-              <button 
-                className="submit-btn"
-                onClick={() => handleAcknowledgeWithResponse(selectedRequest)}
-              >
-                Send Response
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Footer */}
       <div className="border-footer">
         <p>
@@ -1678,7 +1204,7 @@ const Border = () => {
           Today: {today}
         </p>
         <p className="footer-note">
-          Auto-refreshes customer requests every 10 seconds • All orders are restaurant-specific
+          Manage orders, process payments, and generate bills
         </p>
       </div>
     </div>

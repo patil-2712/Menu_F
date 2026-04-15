@@ -13,6 +13,7 @@ import Analytics from "./Analytics";
 import Admin from "./Admin";
 import FeedbackPage from "./FeedbackPage";
 import ForgotPassword from "./ForgotPassword";
+import CustomerRequests from "./CustomerRequests";
 
 // Session management hook - SINGLE SOURCE OF TRUTH
 const useSessionCheck = () => {
@@ -138,7 +139,7 @@ const OwnerProtectedRoute = ({ children }) => {
 
 // Billing Protected Route - can access billing pages only
 const BillingProtectedRoute = ({ children }) => {
-  const allowedPages = ['border', 'totalbill'];
+  const allowedPages = ['border', 'totalbill', 'customer-requests'];
   return (
     <ProtectedRoute allowedRoles={['billing', 'owner']} allowedPages={allowedPages}>
       {children}
@@ -342,6 +343,14 @@ function App() {
               </RestaurantLayout>
             </OwnerProtectedRoute>
           } />
+
+		  <Route path="/:restaurantSlug/customer-requests" element={
+  <BillingProtectedRoute>
+    <RestaurantLayout>
+      <CustomerRequests />
+    </RestaurantLayout>
+  </BillingProtectedRoute>
+} />
           
           <Route path="/:restaurantSlug/analytics" element={
             <OwnerProtectedRoute>

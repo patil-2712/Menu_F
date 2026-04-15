@@ -1,4 +1,3 @@
-// TotalBill.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -35,7 +34,8 @@ import {
   FaStar,
   FaEye,
   FaChartBar,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaCommentDots
 } from 'react-icons/fa';
 import './TotalBill.css';
 
@@ -299,26 +299,6 @@ const TotalBill = () => {
     navigate(`/${restaurantSlug}/records`);
   };
 
-  const handleNavigateToFeedback = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/feedback`);
-  };
-
-  const handleNavigateToDashboard = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/dashboard`);
-  };
-
-  const handleNavigateToSetMenu = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/setmenu`);
-  };
-
-  const handleNavigateToKorder = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/Korder`);
-  };
-
   const handleNavigateToBorder = () => {
     setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/border`);
@@ -327,6 +307,11 @@ const TotalBill = () => {
   const handleNavigateToTotalBill = () => {
     setMobileMenuOpen(false);
     navigate(`/${restaurantSlug}/totalbill`);
+  };
+
+  const handleNavigateToCustomerRequests = () => {
+    setMobileMenuOpen(false);
+    navigate(`/${restaurantSlug}/customer-requests`);
   };
   
   // FIXED: Immediate logout without refresh needed
@@ -365,10 +350,9 @@ const TotalBill = () => {
 
   // Navigation items for mobile
   const navItems = [
-    
     { icon: FaWallet, label: 'Border', action: handleNavigateToBorder },
-    { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill }
-   
+    { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill },
+    { icon: FaCommentDots, label: 'Customer Requests', action: handleNavigateToCustomerRequests }
   ];
 
   if (loading) {
@@ -435,15 +419,15 @@ const TotalBill = () => {
 
       {/* Desktop Navigation Tabs */}
       <div className="navigation-tabs desktop-only">
-       
-       
         <button className="nav-tab" onClick={handleNavigateToBorder}>
           <FaWallet /> Border
         </button>
         <button className="nav-tab active" onClick={handleNavigateToTotalBill}>
           <FaReceipt /> Total Bill
         </button>
-      
+        <button className="nav-tab" onClick={handleNavigateToCustomerRequests}>
+          <FaCommentDots /> Customer Requests
+        </button>
       </div>
 
       {/* Error Display */}
@@ -606,7 +590,7 @@ const TotalBill = () => {
                         <tr key={order._id}>
                           <td className="bill-number">
                             #{order.billNumber}
-                           </td>
+                            </td>
                           <td>{getStatusBadge(order.status)}</td>
                           <td className="order-time">
                             {order.time ? order.time.split(':').slice(0, 2).join(':') : '--:--'}
