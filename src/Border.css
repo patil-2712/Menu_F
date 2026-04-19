@@ -933,182 +933,197 @@
   transform: translateY(-1px);
 }
 
-/* ========== EDIT ORDER MODAL - FIXED NORMAL LAYOUT ========== */
-.edit-order-modal {
+/* ========== INLINE EDIT MODE STYLES (NO POPUP) ========== */
+.order-card.edit-mode-card {
   background: white;
   border-radius: 15px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: 100%;
-  max-width: 1000px;
-  margin: 0 auto;
 }
 
-.edit-modal-header {
+.edit-form-container {
+  width: 100%;
+}
+
+.edit-form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
+  padding: 16px 20px;
   background: linear-gradient(135deg, #667eea, #764ba2);
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.edit-modal-header h3 {
   color: white;
-  font-size: 1.1rem;
-  margin: 0;
 }
 
-.close-edit-btn {
+.edit-form-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancel-edit-btn {
   background: rgba(255, 255, 255, 0.2);
   border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: white;
   width: 32px;
   height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s;
 }
 
-.close-edit-btn:hover {
+.cancel-edit-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
 }
 
-.edit-form {
+.edit-form-content {
   padding: 20px;
-  max-height: 70vh;
-  overflow-y: auto;
 }
 
-.form-row {
+/* Edit Info Grid */
+.edit-info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
   margin-bottom: 20px;
+  background: #f7fafc;
+  padding: 15px;
+  border-radius: 12px;
 }
 
-.form-group {
+.edit-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.form-group label {
-  font-size: 0.8rem;
+.edit-field label {
+  font-size: 0.7rem;
   font-weight: 600;
   color: #4a5568;
+  text-transform: uppercase;
 }
 
-.form-select,
-.form-input {
+.edit-select,
+.edit-input {
   padding: 10px 12px;
   border: 2px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.9rem;
-  transition: all 0.3s;
+  font-size: 0.85rem;
   background: white;
+  width: 100%;
 }
 
-.form-select:focus,
-.form-input:focus {
+.edit-select:focus,
+.edit-input:focus {
   outline: none;
   border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-/* Items Section - Normal Vertical Layout */
-.items-section {
+/* Edit Items Section */
+.edit-items-section {
   margin-bottom: 20px;
 }
 
-.items-section label {
-  font-size: 0.9rem;
+.edit-items-section > label {
   font-weight: 600;
-  color: #4a5568;
+  color: #2d3748;
   margin-bottom: 12px;
   display: block;
+  font-size: 0.9rem;
 }
 
-/* Item Row - Vertical Layout (No Horizontal Scroll) */
-.item-row {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 15px;
+.edit-items-list {
+  max-height: 400px;
+  overflow-y: auto;
   margin-bottom: 12px;
+}
+
+.edit-item-row {
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
-  transition: all 0.3s;
-}
-
-.item-row:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Item Row Inner Grid */
-.item-row {
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
+  gap: 10px;
+  align-items: flex-end;
 }
 
-.menu-select {
+.edit-item-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-item-field label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #718096;
+  text-transform: uppercase;
+}
+
+.edit-item-name-field {
   flex: 2;
   min-width: 180px;
-  padding: 10px 12px;
+}
+
+.edit-item-select,
+.edit-item-name-input {
+  width: 100%;
+  padding: 8px 10px;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  background: white;
-}
-
-.qty-input,
-.price-input,
-.gst-input {
-  flex: 0.8;
-  min-width: 80px;
-  padding: 10px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  text-align: center;
-}
-
-.item-total {
-  flex: 0.8;
-  min-width: 100px;
-  font-family: monospace;
-  font-size: 0.9rem;
-  font-weight: 700;
-  
-  text-align: center;
-  padding: 8px;
- 
-  border-radius: 8px;
-}
-
-.remove-item-btn {
-  flex: 0.5;
-  min-width: 40px;
-  background: #fee2e2;
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #c53030;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
+  border-radius: 6px;
   font-size: 0.8rem;
 }
 
-.remove-item-btn:hover {
+.edit-item-qty,
+.edit-item-price,
+.edit-item-gst {
+  width: 80px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.edit-item-total {
+  min-width: 90px;
+  justify-content: center;
+}
+
+.edit-item-total span {
+  padding: 8px 10px;
+  background: #e2e8f0;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  font-family: monospace;
+}
+
+.edit-remove-btn {
+  background: #fee2e2;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #c53030;
+  transition: all 0.2s;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.edit-remove-btn:hover {
   background: #fecaca;
   transform: scale(1.02);
 }
@@ -1117,15 +1132,15 @@
   background: linear-gradient(135deg, #48bb78, #38a169);
   color: white;
   border: none;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.85rem;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s;
-  margin-top: 10px;
+  transition: all 0.2s;
+  margin-top: 5px;
 }
 
 .add-item-btn:hover {
@@ -1133,60 +1148,75 @@
   box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
 }
 
-.no-items-message {
-  text-align: center;
-  padding: 30px;
-  color: #718096;
+/* Edit Discount Section */
+.edit-discount-section {
   background: #f7fafc;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  border: 2px dashed #e2e8f0;
-}
-
-.discount-section {
-  margin-bottom: 20px;
   padding: 15px;
-  background: #f7fafc;
   border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
-.totals-panel {
+.edit-discount-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.edit-discount-row label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #4a5568;
+  text-transform: uppercase;
+}
+
+.discount-input {
+  width: 100%;
+}
+
+/* Edit Totals Section */
+.edit-totals-section {
   background: linear-gradient(135deg, #f7fafc, #edf2f7);
-  padding: 20px;
+  padding: 15px;
   border-radius: 12px;
   margin-bottom: 20px;
 }
 
-.total-line {
+.edit-total-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  font-size: 0.9rem;
+  padding: 6px 0;
+  font-size: 0.85rem;
   color: #4a5568;
 }
 
-.total-line.discount-line {
+.edit-total-row.discount {
   color: #f59e0b;
-  font-weight: 600;
+  border-top: 1px dashed #e2e8f0;
+  margin-top: 4px;
+  padding-top: 8px;
 }
 
-.total-line.final-total {
-  font-size: 1.1rem;
+.edit-total-row.final {
+  font-size: 1rem;
   font-weight: bold;
   color: #2d3748;
   border-top: 2px solid #e2e8f0;
-  margin-top: 8px;
-  padding-top: 12px;
+  margin-top: 6px;
+  padding-top: 10px;
 }
 
-.form-actions {
+/* Edit Actions */
+.edit-actions {
   display: flex;
   gap: 15px;
   justify-content: flex-end;
-  margin-top: 20px;
 }
 
-.save-btn {
+.save-edit-btn {
   background: linear-gradient(135deg, #48bb78, #38a169);
   color: white;
   border: none;
@@ -1198,15 +1228,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
-.save-btn:hover {
+.save-edit-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(72, 187, 120, 0.3);
 }
 
-.cancel-btn {
+.cancel-edit-btn-action {
   background: #e2e8f0;
   color: #4a5568;
   border: none;
@@ -1218,10 +1248,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
-.cancel-btn:hover {
+.cancel-edit-btn-action:hover {
   background: #cbd5e0;
   transform: translateY(-2px);
 }
@@ -1270,10 +1300,6 @@
   
   .orders-grid {
     grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  }
-  
-  .edit-order-modal {
-    max-width: 95%;
   }
 }
 
@@ -1340,44 +1366,38 @@
     width: 100%;
   }
   
-  /* Edit Modal Mobile - Vertical Layout */
-  .edit-order-modal {
-    max-width: 100%;
-    margin: 10px;
-  }
-  
-  .edit-form {
-    padding: 15px;
-  }
-  
-  .form-row {
+  /* Mobile Edit Mode Styles */
+  .edit-info-grid {
     grid-template-columns: 1fr;
   }
   
-  .item-row {
+  .edit-item-row {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .menu-select,
-  .qty-input,
-  .price-input,
-  .gst-input,
-  .item-total,
-  .remove-item-btn {
+  .edit-item-name-field,
+  .edit-item-qty,
+  .edit-item-price,
+  .edit-item-gst,
+  .edit-item-total {
     width: 100%;
-    min-width: auto;
   }
   
-  .item-total {
-    text-align: center;
+  .edit-item-field {
+    width: 100%;
   }
   
-  .form-actions {
+  .edit-discount-section {
     flex-direction: column;
   }
   
-  .save-btn, .cancel-btn {
+  .edit-actions {
+    flex-direction: column;
+  }
+  
+  .save-edit-btn,
+  .cancel-edit-btn-action {
     width: 100%;
     justify-content: center;
   }
@@ -1476,16 +1496,16 @@
     font-size: 0.8rem;
   }
   
-  .edit-form {
-    padding: 12px;
-  }
-  
-  .totals-panel {
+  .edit-form-content {
     padding: 15px;
   }
   
-  .total-line {
-    font-size: 0.8rem;
+  .edit-item-row {
+    padding: 10px;
+  }
+  
+  .edit-totals-section {
+    padding: 12px;
   }
 }
 
@@ -1503,22 +1523,23 @@
     font-size: 18px;
   }
   
-  .edit-form {
-    max-height: 60vh;
+  .edit-items-list {
+    max-height: 250px;
   }
   
-  .item-row {
+  .edit-item-row {
     flex-direction: row;
     flex-wrap: wrap;
   }
   
-  .menu-select {
+  .edit-item-name-field {
     flex: 2;
   }
   
-  .qty-input,
-  .price-input,
-  .gst-input {
+  .edit-item-qty,
+  .edit-item-price,
+  .edit-item-gst {
+    width: auto;
     flex: 1;
   }
 }
@@ -1538,8 +1559,11 @@
   .order-actions,
   .navigation-tabs,
   .header-right,
-  .edit-order-modal,
-  .refresh-btn {
+  .edit-mode-card,
+  .edit-form-container,
+  .refresh-btn,
+  .summary-section:first-of-type,
+  .summary-section:nth-of-type(2) {
     display: none !important;
   }
   

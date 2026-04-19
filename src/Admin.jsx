@@ -29,7 +29,9 @@ import {
   FaSpinner,
   FaPercentage,
   FaBars,
-  FaTimesCircle
+  FaTimesCircle,
+  FaGlobe,
+  FaLocationArrow
 } from 'react-icons/fa';
 import "./Admin.css";
 
@@ -51,6 +53,7 @@ const Admin = () => {
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
   
   // Password update states
   const [showPasswordUpdate, setShowPasswordUpdate] = useState(false);
@@ -127,6 +130,74 @@ const Admin = () => {
     }
   };
 
+  // Detect current location
+  const detectCurrentLocation = () => {
+    setDetectingLocation(true);
+    
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser");
+      setDetectingLocation(false);
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        setEditForm({
+          ...editForm,
+          latitude: latitude.toString(),
+          longitude: longitude.toString()
+        });
+        
+        // Optional: Reverse geocoding to get city, state, country
+        try {
+          const response = await axios.get(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          if (response.data) {
+            const location = response.data;
+            setEditForm(prev => ({
+              ...prev,
+              city: location.city || prev.city,
+              state: location.principalSubdivision || prev.state,
+              country: location.countryName || prev.country
+            }));
+          }
+        } catch (geoErr) {
+          console.error("Reverse geocoding error:", geoErr);
+        }
+        
+        setDetectingLocation(false);
+        showSuccessMessage("📍 Location detected successfully!");
+      },
+      (error) => {
+        console.error("Location error:", error);
+        let errorMsg = "Unable to get location. ";
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg += "Please allow location access.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMsg += "Location information unavailable.";
+            break;
+          case error.TIMEOUT:
+            errorMsg += "Location request timed out.";
+            break;
+          default:
+            errorMsg += "Please enter coordinates manually.";
+        }
+        setError(errorMsg);
+        setDetectingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
   const handleEditClick = () => {
     setIsEditing(true);
     setEditForm(restaurantData);
@@ -156,6 +227,8 @@ const Admin = () => {
       Object.keys(editForm).forEach(key => {
         if (editForm[key] !== undefined && editForm[key] !== null) {
           if (key === 'gstPercentage') {
+            dataToSend[key] = editForm[key] ? parseFloat(editForm[key]) : null;
+          } else if (key === 'latitude' || key === 'longitude') {
             dataToSend[key] = editForm[key] ? parseFloat(editForm[key]) : null;
           } else if (typeof editForm[key] === 'string') {
             dataToSend[key] = editForm[key].trim();
@@ -333,20 +406,11 @@ const Admin = () => {
     navigate(`/${restaurantSlug}/dashboard`);
   };
 
-  // FIXED: Immediate logout without refresh needed
   const handleLogout = () => {
     console.log("🔓 Logging out from Admin...");
-    
-    // Clear all localStorage
     localStorage.clear();
-    
-    // Clear sessionStorage if any
     sessionStorage.clear();
-    
-    // Force immediate navigation with replace
     navigate("/", { replace: true });
-    
-    // Hard reload to ensure complete cleanup
     setTimeout(() => {
       window.location.href = "/";
     }, 50);
@@ -556,7 +620,6 @@ const Admin = () => {
             </div>
 
             <div className="password-grid">
-              {/* Owner Password */}
               <div className="form-group">
                 <label>New Owner Password</label>
                 <div className="password-input-wrapper">
@@ -588,7 +651,6 @@ const Admin = () => {
                 )}
               </div>
 
-              {/* Kitchen Password */}
               <div className="form-group">
                 <label>New Kitchen Password</label>
                 <div className="password-input-wrapper">
@@ -620,7 +682,6 @@ const Admin = () => {
                 )}
               </div>
 
-              {/* Billing Password */}
               <div className="form-group">
                 <label>New Billing Password</label>
                 <div className="password-input-wrapper">
@@ -652,7 +713,6 @@ const Admin = () => {
                 )}
               </div>
 
-              {/* Confirm Password */}
               {(passwordUpdateForm.newOwnerPassword || 
                 passwordUpdateForm.newKitchenPassword || 
                 passwordUpdateForm.newBillingPassword) && (
@@ -846,6 +906,155 @@ const Admin = () => {
               </div>
             </div>
 
+            {/* Location Information with Latitude/Longitude */}
+            <div className="info-card location-card">
+              <h3>
+                <FaMapMarkerAlt /> Location
+              </h3>
+              
+              {/* Auto-detect Location Button (only in edit mode) */}
+              {isEditing && (
+                <div className="detect-location-btn-container">
+                  <button
+                    type="button"
+                    className="detect-location-edit-btn"
+                    onClick={detectCurrentLocation}
+                    disabled={detectingLocation}
+                  >
+                    {detectingLocation ? (
+                      <>
+                        <FaSpinner className="spinner" /> Detecting...
+                      </>
+                    ) : (
+                      <>
+                        <FaLocationArrow /> Detect Current Location
+                      </>
+                    )}
+                  </button>
+                  <p className="helper-text">Auto-fill coordinates from your current location</p>
+                </div>
+              )}
+              
+              {/* Latitude */}
+              <div className="info-field">
+                <label>
+                  <FaGlobe /> Latitude:
+                </label>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    step="any"
+                    name="latitude"
+                    value={editForm.latitude || ""}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 19.0760"
+                    className="edit-input"
+                  />
+                ) : (
+                  <span className="data-value">
+                    {restaurantData?.latitude ? restaurantData.latitude : "Not set"}
+                  </span>
+                )}
+              </div>
+              
+              {/* Longitude */}
+              <div className="info-field">
+                <label>
+                  <FaGlobe /> Longitude:
+                </label>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    step="any"
+                    name="longitude"
+                    value={editForm.longitude || ""}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 72.8777"
+                    className="edit-input"
+                  />
+                ) : (
+                  <span className="data-value">
+                    {restaurantData?.longitude ? restaurantData.longitude : "Not set"}
+                  </span>
+                )}
+              </div>
+              
+              {/* Google Maps Link (if coordinates exist) */}
+              {restaurantData?.latitude && restaurantData?.longitude && (
+                <div className="info-field">
+                  <label>Map View:</label>
+                  <a
+                    href={`https://www.google.com/maps?q=${restaurantData.latitude},${restaurantData.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="map-link"
+                  >
+                    <FaMapMarkerAlt /> View on Google Maps
+                  </a>
+                </div>
+              )}
+              
+              <div className="info-field">
+                <label>City:</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="city"
+                    value={editForm.city || ""}
+                    onChange={handleInputChange}
+                    className="edit-input"
+                  />
+                ) : (
+                  <span className="data-value">{restaurantData?.city}</span>
+                )}
+              </div>
+              
+              <div className="info-field">
+                <label>State:</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="state"
+                    value={editForm.state || ""}
+                    onChange={handleInputChange}
+                    className="edit-input"
+                  />
+                ) : (
+                  <span className="data-value">{restaurantData?.state}</span>
+                )}
+              </div>
+              
+              <div className="info-field">
+                <label>Country:</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="country"
+                    value={editForm.country || ""}
+                    onChange={handleInputChange}
+                    className="edit-input"
+                  />
+                ) : (
+                  <span className="data-value">{restaurantData?.country}</span>
+                )}
+              </div>
+              
+              <div className="info-field">
+                <label>Nearest Place:</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="nearestPlace"
+                    value={editForm.nearestPlace || ""}
+                    onChange={handleInputChange}
+                    className="edit-input"
+                  />
+                ) : (
+                  <span className="data-value">{restaurantData?.nearestPlace}</span>
+                )}
+              </div>
+            </div>
+
             {/* Login Credentials */}
             <div className="info-card credentials-card">
               <h3>Login Credentials</h3>
@@ -907,56 +1116,6 @@ const Admin = () => {
                       <FaCopy />
                     </button>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Location Information */}
-            <div className="info-card">
-              <h3>Location</h3>
-              
-              <div className="info-field">
-                <label>City:</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="city"
-                    value={editForm.city || ""}
-                    onChange={handleInputChange}
-                    className="edit-input"
-                  />
-                ) : (
-                  <span className="data-value">{restaurantData?.city}</span>
-                )}
-              </div>
-              
-              <div className="info-field">
-                <label>State:</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="state"
-                    value={editForm.state || ""}
-                    onChange={handleInputChange}
-                    className="edit-input"
-                  />
-                ) : (
-                  <span className="data-value">{restaurantData?.state}</span>
-                )}
-              </div>
-              
-              <div className="info-field">
-                <label>Country:</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    name="country"
-                    value={editForm.country || ""}
-                    onChange={handleInputChange}
-                    className="edit-input"
-                  />
-                ) : (
-                  <span className="data-value">{restaurantData?.country}</span>
                 )}
               </div>
             </div>
@@ -1093,6 +1252,14 @@ const Admin = () => {
               {restaurantData?.gstPercentage ? `${restaurantData.gstPercentage}%` : 'Not Set'}
             </span>
           </div>
+          {restaurantData?.latitude && restaurantData?.longitude && (
+            <div className="stat-item">
+              <span className="stat-label">Location</span>
+              <span className="stat-value">
+                {restaurantData.latitude}, {restaurantData.longitude}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

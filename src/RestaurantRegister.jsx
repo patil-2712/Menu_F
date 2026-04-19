@@ -26,6 +26,8 @@ function RestaurantRegister() {
     state: "",
     country: "",
     nearestPlace: "",
+    latitude: "",
+    longitude: "",
     ownerName: "",
     ownerMobile: "",
     kitchenUsername: "",
@@ -42,6 +44,8 @@ function RestaurantRegister() {
   const [credentials, setCredentials] = useState(null);
   const [showKitchenPassword, setShowKitchenPassword] = useState(false);
   const [showBillingPassword, setShowBillingPassword] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationError, setLocationError] = useState("");
 
   useEffect(() => {
     generateRestaurantCode();
@@ -60,7 +64,75 @@ function RestaurantRegister() {
     setServerError("");
     setShowKitchenPassword(false);
     setShowBillingPassword(false);
+    setLocationError("");
     generateRestaurantCode();
+  };
+
+  // Get current location automatically
+  const detectLocation = () => {
+    setDetectingLocation(true);
+    setLocationError("");
+    
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      setDetectingLocation(false);
+      return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setForm(prev => ({
+          ...prev,
+          latitude: latitude.toString(),
+          longitude: longitude.toString()
+        }));
+        
+        // Optional: Reverse geocoding to get city, state, country
+        try {
+          const response = await axios.get(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          if (response.data) {
+            const location = response.data;
+            setForm(prev => ({
+              ...prev,
+              city: location.city || prev.city,
+              state: location.principalSubdivision || prev.state,
+              country: location.countryName || prev.country
+            }));
+          }
+        } catch (geoErr) {
+          console.error("Reverse geocoding error:", geoErr);
+        }
+        
+        setDetectingLocation(false);
+      },
+      (error) => {
+        console.error("Location error:", error);
+        let errorMsg = "Unable to get location. ";
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMsg += "Please allow location access.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMsg += "Location information unavailable.";
+            break;
+          case error.TIMEOUT:
+            errorMsg += "Location request timed out.";
+            break;
+          default:
+            errorMsg += "Please enter coordinates manually.";
+        }
+        setLocationError(errorMsg);
+        setDetectingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   };
 
   const validateField = (name, value) => {
@@ -119,6 +191,28 @@ function RestaurantRegister() {
           else delete err.gstPercentage;
         } else {
           delete err.gstPercentage;
+        }
+        break;
+        
+      case "latitude":
+        if (value) {
+          const numValue = parseFloat(value);
+          if (isNaN(numValue)) err.latitude = "Latitude must be a number";
+          else if (numValue < -90 || numValue > 90) err.latitude = "Latitude must be between -90 and 90";
+          else delete err.latitude;
+        } else {
+          delete err.latitude;
+        }
+        break;
+        
+      case "longitude":
+        if (value) {
+          const numValue = parseFloat(value);
+          if (isNaN(numValue)) err.longitude = "Longitude must be a number";
+          else if (numValue < -180 || numValue > 180) err.longitude = "Longitude must be between -180 and 180";
+          else delete err.longitude;
+        } else {
+          delete err.longitude;
         }
         break;
         
@@ -212,6 +306,8 @@ function RestaurantRegister() {
     validateField("confirmPassword", form.confirmPassword);
     validateField("gstNumber", form.gstNumber);
     validateField("gstPercentage", form.gstPercentage);
+    validateField("latitude", form.latitude);
+    validateField("longitude", form.longitude);
     validateField("ownerMobile", form.ownerMobile);
     validateField("kitchenUsername", form.kitchenUsername);
     validateField("kitchenPassword", form.kitchenPassword);
@@ -242,7 +338,9 @@ function RestaurantRegister() {
         `${API_URL}/api/restaurant/register`,
         {
           ...form,
-          gstPercentage: form.gstPercentage ? parseFloat(form.gstPercentage) : null
+          gstPercentage: form.gstPercentage ? parseFloat(form.gstPercentage) : null,
+          latitude: form.latitude ? parseFloat(form.latitude) : null,
+          longitude: form.longitude ? parseFloat(form.longitude) : null
         },
         {
           headers: {
@@ -472,9 +570,62 @@ function RestaurantRegister() {
             </div>
           </div>
 
-          {/* Location Fields */}
+          {/* Location Section with Latitude/Longitude */}
           <div className="location-section">
             <h3 className="section-title">📍 Restaurant Location</h3>
+            
+            {/* Auto-detect Location Button */}
+            <div className="location-detect-section">
+              <button 
+                type="button"
+                className="detect-location-btn"
+                onClick={detectLocation}
+                disabled={detectingLocation}
+              >
+                {detectingLocation ? "📍 Detecting..." : "📍 Detect Current Location"}
+              </button>
+              {locationError && <div className="location-error">{locationError}</div>}
+              <div className="helper-text">Click to automatically fill coordinates and location details</div>
+            </div>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Latitude</label>
+                <input
+                  className={`form-input ${errors.latitude ? 'error' : ''}`}
+                  name="latitude"
+                  type="number"
+                  step="any"
+                  placeholder="e.g., 19.0760"
+                  value={form.latitude}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+                {touched.latitude && errors.latitude && (
+                  <span className="error-text">{errors.latitude}</span>
+                )}
+                <div className="helper-text">Enter restaurant latitude (e.g., 19.0760)</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Longitude</label>
+                <input
+                  className={`form-input ${errors.longitude ? 'error' : ''}`}
+                  name="longitude"
+                  type="number"
+                  step="any"
+                  placeholder="e.g., 72.8777"
+                  value={form.longitude}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+                {touched.longitude && errors.longitude && (
+                  <span className="error-text">{errors.longitude}</span>
+                )}
+                <div className="helper-text">Enter restaurant longitude (e.g., 72.8777)</div>
+              </div>
+            </div>
+
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">

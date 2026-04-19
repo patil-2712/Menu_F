@@ -13,12 +13,14 @@ import {
   FaWallet,
   FaReceipt,
   FaSpinner,
-  FaChevronRight,
   FaClock,
   FaUser,
   FaChair,
-  FaEnvelope,
-  FaCalendarAlt
+  FaChartLine,
+  FaChevronDown,
+  FaChevronUp,
+  FaReplyAll,
+  FaSearch
 } from 'react-icons/fa';
 import './CustomerRequests.css';
 
@@ -29,6 +31,7 @@ const CustomerRequests = () => {
   const API_URL = import.meta.env.VITE_API_URL || 'https://menu-b-ym9l.onrender.com';
   
   const [customerRequests, setCustomerRequests] = useState([]);
+  const [filteredRequests, setFilteredRequests] = useState([]);
   const [requestsStats, setRequestsStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
@@ -39,9 +42,17 @@ const CustomerRequests = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [popupType, setPopupType] = useState('success');
+  const [expandedSections, setExpandedSections] = useState({
+    stats: true,
+    requests: true
+  });
+  
+  // Search state
+  const [searchTable, setSearchTable] = useState('');
   
   const refreshInterval = useRef(null);
   const previousRequestsRef = useRef([]);
+  const messagesEndRef = useRef(null);
 
   // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
@@ -108,6 +119,26 @@ const CustomerRequests = () => {
     };
   }, [restaurantSlug]);
 
+  // Filter requests when search term changes
+  useEffect(() => {
+    if (searchTable.trim()) {
+      const filtered = customerRequests.filter(request => 
+        request.tableNumber && 
+        request.tableNumber.toString().toLowerCase().includes(searchTable.toLowerCase())
+      );
+      setFilteredRequests(filtered);
+    } else {
+      setFilteredRequests(customerRequests);
+    }
+  }, [searchTable, customerRequests]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [filteredRequests]);
+
   const startAutoRefresh = () => {
     if (refreshInterval.current) {
       clearInterval(refreshInterval.current);
@@ -127,12 +158,15 @@ const CustomerRequests = () => {
       );
       
       if (response.data.success) {
-        // Filter only today's requests
         const allRequests = response.data.requests;
         const todayRequests = allRequests.filter(req => isToday(req.requestedAt));
+        // Sort by newest first (latest on top)
+        const sortedRequests = [...todayRequests].sort((a, b) => 
+          new Date(b.requestedAt) - new Date(a.requestedAt)
+        );
         const oldTodayRequests = previousRequestsRef.current;
         
-        const newPendingRequests = todayRequests.filter(
+        const newPendingRequests = sortedRequests.filter(
           newReq => 
             newReq.status === 'pending' && 
             !oldTodayRequests.some(oldReq => oldReq._id === newReq._id)
@@ -140,18 +174,18 @@ const CustomerRequests = () => {
         
         if (newPendingRequests.length > 0) {
           showPopupNotification(`${newPendingRequests.length} new request${newPendingRequests.length > 1 ? 's' : ''} received!`, 'info');
-          setCustomerRequests(todayRequests);
-          // Update stats based on today's requests
+          setCustomerRequests(sortedRequests);
+          setFilteredRequests(sortedRequests);
           const stats = {
-            total: todayRequests.length,
-            pending: todayRequests.filter(r => r.status === 'pending').length,
-            acknowledged: todayRequests.filter(r => r.status === 'acknowledged').length,
-            completed: todayRequests.filter(r => r.status === 'completed').length
+            total: sortedRequests.length,
+            pending: sortedRequests.filter(r => r.status === 'pending').length,
+            acknowledged: sortedRequests.filter(r => r.status === 'acknowledged').length,
+            completed: sortedRequests.filter(r => r.status === 'completed').length
           };
           setRequestsStats(stats);
         }
         
-        previousRequestsRef.current = todayRequests;
+        previousRequestsRef.current = sortedRequests;
       }
     } catch (err) {
       console.error('Error checking for new requests:', err);
@@ -189,21 +223,24 @@ const CustomerRequests = () => {
       );
       
       if (response.data.success) {
-        // Filter only today's requests
         const allRequests = response.data.requests;
         const todayRequests = allRequests.filter(req => isToday(req.requestedAt));
+        // Sort by newest first (latest on top)
+        const sortedRequests = [...todayRequests].sort((a, b) => 
+          new Date(b.requestedAt) - new Date(a.requestedAt)
+        );
         
-        setCustomerRequests(todayRequests);
+        setCustomerRequests(sortedRequests);
+        setFilteredRequests(sortedRequests);
         
-        // Calculate stats for today's requests only
         const stats = {
-          total: todayRequests.length,
-          pending: todayRequests.filter(r => r.status === 'pending').length,
-          acknowledged: todayRequests.filter(r => r.status === 'acknowledged').length,
-          completed: todayRequests.filter(r => r.status === 'completed').length
+          total: sortedRequests.length,
+          pending: sortedRequests.filter(r => r.status === 'pending').length,
+          acknowledged: sortedRequests.filter(r => r.status === 'acknowledged').length,
+          completed: sortedRequests.filter(r => r.status === 'completed').length
         };
         setRequestsStats(stats);
-        previousRequestsRef.current = todayRequests;
+        previousRequestsRef.current = sortedRequests;
       }
     } catch (err) {
       console.error('Error fetching customer requests:', err);
@@ -259,6 +296,12 @@ const CustomerRequests = () => {
     showPopupNotification('Refreshed successfully', 'success');
   };
 
+  // Clear search filter
+  const clearSearch = () => {
+    setSearchTable('');
+    showPopupNotification('Search cleared', 'info');
+  };
+
   // Navigation Functions
   const handleNavigateToBorder = () => {
     setMobileMenuOpen(false);
@@ -305,13 +348,19 @@ const CustomerRequests = () => {
     }
   };
 
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   const navItems = [
     { icon: FaWallet, label: 'Border', action: handleNavigateToBorder },
     { icon: FaReceipt, label: 'Total Bill', action: handleNavigateToTotalBill },
     { icon: FaCommentDots, label: 'Customer Requests', action: handleNavigateToCustomerRequests, active: true },
   ];
 
-  const todayDate = getTodayDate();
   const formattedDate = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
     month: '2-digit',
@@ -319,6 +368,8 @@ const CustomerRequests = () => {
   });
 
   const pendingCount = requestsStats?.pending || 0;
+  const completedCount = requestsStats?.completed || 0;
+  const totalCount = filteredRequests.length;
 
   return (
     <div className="customer-requests-container">
@@ -369,7 +420,7 @@ const CustomerRequests = () => {
       {/* Header */}
       <div className="requests-header">
         <div className="header-content">
-          <h1><FaCommentDots /> Customer Requests</h1>
+          <h1><FaCommentDots /> Customer Messages</h1>
           <p className="subtitle">{restaurantData?.restaurantName} • {restaurantData?.restaurantCode}</p>
         </div>
         <div className="header-right desktop-only">
@@ -386,164 +437,207 @@ const CustomerRequests = () => {
       <div className="navigation-tabs desktop-only">
         <button className="nav-tab" onClick={handleNavigateToBorder}><FaWallet /> Border</button>
         <button className="nav-tab" onClick={handleNavigateToTotalBill}><FaReceipt /> Total Bill</button>
-        <button className="nav-tab active" onClick={handleNavigateToCustomerRequests}><FaCommentDots /> Customer Requests</button>
+        <button className="nav-tab active" onClick={handleNavigateToCustomerRequests}><FaCommentDots /> Customer Messages</button>
       </div>
 
-      {/* Stats Bar - Single Rectangle */}
-      <div className="stats-bar">
-        <div className="stat-item">
-          <span className="stat-icon">📋</span>
-          <span className="stat-label">Today's Requests</span>
-          <span className="stat-value">{customerRequests.length}</span>
+      {/* Statistics Section */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('stats')}>
+          <h2><FaChartLine /> Messages Statistics</h2>
+          <button className="expand-toggle">
+            {expandedSections.stats ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
         </div>
-        <div className="stat-item pending">
-          <span className="stat-icon">⏳</span>
-          <span className="stat-label">Pending</span>
-          <span className="stat-value">{pendingCount}</span>
-        </div>
-        <div className="stat-item completed">
-          <span className="stat-icon">✅</span>
-          <span className="stat-label">Completed</span>
-          <span className="stat-value">{customerRequests.filter(r => r.status === 'completed').length}</span>
-        </div>
-        <div className="stat-item date">
-          <span className="stat-icon">📅</span>
-          <span className="stat-label">Date</span>
-          <span className="stat-value">{formattedDate}</span>
-        </div>
-      </div>
-
-      {/* Auto-refresh indicator */}
-      <div className="auto-refresh-indicator">
-        <span>🔄 Auto-refreshing every 10 seconds • Showing today's requests only</span>
-      </div>
-
-      {/* Requests List */}
-      <div className="requests-list-container">
-        {loading ? (
-          <div className="loading-state">
-            <div className="spinner"></div>
-            <p>Loading today's requests...</p>
-          </div>
-        ) : customerRequests.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">💬</div>
-            <h3>No Requests Today</h3>
-            <p>No customer requests have been made today</p>
-            <div className="empty-tips">
-              <p>📅 Date: {formattedDate}</p>
-              <p>💡 New requests will appear here automatically when customers make them</p>
+        
+        {expandedSections.stats && (
+          <div className="summary-cards">
+            <div className="stat-card">
+              <div className="stat-icon">💬</div>
+              <div className="stat-content">
+                <h3>Total Messages</h3>
+                <p className="stat-number">{totalCount}</p>
+              </div>
+            </div>
+            
+            <div className="stat-card pending-stat">
+              <div className="stat-icon">⏳</div>
+              <div className="stat-content">
+                <h3>Pending</h3>
+                <p className="stat-number">{pendingCount}</p>
+              </div>
+            </div>
+            
+            <div className="stat-card completed-stat">
+              <div className="stat-icon">✅</div>
+              <div className="stat-content">
+                <h3>Completed</h3>
+                <p className="stat-number">{completedCount}</p>
+              </div>
+            </div>
+            
+            <div className="stat-card date-stat">
+              <div className="stat-icon">📅</div>
+              <div className="stat-content">
+                <h3>Today's Date</h3>
+                <p className="stat-number date-value">{formattedDate}</p>
+              </div>
             </div>
           </div>
-        ) : (
-          <div className="requests-grid">
-            {customerRequests.map(request => (
-              <div key={request._id} className={`request-card ${request.status}`}>
-                {/* Card Header */}
-                <div className="card-header">
-                  <div className="request-type-badge">
-                    <span className="type-icon">{getRequestIcon(request.requestType)}</span>
-                    <span className="type-name">{getRequestTitle(request.requestType)}</span>
-                  </div>
-                  <div className={`status-indicator ${request.status}`}>
-                    <span className="status-dot"></span>
-                    <span className="status-text">
-                      {request.status === 'pending' && 'Pending'}
-                      {request.status === 'acknowledged' && 'Acknowledged'}
-                      {request.status === 'completed' && 'Completed'}
-                    </span>
-                  </div>
-                </div>
+        )}
+      </div>
 
-                {/* Card Body */}
-                <div className="card-body">
-                  <div className="info-row">
-                    <div className="info-icon">
-                      <FaChair />
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Table Number</span>
-                      <span className="info-value">{request.tableNumber}</span>
-                    </div>
-                  </div>
+      {/* Search Bar for Table Number */}
+      <div className="search-section">
+        <div className="search-container-requests">
+          <FaSearch className="search-icon-requests" />
+          <input
+            type="text"
+            placeholder="Search by table number..."
+            value={searchTable}
+            onChange={(e) => setSearchTable(e.target.value)}
+            className="search-input-requests"
+          />
+          {searchTable && (
+            <button className="clear-search-requests" onClick={clearSearch}>
+              <FaTimes />
+            </button>
+          )}
+        </div>
+        {searchTable && filteredRequests.length === 0 && customerRequests.length > 0 && (
+          <div className="no-search-results">
+            No requests found for Table {searchTable}
+          </div>
+        )}
+      </div>
 
-                  <div className="info-row">
-                    <div className="info-icon">
-                      <FaUser />
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Customer Name</span>
-                      <span className="info-value">{request.customerName}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-row message-row">
-                    <div className="info-icon">
-                      <FaCommentDots />
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Request Message</span>
-                      <span className="info-value message">{request.requestMessage}</span>
-                    </div>
-                  </div>
-
-                  <div className="info-row time-row">
-                    <div className="info-icon">
-                      <FaClock />
-                    </div>
-                    <div className="info-content">
-                      <span className="info-label">Requested At</span>
-                      <span className="info-value time">
-                        {new Date(request.requestedAt).toLocaleTimeString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {request.staffResponse && (
-                    <div className="info-row response-row">
-                      <div className="info-icon">
-                        <FaReply />
-                      </div>
-                      <div className="info-content">
-                        <span className="info-label">Staff Response</span>
-                        <span className="info-value response">{request.staffResponse}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Card Footer */}
-                <div className="card-footer">
-                  {request.status === 'pending' && (
-                    <>
-                      <button 
-                        className="card-btn acknowledge"
-                        onClick={() => {
-                          setSelectedRequest(request);
-                          setShowResponseModal(true);
-                        }}
-                      >
-                        <FaCheckDouble /> Acknowledge
-                      </button>
-                      <button 
-                        className="card-btn complete"
-                        onClick={() => updateRequestStatus(request._id, 'completed', 'Request fulfilled')}
-                      >
-                        <FaCheckCircle /> Complete
-                      </button>
-                    </>
-                  )}
-                  {request.status === 'acknowledged' && (
-                    <button 
-                      className="card-btn complete full-width"
-                      onClick={() => updateRequestStatus(request._id, 'completed')}
-                    >
-                      <FaCheckCircle /> Mark as Completed
-                    </button>
-                  )}
-                </div>
+      {/* Messages Feed - Single Frame */}
+      <div className="summary-section">
+        <div className="section-header" onClick={() => toggleSection('requests')}>
+          <h2><FaCommentDots /> Message Feed</h2>
+          <div className="header-actions">
+            <button className="refresh-btn-small" onClick={handleManualRefresh}>
+              <FaSpinner /> Refresh
+            </button>
+            <button className="expand-toggle">
+              {expandedSections.requests ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+          </div>
+        </div>
+        
+        {expandedSections.requests && (
+          <div className="messages-feed">
+            {loading ? (
+              <div className="loading-state">
+                <div className="spinner"></div>
+                <p>Loading messages...</p>
               </div>
-            ))}
+            ) : filteredRequests.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">💬</div>
+                <h3>{searchTable ? `No Requests for Table ${searchTable}` : 'No Messages Today'}</h3>
+                <p>{searchTable ? `No customer messages found for table number ${searchTable}` : 'No customer messages have been received today'}</p>
+                {searchTable && (
+                  <button className="clear-search-btn" onClick={clearSearch}>
+                    Clear Search
+                  </button>
+                )}
+                {!searchTable && (
+                  <div className="empty-tips">
+                    <p>📅 Date: {formattedDate}</p>
+                    <p>💡 New messages will appear here automatically</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="message-feed-container">
+                {filteredRequests.map((request, index) => (
+                  <div key={request._id} className={`message-thread ${request.status}`}>
+                    {/* Message Header */}
+                    <div className="thread-header">
+                      <div className="customer-avatar">
+                        {getRequestIcon(request.requestType)}
+                      </div>
+                      <div className="thread-info">
+                        <div className="customer-name-row">
+                          <span className="customer-name">{request.customerName}</span>
+                          <span className="table-number">Table {request.tableNumber}</span>
+                        </div>
+                        <div className="message-time">
+                          <FaClock /> {new Date(request.requestedAt).toLocaleTimeString()}
+                        </div>
+                      </div>
+                      <div className={`status-badge ${request.status}`}>
+                        {request.status === 'pending' && '⏳ Pending'}
+                        {request.status === 'acknowledged' && '✓ Acknowledged'}
+                        {request.status === 'completed' && '✅ Completed'}
+                      </div>
+                    </div>
+                    
+                    {/* Customer Message */}
+                    <div className="customer-message">
+                      <div className="message-bubble customer-bubble">
+                        <div className="request-type-label">
+                          {getRequestTitle(request.requestType)}
+                        </div>
+                        <div className="message-text">{request.requestMessage}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Staff Response if exists */}
+                    {request.staffResponse && (
+                      <div className="staff-response">
+                        <div className="response-label">
+                          <FaReplyAll /> Staff Response:
+                        </div>
+                        <div className="message-bubble staff-bubble">
+                          <div className="message-text">{request.staffResponse}</div>
+                          <div className="response-time">
+                            {request.acknowledgedAt ? new Date(request.acknowledgedAt).toLocaleTimeString() : 'Just now'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Action Buttons */}
+                    <div className="thread-actions">
+                      {request.status === 'pending' && (
+                        <>
+                          <button 
+                            className="action-btn acknowledge-btn"
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setShowResponseModal(true);
+                            }}
+                          >
+                            <FaReply /> Reply
+                          </button>
+                          <button 
+                            className="action-btn complete-btn"
+                            onClick={() => updateRequestStatus(request._id, 'completed', 'Request fulfilled')}
+                          >
+                            <FaCheckCircle /> Complete
+                          </button>
+                        </>
+                      )}
+                      {request.status === 'acknowledged' && (
+                        <button 
+                          className="action-btn complete-btn full-width"
+                          onClick={() => updateRequestStatus(request._id, 'completed')}
+                        >
+                          <FaCheckCircle /> Mark as Completed
+                        </button>
+                      )}
+                      {request.status === 'completed' && (
+                        <div className="completed-label">
+                          <FaCheckCircle /> Completed
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -553,7 +647,7 @@ const CustomerRequests = () => {
         <div className="modal-overlay" onClick={() => setShowResponseModal(false)}>
           <div className="response-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Respond to Request</h3>
+              <h3>Reply to {selectedRequest.customerName}</h3>
               <button className="close-modal-btn" onClick={() => setShowResponseModal(false)}>
                 <FaTimes />
               </button>
@@ -561,20 +655,17 @@ const CustomerRequests = () => {
             <div className="modal-body">
               <div className="request-info-card">
                 <div className="info-item">
-                  <FaChair className="info-icon-small" />
-                  <span><strong>Table:</strong> {selectedRequest.tableNumber}</span>
+                  <FaChair /> Table: {selectedRequest.tableNumber}
                 </div>
                 <div className="info-item">
-                  <FaUser className="info-icon-small" />
-                  <span><strong>Customer:</strong> {selectedRequest.customerName}</span>
+                  <FaUser /> Customer: {selectedRequest.customerName}
                 </div>
-                <div className="info-item">
-                  <FaCommentDots className="info-icon-small" />
-                  <span><strong>Request:</strong> {selectedRequest.requestMessage}</span>
+                <div className="info-item message-preview">
+                  <FaCommentDots /> Message: {selectedRequest.requestMessage}
                 </div>
               </div>
               <div className="response-input">
-                <label>Your Response:</label>
+                <label>Your Reply:</label>
                 <textarea
                   value={staffResponse}
                   onChange={(e) => setStaffResponse(e.target.value)}
@@ -586,7 +677,7 @@ const CustomerRequests = () => {
             </div>
             <div className="modal-footer">
               <button className="cancel-btn" onClick={() => setShowResponseModal(false)}>Cancel</button>
-              <button className="send-btn" onClick={handleAcknowledgeWithResponse}>Send Response</button>
+              <button className="send-btn" onClick={handleAcknowledgeWithResponse}>Send Reply</button>
             </div>
           </div>
         </div>
@@ -594,7 +685,14 @@ const CustomerRequests = () => {
 
       {/* Footer */}
       <div className="requests-footer">
-        <p>{restaurantData?.restaurantName} • Today's Customer Requests • Auto-refreshes every 10 seconds</p>
+        <p>
+          {restaurantData?.restaurantName} • Customer Messages • 
+          <span className="footer-code"> {restaurantData?.restaurantCode}</span> • 
+          Today: {formattedDate}
+        </p>
+        <p className="footer-note">
+          Auto-refreshes every 10 seconds • Latest messages shown first • Search by table number
+        </p>
       </div>
     </div>
   );
