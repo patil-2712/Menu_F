@@ -853,8 +853,7 @@ const Publicmenu = () => {
   const [locationStatus, setLocationStatus] = useState('loading');
   const [locationError, setLocationError] = useState('');
   const [distanceToRestaurant, setDistanceToRestaurant] = useState(null);
-  const [showLocationBanner, setShowLocationBanner] = useState(true);
-  const [bypassLocationCheck, setBypassLocationCheck] = useState(false);
+  const [showLocationPopup, setShowLocationPopup] = useState(true);
   
   // Request feature states
   const [showRequestMenu, setShowRequestMenu] = useState(false);
@@ -897,7 +896,7 @@ const Publicmenu = () => {
   const getUserLocation = () => {
     setLocationStatus('loading');
     setLocationError('');
-    setShowLocationBanner(true);
+    setShowLocationPopup(true);
     
     if (!navigator.geolocation) {
       setLocationStatus('error');
@@ -940,13 +939,18 @@ const Publicmenu = () => {
           console.log('⚠️ Restaurant location not set in ref, allowing order');
           setLocationStatus('within_range');
         }
+        
+        // Auto hide popup after 3 seconds if within range
+        if (distanceToRestaurant <= 40) {
+          setTimeout(() => setShowLocationPopup(false), 3000);
+        }
       },
       (error) => {
         console.error('Location error:', error);
         let errorMsg = '';
         switch(error.code) {
           case error.PERMISSION_DENIED:
-            errorMsg = 'Location access denied. Please enable location.';
+            errorMsg = 'Location access denied. Please enable location to order.';
             setLocationStatus('denied');
             break;
           case error.POSITION_UNAVAILABLE:
@@ -970,17 +974,6 @@ const Publicmenu = () => {
       }
     );
   };
-
-  // Auto-hide location banner after 5 seconds
-  useEffect(() => {
-    if (locationStatus !== 'loading') {
-      const timer = setTimeout(() => {
-        setShowLocationBanner(false);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [locationStatus]);
 
   const getImageUrl = (imageName) => {
     if (!imageName) return null;
@@ -1104,7 +1097,7 @@ const Publicmenu = () => {
   }, []);
 
   const addToOrder = (item) => {
-    if (locationStatus === 'outside_range' && !bypassLocationCheck) {
+    if (locationStatus === 'outside_range') {
       showPopup(`⚠️ You are ${Math.round(distanceToRestaurant)} meters away.\nPlease come within 40 meters to order.`, 'error');
       return;
     }
@@ -1133,7 +1126,7 @@ const Publicmenu = () => {
   const getGrandTotal = () => getTotal() + getGstAmount();
 
   const openRequestPopup = (option) => {
-    if (locationStatus === 'outside_range' && !bypassLocationCheck) {
+    if (locationStatus === 'outside_range') {
       showPopup(`⚠️ You are ${Math.round(distanceToRestaurant)} meters away.\nPlease come within 40 meters to send request.`, 'error');
       return;
     }
@@ -1142,7 +1135,7 @@ const Publicmenu = () => {
   };
 
   const handleSendRequest = async () => {
-    if (locationStatus === 'outside_range' && !bypassLocationCheck) {
+    if (locationStatus === 'outside_range') {
       showPopup(`⚠️ You are ${Math.round(distanceToRestaurant)} meters away.\nPlease come within 40 meters to send request.`, 'error');
       return;
     }
@@ -1221,7 +1214,7 @@ const Publicmenu = () => {
   };
 
   const handleOrder = async () => {
-    if (locationStatus === 'outside_range' && !bypassLocationCheck) {
+    if (locationStatus === 'outside_range') {
       showPopup(`⚠️ You are ${Math.round(distanceToRestaurant)} meters away.\nPlease come within 40 meters to place order.`, 'error');
       return;
     }
@@ -1317,7 +1310,6 @@ const Publicmenu = () => {
   };
 
   const isOrderingAllowed = () => {
-    if (bypassLocationCheck) return true;
     return locationStatus === 'within_range';
   };
 
@@ -1333,8 +1325,80 @@ const Publicmenu = () => {
     return 'calculating...';
   };
 
+  // Check if user is outside range and should see restricted view
+  const isOutsideRange = locationStatus === 'outside_range';
+
   return (
     <div className="luxury-menu">
+      {/* Location Popup Modal */}
+      {showLocationPopup && (locationStatus === 'loading' || locationStatus === 'outside_range' || locationStatus === 'denied' || locationStatus === 'error') && (
+        <div className="location-popup-overlay">
+          <div className="location-popup">
+            <button className="location-popup-close" onClick={() => setShowLocationPopup(false)}>
+              <FaTimes />
+            </button>
+            
+            {locationStatus === 'loading' && (
+              <div className="location-popup-content loading">
+                <div className="popup-spinner"></div>
+                <FaLocationArrow className="popup-icon pulse" />
+                <h3>Detecting Your Location</h3>
+                <p>Please wait while we verify your location...</p>
+                <p className="location-note">We need to ensure you're within ordering range (40 meters)</p>
+              </div>
+            )}
+            
+            {locationStatus === 'outside_range' && distanceToRestaurant !== null && (
+              <div className="location-popup-content warning">
+                <FaExclamationTriangle className="popup-icon" />
+                <h3>You're Too Far Away!</h3>
+                <p>You are <strong>{getDistanceMessage()}</strong> from the restaurant.</p>
+                <p>Please come within <strong>40 meters</strong> to view the menu and place orders.</p>
+                <div className="distance-indicator">
+                  <div className="distance-bar">
+                    <div className="distance-fill" style={{ width: `${Math.min(100, (distanceToRestaurant / 40) * 100)}%` }}></div>
+                  </div>
+                  <span>Required: 40m</span>
+                </div>
+                <div className="restaurant-address-popup">
+                  <FaMapMarkerAlt />
+                  <span>{restaurant?.restaurantName}</span>
+                </div>
+                <button onClick={getDirections} className="popup-directions-btn">
+                  <FaDirections /> Get Directions
+                </button>
+                <button onClick={retryLocation} className="popup-retry-btn">
+                  Try Again
+                </button>
+              </div>
+            )}
+            
+            {locationStatus === 'denied' && (
+              <div className="location-popup-content error">
+                <FaExclamationTriangle className="popup-icon" />
+                <h3>Location Access Required</h3>
+                <p>We need your location to verify you're within ordering range.</p>
+                <p className="location-help">Please enable location access in your browser settings to continue.</p>
+                <button onClick={retryLocation} className="popup-retry-btn">
+                  Try Again
+                </button>
+              </div>
+            )}
+            
+            {locationStatus === 'error' && (
+              <div className="location-popup-content error">
+                <FaExclamationTriangle className="popup-icon" />
+                <h3>Location Error</h3>
+                <p>{locationError}</p>
+                <button onClick={retryLocation} className="popup-retry-btn">
+                  Retry Location
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Success Popup */}
       {showSuccessPopup && (
         <div className="success-popup-overlay">
@@ -1346,47 +1410,16 @@ const Publicmenu = () => {
         </div>
       )}
 
-      {/* Location Banners */}
-      {locationStatus === 'loading' && showLocationBanner && (
-        <div className="location-banner loading">
-          <FaLocationArrow className="banner-icon" />
-          <span>Detecting your location...</span>
-        </div>
+      {/* Request Button - Only show when within range */}
+      {isOrderingAllowed() && (
+        <button 
+          className="request-fab"
+          onClick={() => { setSelectedRequestType(null); setShowRequestMenu(true); }}
+          disabled={submittingRequest}
+        >
+          {submittingRequest ? <FaSpinner className="spinner" /> : <FaCommentDots />}
+        </button>
       )}
-      
-      {locationStatus === 'within_range' && distanceToRestaurant !== null && showLocationBanner && (
-        <div className="location-banner success">
-          <FaMapMarkerAlt className="banner-icon" />
-          <span>✓ You are within ordering range! Distance: {getDistanceMessage()}</span>
-        </div>
-      )}
-      
-      {locationStatus === 'outside_range' && distanceToRestaurant !== null && showLocationBanner && (
-        <div className="location-banner warning">
-          <FaExclamationTriangle className="banner-icon" />
-          <span>⚠️ You are {getDistanceMessage()} away. Please come within 40 meters to order.</span>
-          <button onClick={getDirections} className="navigate-btn">
-            <FaDirections /> Get Directions
-          </button>
-        </div>
-      )}
-      
-      {locationStatus === 'denied' && showLocationBanner && (
-        <div className="location-banner error">
-          <FaExclamationTriangle className="banner-icon" />
-          <span>Location access denied. Please enable location.</span>
-          <button onClick={retryLocation} className="retry-btn">Retry</button>
-        </div>
-      )}
-
-      {/* Request Button */}
-      <button 
-        className="request-fab"
-        onClick={() => { setSelectedRequestType(null); setShowRequestMenu(true); }}
-        disabled={submittingRequest || (locationStatus === 'outside_range' && !bypassLocationCheck)}
-      >
-        {submittingRequest ? <FaSpinner className="spinner" /> : <FaCommentDots />}
-      </button>
 
       {/* Request Popup */}
       {showRequestMenu && (
@@ -1461,6 +1494,7 @@ const Publicmenu = () => {
         </div>
       )}
 
+      {/* Cart Button - Only show when within range */}
       {orderItems.length > 0 && isOrderingAllowed() && (
         <button className="cart-button" onClick={() => setShowOrderSummary(true)}>
           <FaShoppingCart />
@@ -1475,25 +1509,30 @@ const Publicmenu = () => {
         </div>
       </header>
 
-      <div className="search-container">
-        <FaSearch className="search-icon" />
-        <input type="text" placeholder="Search menu..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
-        {searchTerm && <button className="clear-search" onClick={() => setSearchTerm('')}><FaTimes /></button>}
-      </div>
+      {/* Show these elements ONLY when within range */}
+      {isOrderingAllowed() && (
+        <>
+          <div className="search-container">
+            <FaSearch className="search-icon" />
+            <input type="text" placeholder="Search menu..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="search-input" />
+            {searchTerm && <button className="clear-search" onClick={() => setSearchTerm('')}><FaTimes /></button>}
+          </div>
 
-      <div className="type-filter-container">
-        <button className={`type-filter-btn ${activeTypeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('all')}>All</button>
-        <button className={`type-filter-btn veg-btn ${activeTypeFilter === 'veg' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('veg')}>🟢 Veg</button>
-        <button className={`type-filter-btn nonveg-btn ${activeTypeFilter === 'non-veg' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('non-veg')}>🔴 Non-Veg</button>
-      </div>
+          <div className="type-filter-container">
+            <button className={`type-filter-btn ${activeTypeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('all')}>All</button>
+            <button className={`type-filter-btn veg-btn ${activeTypeFilter === 'veg' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('veg')}>🟢 Veg</button>
+            <button className={`type-filter-btn nonveg-btn ${activeTypeFilter === 'non-veg' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('non-veg')}>🔴 Non-Veg</button>
+          </div>
 
-      <nav className="menu-categories">
-        {allCategories.map(category => (
-          <button key={category.id} className={`category-btn ${activeCategory === category.id ? 'active' : ''}`} onClick={() => setActiveCategory(category.id)}>
-            {category.name}
-          </button>
-        ))}
-      </nav>
+          <nav className="menu-categories">
+            {allCategories.map(category => (
+              <button key={category.id} className={`category-btn ${activeCategory === category.id ? 'active' : ''}`} onClick={() => setActiveCategory(category.id)}>
+                {category.name}
+              </button>
+            ))}
+          </nav>
+        </>
+      )}
 
       <main className="menu-items-container">
         {loading && (
@@ -1503,28 +1542,7 @@ const Publicmenu = () => {
           </div>
         )}
         
-        {!loading && locationStatus === 'outside_range' && !bypassLocationCheck && (
-          <div className="location-restricted">
-            <div className="restricted-icon">📍</div>
-            <h3>You're too far from the restaurant!</h3>
-            <p>Please come within 40 meters of the restaurant to view the menu and place orders.</p>
-            <div className="distance-circle">
-              <span className="distance-number">{getDistanceMessage()}</span>
-              <span className="distance-unit">away</span>
-            </div>
-            <div className="restaurant-address">
-              <strong>{restaurant?.restaurantName}</strong>
-              <p>{restaurant?.nearestPlace}, {restaurant?.city}</p>
-            </div>
-            <button onClick={getDirections} className="get-directions-btn">
-              <FaDirections /> Get Directions to Restaurant
-            </button>
-            <button onClick={retryLocation} className="retry-location-btn-full">Retry Location</button>
-            <button onClick={() => setBypassLocationCheck(true)} className="bypass-btn">Continue Anyway (Test Mode)</button>
-          </div>
-        )}
-        
-        {!loading && !(locationStatus === 'outside_range' && !bypassLocationCheck) && filteredItems.length > 0 ? (
+        {!loading && isOrderingAllowed() && filteredItems.length > 0 && (
           filteredItems.map(item => {
             const quantity = getItemQuantity(item._id);
             const imageUrl = getImageUrl(item.image);
@@ -1562,15 +1580,15 @@ const Publicmenu = () => {
               </div>
             );
           })
-        ) : (
-          !loading && !(locationStatus === 'outside_range' && !bypassLocationCheck) && (
-            <div className="no-items">
-              <p>No menu items found</p>
-              {(searchTerm || activeTypeFilter !== 'all') && (
-                <button onClick={() => { setSearchTerm(''); setActiveTypeFilter('all'); }} className="clear-search-btn">Clear Filters</button>
-              )}
-            </div>
-          )
+        )}
+        
+        {!loading && isOrderingAllowed() && filteredItems.length === 0 && (
+          <div className="no-items">
+            <p>No menu items found</p>
+            {(searchTerm || activeTypeFilter !== 'all') && (
+              <button onClick={() => { setSearchTerm(''); setActiveTypeFilter('all'); }} className="clear-search-btn">Clear Filters</button>
+            )}
+          </div>
         )}
       </main>
 
