@@ -1611,11 +1611,11 @@ const Publicmenu = () => {
                           <span className="item-price">₹{item.price}</span>
                           <span className="item-quantity-label">× {item.quantity}</span>
                         </div>
-                        <div className="item-controls">
+                        {/*<div className="item-controls">
                           <button onClick={() => removeFromOrder(item._id)} className="control-btn">−</button>
                           <span className="item-quantity">{item.quantity}</span>
                           <button onClick={() => addToOrder(item)} className="control-btn">+</button>
-                        </div>
+                        </div>*/}
                       </div>
                     ))}
                   </div>

@@ -10,14 +10,11 @@ import {
   FaArrowLeft,
   FaWhatsapp,
   FaPercent,
-  FaIdCard,
-  FaUtensils,
   FaCheckCircle,
   FaDownload,
   FaMapMarkerAlt,
   FaPhone,
   FaEnvelope,
-  FaSignOutAlt,
   FaSpinner,
   FaGlassWhiskey,
   FaRegStickyNote,
@@ -49,23 +46,11 @@ const MyOrderPage = () => {
   const [restaurant, setRestaurant] = useState(null);
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [imageErrors, setImageErrors] = useState({});
   const [showRequestMenu, setShowRequestMenu] = useState(false);
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [popupIcon, setPopupIcon] = useState('');
-
-  const getImageUrl = (imageName) => {
-    if (!imageName) return '/placeholder.jpg';
-    if (imageName.startsWith('http')) return imageName;
-    if (imageName.startsWith('/uploads/')) return imageName;
-    return `/uploads/${imageName}`;
-  };
-
-  const handleImageError = (itemId) => {
-    setImageErrors(prev => ({ ...prev, [itemId]: true }));
-  };
 
   const [feedbackForm, setFeedbackForm] = useState({
     serviceRating: 0,
@@ -642,24 +627,9 @@ const MyOrderPage = () => {
     navigate(`/${restaurantSlug}/menu`);
   };
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
-  };
-
   const getCategoryDisplayName = (category) => {
     if (!category) return 'Uncategorized';
     return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
   };
 
   const formatGSTNumber = (gst) => {
@@ -680,19 +650,16 @@ const MyOrderPage = () => {
 
   const gstPercentage = order?.gstPercentage || restaurant?.gstPercentage || 18;
 
-  // Show popup notification
   const showPopup = (message, type = 'success') => {
     setPopupMessage(message);
     setPopupIcon(type === 'success' ? '✅' : '❌');
     setShowSuccessPopup(true);
     
-    // Auto hide after 3 seconds
     setTimeout(() => {
       setShowSuccessPopup(false);
     }, 3000);
   };
 
-  // Handle request options with backend integration
   const handleRequestOption = async (option) => {
     let requestType = '';
     let requestMessage = '';
@@ -789,7 +756,6 @@ const MyOrderPage = () => {
   }
 
   const { subtotal, gst, total } = getDisplayTotals();
-  const amountInWords = numberToWords(total);
 
   return (
     <div className="bill-container">
@@ -806,7 +772,12 @@ const MyOrderPage = () => {
         </div>
       )}
 
-      {/* Request Button - Floating Action Button */}
+      {/* Floating Add Items Button - Circular with only + icon */}
+      <button className="floating-add-btn" onClick={() => setShowAddItemsModal(true)}>
+        <FaPlus />
+      </button>
+
+      {/* Request Button */}
       <button 
         className="request-fab"
         onClick={() => setShowRequestMenu(!showRequestMenu)}
@@ -863,7 +834,7 @@ const MyOrderPage = () => {
 
       {/* Main Bill Card */}
       <div className="bill-card">
-        {/* Restaurant Header */}
+        {/* Restaurant Header - COMPACT */}
         <div className="restaurant-header">
           <h1 className="restaurant-name">
             {restaurant?.restaurantName?.toUpperCase() || 'RESTAURANT NAME'}
@@ -888,23 +859,44 @@ const MyOrderPage = () => {
         {/* Divider */}
         <div className="divider"></div>
 
-        {/* Bill Info */}
-        <div className="bill-info">
-          <span className="bill-number">Bill No: {order.billNumber}</span>
-          <span>📅 Date: {order.date}</span><span>🕒 Time: {order.time}</span>
-          <span>👤 Customer: {order.customerName || 'Guest'}</span> <span>🪑 Table: {order.tableNumber || 'Takeaway'}</span>{restaurant?.gstNumber && <span>📋 GSTIN: {formatGSTNumber(restaurant.gstNumber)}</span>}
-        </div>
-
-        {/* GST Info */}
-        <div className="gst-info">
-          <span>💰 GST Rate: {gstPercentage}%</span>
-          {restaurant?.foodLicense && <span>✅ FSSAI: {restaurant.foodLicense}</span>}
-        </div>
+       {/* Bill Info - CLEAN BILL STYLE */}
+<div className="bill-info">
+  <div className="bill-info-row">
+    <span className="bill-label">Bill No:</span>
+    <span className="bill-value">{order.billNumber}</span>
+    <span className="bill-label">📅</span>
+    <span className="bill-value">{order.date}</span>
+    <span className="bill-label">🕒</span>
+    <span className="bill-value">{order.time}</span>
+  </div>
+  <div className="bill-info-row">
+    <span className="bill-label">👤</span>
+    <span className="bill-value">{order.customerName || 'Guest'}</span>
+    <span className="bill-label">🪑</span>
+    <span className="bill-value">{order.tableNumber || 'Takeaway'}</span>
+    {restaurant?.gstNumber && (
+      <><br></br>
+        <span className="bill-label">📋 GSTIN:{formatGSTNumber(restaurant.gstNumber)}</span>
+        <span className="bill-value"></span>
+      </>
+    )}
+  </div>
+  <div className="bill-info-row">
+    <span className="bill-label">💰 GST Rate:</span>
+    <span className="bill-value">{gstPercentage}%</span>
+    {restaurant?.foodLicense && (
+      <>
+        <span className="bill-label">✅ FSSAI:</span>
+        <span className="bill-value">{restaurant.foodLicense}</span>
+      </>
+    )}
+  </div>
+</div>
 
         {/* Divider */}
         <div className="divider"></div>
 
-        {/* Items Table - Non-scrollable with Black Text */}
+        {/* Items Table */}
         <div className="items-container">
           <table className="items-table">
             <thead>
@@ -931,7 +923,7 @@ const MyOrderPage = () => {
           </table>
         </div>
 
-        {/* Totals */}
+        {/* Totals - COMPACT */}
         <div className="totals">
           <div className="total-row">
             <span>Subtotal:</span>
@@ -955,9 +947,6 @@ const MyOrderPage = () => {
 
         {/* Action Buttons */}
         <div className="action-buttons">
-          <button className="action-btn add-btn" onClick={() => setShowAddItemsModal(true)}>
-            <FaPlus /> Add Items
-          </button>
           <button className="action-btn print-btn" onClick={handleDownloadPDF}>
             <FaDownload /> Download PDF
           </button>
@@ -1047,7 +1036,7 @@ const MyOrderPage = () => {
         </div>
       )}
 
-      {/* Add Items Modal */}
+      {/* Add Items Modal - WITHOUT IMAGES, clean simple layout */}
       {showAddItemsModal && (
         <div className="modal-overlay" onClick={() => {
           if (!addingItems) {
@@ -1101,38 +1090,36 @@ const MyOrderPage = () => {
                 ))}
               </div>
 
+              {/* Items Grid - NO IMAGES, only name, price, category and +/- buttons */}
               <div className="modal-items-grid">
                 {filteredItems.length > 0 ? (
                   filteredItems.map(item => {
                     const quantity = getItemQuantity(item._id);
                     return (
-                      <div key={item._id} className="menu-item-card">
-                        <div className="item-image-container">
-                          {!imageErrors[item._id] ? (
-                            <img
-                              src={getImageUrl(item.image)}
-                              alt={item.name}
-                              className="item-image"
-                              onError={() => handleImageError(item._id)}
-                            />
-                          ) : (
-                            <div className="image-fallback">{item.name.charAt(0)}</div>
-                          )}
-                          <span className={`item-type ${item.type === 'Veg' ? 'veg' : 'non-veg'}`}>
-                            {item.type === 'Veg' ? '🟢' : '🔴'}
-                          </span>
-                        </div>
-                        <div className="item-info">
-                          <h4>{item.name}</h4>
-                          <div className="item-meta-row">
-                            <span className="item-category">{item.category}</span>
-                            <span className="item-price">₹{item.price.toFixed(2)}</span>
+                      <div key={item._id} className="menu-item-card-simple">
+                        <div className="item-info-simple">
+                          <div className="item-name-price">
+                            <span className="item-name-text">{item.name}</span>
+                            <span className="item-price-text">₹{item.price.toFixed(2)}</span>
                           </div>
+                          <div className="item-category-text">{item.category || 'Uncategorized'}</div>
                         </div>
-                        <div className="item-actions">
-                          <button onClick={() => removeMenuItemFromOrder(item._id)} className="qty-btn" disabled={quantity === 0 || addingItems}>−</button>
-                          <span className="qty-display">{quantity}</span>
-                          <button onClick={() => addMenuItemToOrder(item)} className="qty-btn" disabled={addingItems}>+</button>
+                        <div className="item-actions-simple">
+                          <button 
+                            onClick={() => removeMenuItemFromOrder(item._id)} 
+                            className="qty-btn-simple" 
+                            disabled={quantity === 0 || addingItems}
+                          >
+                            −
+                          </button>
+                          <span className="qty-display-simple">{quantity}</span>
+                          <button 
+                            onClick={() => addMenuItemToOrder(item)} 
+                            className="qty-btn-simple" 
+                            disabled={addingItems}
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
                     );

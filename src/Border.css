@@ -522,23 +522,9 @@
   gap: 5px;
 }
 
-.search-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #a0aec0;
-  font-size: 0.9rem;
-}
-
 .filter-input {
   width: 100%;
-  padding: 10px 35px 10px 35px;
+  padding: 10px 15px;
   border: 2px solid #e2e8f0;
   border-radius: 10px;
   font-size: 0.9rem;
@@ -549,17 +535,6 @@
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.clear-input {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #a0aec0;
 }
 
 .filter-select {
@@ -642,10 +617,10 @@
 }
 
 .order-card-wrapper {
-  animation: fadeIn 0.3s ease;
+  animation: fadeInCard 0.3s ease;
 }
 
-@keyframes fadeIn {
+@keyframes fadeInCard {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -689,8 +664,8 @@
 
 .bill-header-main {
   text-align: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
   border-bottom: 2px dashed #e2e8f0;
 }
 
@@ -698,6 +673,13 @@
   font-size: 1.2rem;
   color: #2d3748;
   margin-bottom: 5px;
+}
+
+.restaurant-mini-address {
+  font-size: 0.6rem;
+  color: #718096;
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 .bill-number {
@@ -720,7 +702,7 @@
 .detail-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #4a5568;
 }
 
@@ -773,11 +755,6 @@
 
 .items-table th:nth-child(4),
 .items-table td:nth-child(4) {
-  text-align: center;
-}
-
-.items-table th:nth-child(5),
-.items-table td:nth-child(5) {
   text-align: right;
 }
 
@@ -792,7 +769,6 @@
 }
 
 .item-price,
-.item-gst,
 .item-total {
   font-family: monospace;
   text-align: right;
@@ -815,7 +791,7 @@
   display: flex;
   justify-content: space-between;
   padding: 5px 0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #4a5568;
 }
 
@@ -827,7 +803,7 @@
 }
 
 .total-row.final-total {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: bold;
   color: #2d3748;
   border-top: 2px solid #e2e8f0;
@@ -866,7 +842,7 @@
   text-align: center;
   padding-top: 10px;
   border-top: 2px dashed #e2e8f0;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #718096;
 }
 
@@ -933,7 +909,7 @@
   transform: translateY(-1px);
 }
 
-/* ========== INLINE EDIT MODE STYLES (NO POPUP) ========== */
+/* ========== INLINE EDIT MODE STYLES ========== */
 .order-card.edit-mode-card {
   background: white;
   border-radius: 15px;
@@ -1107,6 +1083,11 @@
   font-size: 0.85rem;
   text-align: center;
   font-family: monospace;
+}
+
+.readonly-field {
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .edit-remove-btn {
@@ -1285,6 +1266,51 @@
 
 .spinner {
   animation: spin 1s linear infinite;
+}
+
+/* ========== PRINT BILL TEMPLATE STYLES ========== */
+.print-bill-template {
+  display: none;
+}
+
+/* Print-specific styles that will be used in the print window */
+@media print {
+  .border-container {
+    background: white;
+    padding: 0;
+  }
+  
+  .mobile-menu-toggle,
+  .logout-button,
+  .refresh-btn-small,
+  .expand-toggle,
+  .filter-controls,
+  .order-actions,
+  .navigation-tabs,
+  .header-right,
+  .edit-mode-card,
+  .edit-form-container,
+  .refresh-btn,
+  .summary-section:first-of-type,
+  .summary-section:nth-of-type(2),
+  .border-header,
+  .border-footer {
+    display: none !important;
+  }
+  
+  .summary-section {
+    break-inside: avoid;
+  }
+  
+  .order-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  
+  .bill-card {
+    border: 1px solid #e2e8f0;
+    box-shadow: none;
+  }
 }
 
 /* ========== DESKTOP ONLY ========== */
@@ -1507,6 +1533,14 @@
   .edit-totals-section {
     padding: 12px;
   }
+  
+  .restaurant-mini-address {
+    font-size: 0.5rem;
+  }
+  
+  .detail-row {
+    font-size: 0.7rem;
+  }
 }
 
 /* ========== LANDSCAPE MODE ========== */
@@ -1541,43 +1575,5 @@
   .edit-item-gst {
     width: auto;
     flex: 1;
-  }
-}
-
-/* ========== PRINT STYLES ========== */
-@media print {
-  .border-container {
-    background: white;
-    padding: 0;
-  }
-  
-  .mobile-menu-toggle,
-  .logout-button,
-  .refresh-btn-small,
-  .expand-toggle,
-  .filter-controls,
-  .order-actions,
-  .navigation-tabs,
-  .header-right,
-  .edit-mode-card,
-  .edit-form-container,
-  .refresh-btn,
-  .summary-section:first-of-type,
-  .summary-section:nth-of-type(2) {
-    display: none !important;
-  }
-  
-  .summary-section {
-    break-inside: avoid;
-  }
-  
-  .order-card {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  
-  .bill-card {
-    border: 1px solid #e2e8f0;
-    box-shadow: none;
   }
 }
