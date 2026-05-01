@@ -80,248 +80,6 @@ const Border = () => {
   
   const printRefs = useRef({});
 
-  // Helper function to get full restaurant address
-  const getFullAddress = () => {
-    if (!restaurantData) return '';
-    const parts = [
-      restaurantData.nearestPlace,
-      restaurantData.city,
-      restaurantData.state,
-      restaurantData.country
-    ].filter(Boolean);
-    return parts.join(', ');
-  };
-
-  // Function to generate print bill HTML with all restaurant details
-  const generatePrintHTML = (order) => {
-    const restaurant = restaurantData;
-    const address = getFullAddress();
-    const subtotal = order.subtotal || 0;
-    const gstAmount = order.gstAmount || 0;
-    const total = order.total || 0;
-    const discountedTotal = order.discountedTotal || total;
-    const discount = order.discount || 0;
-    const discountType = order.discountType || 'amount';
-    const discountAmount = total - discountedTotal;
-    
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Invoice ${order.billNumber}</title>
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          body {
-            font-family: 'Courier New', monospace;
-            background: white;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-          }
-          .print-bill {
-            max-width: 400px;
-            width: 100%;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border: 1px solid #ddd;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-          }
-          .bill-header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px dashed #333;
-          }
-          .restaurant-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-          }
-          .restaurant-address {
-            font-size: 9px;
-            color: #555;
-            margin-bottom: 3px;
-          }
-          .restaurant-contact {
-            font-size: 8px;
-            color: #555;
-            margin-bottom: 2px;
-          }
-          .bill-title {
-            text-align: center;
-            font-size: 14px;
-            font-weight: bold;
-            margin: 10px 0;
-            letter-spacing: 2px;
-          }
-          .bill-info {
-            margin: 15px 0;
-            padding: 10px;
-            border: 1px solid #ddd;
-            font-size: 10px;
-          }
-          .bill-info-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-          }
-          .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 13px;
-          }
-          .items-table th,
-          .items-table td {
-            padding: 6px 3px;
-            text-align: left;
-            border-bottom: 1px dotted #ddd;
-          }
-          .items-table th {
-            background: #f5f5f5;
-            font-weight: bold;
-            text-align: center;
-          }
-          .items-table td:nth-child(2),
-          .items-table th:nth-child(2) {
-            text-align: center;
-          }
-          .items-table td:nth-child(3),
-          .items-table th:nth-child(3),
-          .items-table td:nth-child(4),
-          .items-table th:nth-child(4) {
-            text-align: right;
-          }
-          .totals {
-            margin: 15px 0;
-            padding: 10px;
-            border-top: 2px solid #333;
-            font-size: 10px;
-          }
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-          }
-          .grand-total {
-            font-size: 12px;
-            font-weight: bold;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 2px solid #333;
-          }
-          .status-badge {
-            text-align: center;
-            margin: 10px 0;
-            padding: 5px;
-            border-radius: 5px;
-            font-size: 10px;
-            font-weight: bold;
-            background: #d1fae5;
-            color: #065f46;
-          }
-          .thank-you {
-            text-align: center;
-            margin-top: 20px;
-            padding-top: 10px;
-            border-top: 2px dashed #333;
-            font-size: 10px;
-          }
-          .footer-note {
-            text-align: center;
-            margin-top: 15px;
-            font-size: 8px;
-            color: #888;
-          }
-          @media print {
-            body {
-              padding: 0;
-              margin: 0;
-            }
-            .print-bill {
-              max-width: 100%;
-              box-shadow: none;
-              border: none;
-              padding: 10px;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-bill">
-          <div class="bill-header">
-            <div class="restaurant-name">${(restaurant?.restaurantName || 'RESTAURANT').toUpperCase()}</div>
-            ${address ? `<div class="restaurant-address">📍 ${address}</div>` : ''}
-            ${restaurant?.mobile ? `<div class="restaurant-contact">📞 ${restaurant.mobile}</div>` : ''}
-            ${restaurant?.email ? `<div class="restaurant-contact">✉️ ${restaurant.email}</div>` : ''}
-            ${restaurant?.gstNumber ? `<div class="restaurant-contact">📋 GST: ${restaurant.gstNumber}</div>` : ''}
-            ${restaurant?.foodLicense ? `<div class="restaurant-contact">✅ FSSAI: ${restaurant.foodLicense}</div>` : ''}
-          </div>
-          
-          <div class="bill-title">TAX INVOICE</div>
-          
-          <div class="bill-info">
-            <div class="bill-info-row"><span>Bill No:</span><span>${order.billNumber}</span></div>
-            <div class="bill-info-row"><span>Date:</span><span>${order.date} | ${order.time}</span></div>
-            <div class="bill-info-row"><span>Customer:</span><span>${order.customerName || 'Guest'}</span></div>
-            <div class="bill-info-row"><span>Table:</span><span>${order.tableNumber || 'Takeaway'}</span></div>
-            <div class="bill-info-row"><span>GST Rate:</span><span>${restaurant?.gstPercentage || 18}%</span></div>
-          </div>
-          
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${order.items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td style="text-align:center">${item.quantity}</td>
-                  <td style="text-align:right">₹${item.price.toFixed(2)}</td>
-                  <td style="text-align:right">₹${(item.price * item.quantity).toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-           </table>
-          
-          <div class="totals">
-            <div class="total-row"><span>Subtotal:</span><span>₹${subtotal.toFixed(2)}</span></div>
-            <div class="total-row"><span>GST (${restaurant?.gstPercentage || 18}%):</span><span>₹${gstAmount.toFixed(2)}</span></div>
-            ${discount > 0 ? `<div class="total-row"><span>Discount (${discountType === 'percentage' ? discount + '%' : '₹' + discount.toFixed(2)}):</span><span>-₹${discountAmount.toFixed(2)}</span></div>` : ''}
-            <div class="total-row grand-total"><span>Grand Total:</span><span>₹${discountedTotal.toFixed(2)}</span></div>
-          </div>
-          
-          <div class="status-badge">
-            ✅ ORDER COMPLETED
-          </div>
-          
-          <div class="thank-you">
-            <p>🙏 Thank you for dining with us!</p>
-            <p>😊 Please visit again!</p>
-          </div>
-          
-          <div class="footer-note">
-            This is a computer generated invoice
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  };
-
   const showPopupNotification = (message, type = 'success') => {
     setPopupMessage(message);
     setPopupType(type);
@@ -660,10 +418,11 @@ const Border = () => {
     updateOrderTotals(updatedItems, editFormData.discount, editFormData.discountType);
   };
 
-  const handlePrint = (order) => {
-    const printHTML = generatePrintHTML(order);
+  const handlePrint = (orderId) => {
+    const printContent = printRefs.current[orderId];
+    if (!printContent) return;
     const printWindow = window.open('', '_blank');
-    printWindow.document.write(printHTML);
+    printWindow.document.write(printContent.innerHTML);
     printWindow.document.close();
     printWindow.print();
   };
@@ -974,7 +733,7 @@ const Border = () => {
                           </div>
                         ) : (
                           <div className="order-card">
-                            <div className={`bill-card ${getStatusClass(order.status)}`}>
+                            <div className={`bill-card ${getStatusClass(order.status)}`} ref={(el) => (printRefs.current[order._id] = el)}>
                               <div className="bill-header-main">
                                 <h2 className="restaurant-name">{restaurantData?.restaurantName}</h2>
                                 <div className="bill-number">Bill #{order.billNumber}</div>
@@ -1012,7 +771,7 @@ const Border = () => {
                               <div className="thank-you"><p>🙏 Thank you for dining with us!</p></div>
                             </div>
                             <div className="order-actions">
-                              <button className="action-btn print-btn" onClick={() => handlePrint(order)} disabled={order.status !== 'completed'}><FaPrint /> Print</button>
+                              <button className="action-btn print-btn" onClick={() => handlePrint(order._id)} disabled={order.status !== 'completed'}><FaPrint /> Print</button>
                               <button className="action-btn edit-btn" onClick={() => handleEdit(order)}><FaEdit /> Edit</button>
                               <button className="action-btn delete-btn" onClick={() => handleDeleteOrder(order._id)}><FaTrash /> Delete</button>
                             </div>
@@ -1035,3 +794,4 @@ const Border = () => {
 };
 
 export default Border;
+
