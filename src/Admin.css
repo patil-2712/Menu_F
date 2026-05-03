@@ -1050,3 +1050,219 @@
     font-size: 0.65rem;
   }
 }
+/* ========== PAYMENT STATUS SECTION ========== */
+.payment-status-section {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 15px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.section-header-with-refresh {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.section-header-with-refresh h2 {
+  color: white;
+  margin: 0;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.refresh-status-btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+}
+
+.refresh-status-btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.refresh-status-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.status-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.status-card {
+  background: white;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  gap: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.3s;
+}
+
+.status-card:hover {
+  transform: translateY(-3px);
+}
+
+.status-card .card-icon {
+  font-size: 2rem;
+  color: #667eea;
+}
+
+.status-card .card-content {
+  flex: 1;
+}
+
+.status-card .card-content h3 {
+  margin: 0 0 10px 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-badge.verified,
+.status-badge.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.failed,
+.status-badge.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.not-submitted {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.status-message,
+.status-detail {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 8px 0 0 0;
+}
+
+.status-help {
+  font-size: 0.75rem;
+  color: #888;
+  margin: 10px 0 0 0;
+}
+
+.status-date {
+  font-size: 0.7rem;
+  color: #999;
+  margin: 5px 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-actions {
+  margin-top: 10px;
+}
+
+.resend-kyc-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  margin-top: 8px;
+  transition: background 0.3s;
+}
+
+.resend-kyc-btn:hover {
+  background: #0056b3;
+}
+
+.status-card.payment-card.active {
+  border-left: 4px solid #28a745;
+}
+
+.status-card.payment-card.inactive {
+  border-left: 4px solid #dc3545;
+}
+
+/* Bank Details Section in Info Card */
+.bank-details-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.bank-details-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: #667eea;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-value.success {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.stat-value.warning {
+  color: #ffc107;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .status-cards-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .section-header-with-refresh {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .status-card {
+    padding: 15px;
+  }
+}
