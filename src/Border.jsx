@@ -80,6 +80,18 @@ const Border = () => {
   
   const printRefs = useRef({});
 
+  // Helper function to get full restaurant address
+  const getFullAddress = () => {
+    if (!restaurantData) return '';
+    const parts = [
+      restaurantData.nearestPlace,
+      restaurantData.city,
+      restaurantData.state,
+      restaurantData.country
+    ].filter(Boolean);
+    return parts.join(', ');
+  };
+
   const showPopupNotification = (message, type = 'success') => {
     setPopupMessage(message);
     setPopupType(type);
@@ -418,15 +430,263 @@ const Border = () => {
     updateOrderTotals(updatedItems, editFormData.discount, editFormData.discountType);
   };
 
-  const handlePrint = (orderId) => {
-    const printContent = printRefs.current[orderId];
-    if (!printContent) return;
+  // UPDATED PRINT FUNCTION with 58mm paper support and contact details
+ const handlePrint = (order) => {
+    const address = getFullAddress();
+    const mobile = restaurantData?.mobile;
+    const email = restaurantData?.email;
+    const restaurantName = restaurantData?.restaurantName || 'RESTAURANT';
+    const gstNumber = restaurantData?.gstNumber || 'N/A';
+    const gstPercentage = restaurantData?.gstPercentage || 18;
+    
+    const subtotal = order.subtotal || 0;
+    const gstAmount = order.gstAmount || 0;
+    const total = order.discountedTotal || order.total || 0;
+    const discount = order.discount || 0;
+    const discountAmount = (order.total || 0) - (order.discountedTotal || order.total || 0);
+    
     const printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent.innerHTML);
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Invoice ${order.billNumber}</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 0px;
+            margin: 0;
+          }
+          .bill-card {
+            max-width: 65mm;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+          }
+          .bill-header-main {
+            text-align: center;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 2px dashed #333;
+          }
+          .restaurant-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          .print-contact-info {
+            font-size: 11px;
+            color: #333;
+            margin-top: 3px;
+            text-align: center;
+            line-height: 1.3;
+            font-weight: bold;
+          }
+          .print-contact-info div {
+            margin-bottom: 1px;
+          }
+          .bill-number {
+            font-size: 12px;
+            color: #667eea;
+            font-weight: bold;
+            margin-top: 3px;
+          }
+          .bill-details {
+            background: #f7fafc;
+            padding: 6px;
+            margin-bottom: 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            font-weight: bold;
+          }
+          .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 11px;
+            font-weight: bold;
+          }
+          .detail-row span:first-child {
+            font-weight: bold;
+          }
+          .table-responsive {
+            margin-bottom: 8px;
+          }
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            font-weight: bold;
+          }
+          .items-table th,
+          .items-table td {
+            padding: 3px 2px;
+            text-align: left;
+            border-bottom: 1px dotted #ddd;
+            font-weight: bold;
+          }
+          .items-table th {
+            background: #f5f5f5;
+            font-weight: bold;
+            font-size: 8px;
+            text-transform: uppercase;
+          }
+          .items-table td:nth-child(2),
+          .items-table th:nth-child(2) {
+            text-align: center;
+          }
+          .items-table td:nth-child(3),
+          .items-table th:nth-child(3),
+          .items-table td:nth-child(4),
+          .items-table th:nth-child(4) {
+            text-align: right;
+          }
+          .item-name {
+            font-size: 10px;
+            font-weight: bold;
+          }
+          .item-qty, .item-price, .item-total {
+            font-size: 10px;
+            font-weight: bold;
+          }
+          .totals-section {
+            background: #f7fafc;
+            padding: 6px;
+            margin-bottom: 8px;
+            font-size: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 10px;
+            font-weight: bold;
+          }
+          .final-total {
+            font-weight: bold;
+            font-size: 12px;
+            border-top: 2px solid #333;
+            padding-top: 4px;
+            margin-top: 4px;
+          }
+          .discount-row {
+            color: #f59e0b;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 4px;
+            margin-top: 3px;
+            font-weight: bold;
+          }
+          .status-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 10px;
+            margin-bottom: 8px;
+            background: #d1fae5;
+            color: #065f46;
+            width: 100%;
+            font-weight: bold;
+          }
+          .thank-you {
+            text-align: center;
+            padding-top: 6px;
+            border-top: 2px dashed #333;
+            font-size: 8px;
+            margin-top: 5px;
+            font-weight: bold;
+          }
+          .thank-you p {
+            margin: 2px 0;
+          }
+          @media print {
+            body {
+              padding: 0;
+              margin: 0;
+            }
+            .bill-card {
+              max-width: 58mm;
+              padding: 3px 2px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="bill-card">
+          <div class="bill-header-main">
+            <div class="restaurant-name">${restaurantName.toUpperCase()}</div>
+            <div class="print-contact-info">
+              ${address ? `<div>📍 ${address}</div>` : ''}
+              ${mobile ? `<div>📞 ${mobile}</div>` : ''}
+              ${email ? `<div>${email}</div>` : ''}
+            </div>
+            <div class="bill-number">Bill #${order.billNumber}</div>
+          </div>
+          
+          <div class="bill-details">
+            <div class="detail-row"><span>📅 Date:${order.date} | ${order.time}</span></div>
+            <div class="detail-row"><span>👤 Customer:${order.customerName || 'Guest'}</span></div>
+            <div class="detail-row"><span>🪑 Table:${order.tableNumber || 'Takeaway'}</span></div>
+            <div class="detail-row"><span>📋 GST:${gstNumber}</span></div>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${order.items.map(item => `
+                  <tr>
+                    <td class="item-name">${item.name}</td>
+                    <td class="item-qty">${item.quantity}</td>
+                    <td class="item-price">₹${item.price.toFixed(2)}</td>
+                    <td class="item-total">₹${(item.price * item.quantity).toFixed(2)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="totals-section">
+            <div class="total-row"><span>Subtotal:₹${subtotal.toFixed(2)}</span></div>
+            <div class="total-row"><span>GST (${gstPercentage}%):₹${gstAmount.toFixed(2)}</span></div>
+            ${discount > 0 ? `<div class="total-row discount-row"><span>Discount:</span><span>-₹${discountAmount.toFixed(2)}</span></div>` : ''}
+            <div class="total-row final-total"><span>Grand Total:₹${total.toFixed(2)}</span></div>
+          </div>
+          
+          <div class="status-badge">
+            ✅ ORDER COMPLETED
+          </div>
+          
+          <div class="thank-you">
+            <p>🙏 Thank you for dining with us!</p>
+            <p>😊 Please visit again!</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
     printWindow.document.close();
     printWindow.print();
   };
-
   const getFilteredGroupedOrders = () => {
     const filtered = {};
     Object.keys(groupedOrders).forEach(date => {
@@ -733,7 +993,7 @@ const Border = () => {
                           </div>
                         ) : (
                           <div className="order-card">
-                            <div className={`bill-card ${getStatusClass(order.status)}`} ref={(el) => (printRefs.current[order._id] = el)}>
+                            <div className={`bill-card ${getStatusClass(order.status)}`}>
                               <div className="bill-header-main">
                                 <h2 className="restaurant-name">{restaurantData?.restaurantName}</h2>
                                 <div className="bill-number">Bill #{order.billNumber}</div>
@@ -771,7 +1031,7 @@ const Border = () => {
                               <div className="thank-you"><p>🙏 Thank you for dining with us!</p></div>
                             </div>
                             <div className="order-actions">
-                              <button className="action-btn print-btn" onClick={() => handlePrint(order._id)} disabled={order.status !== 'completed'}><FaPrint /> Print</button>
+                              <button className="action-btn print-btn" onClick={() => handlePrint(order)} disabled={order.status !== 'completed'}><FaPrint /> Print</button>
                               <button className="action-btn edit-btn" onClick={() => handleEdit(order)}><FaEdit /> Edit</button>
                               <button className="action-btn delete-btn" onClick={() => handleDeleteOrder(order._id)}><FaTrash /> Delete</button>
                             </div>
@@ -794,4 +1054,3 @@ const Border = () => {
 };
 
 export default Border;
-
