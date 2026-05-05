@@ -2068,18 +2068,7 @@ const MyOrderPage = () => {
                     <td className="item-qty">{item.quantity}</td>
                     <td className="item-price">₹{formatCurrency(item.price)}</td>
                     <td className="item-total">₹{formatCurrency(itemTotal)}</td>
-                    <td className="item-remove">
-                      {!isPaid && !isCashSelected && (
-                        <button 
-                          className="remove-item-btn"
-                          onClick={() => removeItemFromOrder(item._id || item.itemId, item.name)}
-                          disabled={updatingOrder}
-                          title="Remove item"
-                        >
-                          <FaTrash />
-                        </button>
-                      )}
-                    </td>
+                   
                   </tr>
                 );
               })}

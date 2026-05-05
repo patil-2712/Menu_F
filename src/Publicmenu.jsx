@@ -3206,13 +3206,13 @@ const Publicmenu = () => {
         </div>
       )}
 
-      {/* Cart Button - Only show when within range */}
+      {/*Cart Button - Only show when within range
       {orderItems.length > 0 && isOrderingAllowed() && (
         <button className="cart-button" onClick={() => setShowOrderSummary(true)}>
           <FaShoppingCart />
           <span className="cart-count">{orderItems.reduce((sum, item) => sum + item.quantity, 0)}</span>
         </button>
-      )}
+      )}*/}
 
       <header className="menu-header">
         <div className="header-content">
