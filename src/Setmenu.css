@@ -898,3 +898,15 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+/* Add at the top of both CSS files */
+.main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 24px 32px;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+}

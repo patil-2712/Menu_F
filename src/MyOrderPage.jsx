@@ -1409,10 +1409,54 @@ const MyOrderPage = () => {
     }
   };
 
+  // =========== PROCESS UPI COUNTER PAYMENT ===========
+  const processUpiCounterPayment = async () => {
+    if (!order || !order._id) {
+      showPopup('Order data missing. Please try again.', 'error');
+      return;
+    }
+    
+    setPaymentLoading(true);
+    
+    try {
+      const response = await axios.post(`${API_URL}/api/payments/upi-counter/${order._id}`, {
+        amount: getDisplayTotals().total
+      });
+      
+      console.log('UPI counter payment response:', response.data);
+      
+      if (response.data.success) {
+        setShowPaymentModal(false);
+        showPopup('💳 Counter UPI selected. Please pay at the counter. Order pending confirmation.', 'success');
+        
+        const freshOrder = await axios.get(`${API_URL}/api/order/id/${order._id}`);
+        if (freshOrder.data) {
+          console.log('Fresh order after UPI counter selection:', freshOrder.data);
+          setOrder(freshOrder.data);
+          localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(freshOrder.data));
+        }
+        
+        setPaymentLoading(false);
+        setPaymentMethod('upi');
+        setSelectedUpiApp(null);
+        
+      } else {
+        showPopup('Failed to select Counter UPI. Please try again.', 'error');
+        setPaymentLoading(false);
+      }
+    } catch (error) {
+      console.error('UPI counter payment selection failed:', error);
+      showPopup('Failed to select Counter UPI. Please try again.', 'error');
+      setPaymentLoading(false);
+    }
+  };
+
   // =========== MAIN PAYMENT HANDLER ===========
   const handlePayment = async () => {
     if (paymentMethod === 'cash') {
       await processCashPayment();
+    } else if (paymentMethod === 'upi_counter') {
+      await processUpiCounterPayment();
     } else if (paymentMethod === 'upi') {
       await processStandardCheckout();
     }
@@ -1421,55 +1465,10 @@ const MyOrderPage = () => {
   // =========== HANDLE UPI APP SELECT ===========
   const handleUpiAppSelect = (app) => {
     setSelectedUpiApp(app);
-    // This will open Razorpay checkout with the selected app preference
     processStandardCheckout();
   };
 
-  // =========== REMOVE ITEM FROM ORDER ===========
-  const removeItemFromOrder = async (itemId, itemName) => {
-    if (!order || !order._id) {
-      showPopup('Order data missing.', 'error');
-      return;
-    }
-    
-    if (window.confirm(`Remove "${itemName}" from this order?`)) {
-      setUpdatingOrder(true);
-      
-      try {
-        const restaurantCode = restaurant?.restaurantCode || localStorage.getItem('restaurantCode');
-        const billNumber = order.billNumber;
-        
-        const response = await axios.delete(
-          `${API_URL}/api/order/${restaurantCode}/${billNumber}/items/${itemId}`,
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-        
-        if (response.data.success) {
-          showPopup(`"${itemName}" removed from order`, 'success');
-          
-          const updatedOrder = await fetchOrderFromBackend();
-          if (updatedOrder) {
-            setOrder(updatedOrder);
-            localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(updatedOrder));
-          }
-          
-          if (updatedOrder && updatedOrder.items.length === 0) {
-            showPopup('Order is empty. Redirecting to menu...', 'warning');
-            setTimeout(() => {
-              navigate(`/${restaurantSlug}/menu`);
-            }, 2000);
-          }
-        } else {
-          showPopup('Failed to remove item', 'error');
-        }
-      } catch (error) {
-        console.error('Remove item error:', error);
-        showPopup('Failed to remove item. Please try again.', 'error');
-      } finally {
-        setUpdatingOrder(false);
-      }
-    }
-  };
+  
 
   // =========== REMOVE NEW ITEM FROM ADD MODAL ===========
   const removeNewItem = (itemId) => {
@@ -1797,7 +1796,7 @@ const MyOrderPage = () => {
     
     y += 8;
     doc.setFont('courier','bold');
-    doc.text(`PAYMENT STATUS: ${isPaid ? 'PAID' : order?.paymentMethod === 'cash' ? 'CASH PENDING' : 'PENDING'}`, 14, y);
+    doc.text(`PAYMENT STATUS: ${isPaid ? 'PAID' : order?.paymentMethod === 'cash' ? 'CASH PENDING' : order?.paymentMethod === 'upi_counter' ? 'UPI COUNTER PENDING' : 'PENDING'}`, 14, y);
 
     doc.save(`Invoice_${order.billNumber}_${restaurant?.restaurantName||'Restaurant'}.pdf`);
   };
@@ -1824,11 +1823,13 @@ const MyOrderPage = () => {
   const gstPercentage = order?.gstPercentage || restaurant?.gstPercentage || 18;
   const isPaid = order?.paymentStatus === 'paid';
   const isCashSelected = order?.paymentMethod === 'cash';
+  const isUpiCounterSelected = order?.paymentMethod === 'upi_counter';
 
   console.log('🔍 Order payment status:', order?.paymentStatus);
   console.log('🔍 Order payment method:', order?.paymentMethod);
   console.log('🔍 Is paid?', isPaid);
   console.log('🔍 Is cash selected?', isCashSelected);
+  console.log('🔍 Is UPI counter selected?', isUpiCounterSelected);
 
   if (loading) {
     return (
@@ -1877,7 +1878,7 @@ const MyOrderPage = () => {
       )}
 
       {/* Payment Modal */}
-      {showPaymentModal && !isPaid && !isCashSelected && (
+      {showPaymentModal && !isPaid && !isCashSelected && !isUpiCounterSelected && (
         <div className="payment-modal-overlay" onClick={() => { if (!paymentLoading) { setShowPaymentModal(false); setSelectedUpiApp(null); } }}>
           <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
             <div className="payment-modal-header">
@@ -1896,14 +1897,21 @@ const MyOrderPage = () => {
                   onClick={() => { setPaymentMethod('upi'); setSelectedUpiApp(null); }}
                   disabled={paymentLoading}
                 >
-                  <FaMobileAlt /> Pay via UPI
+                  <FaMobileAlt /> Pay Online (UPI)
+                </button>
+                <button 
+                  className={`payment-option-btn ${paymentMethod === 'upi_counter' ? 'active' : ''}`}
+                  onClick={() => { setPaymentMethod('upi_counter'); setSelectedUpiApp(null); }}
+                  disabled={paymentLoading}
+                >
+                  <FaQrcode /> Counter UPI
                 </button>
                 <button 
                   className={`payment-option-btn ${paymentMethod === 'cash' ? 'active' : ''}`}
                   onClick={() => { setPaymentMethod('cash'); setSelectedUpiApp(null); }}
                   disabled={paymentLoading}
                 >
-                  💵 Pay by Cash
+                  💵 Cash
                 </button>
               </div>
               
@@ -1915,6 +1923,19 @@ const MyOrderPage = () => {
                   totalAmount={total}
                   processPayment={handlePayment}
                 />
+              )}
+              
+              {paymentMethod === 'upi_counter' && (
+                <div className="payment-modal-actions">
+                  <button 
+                    className="confirm-payment-btn upi-counter-btn"
+                    onClick={handlePayment}
+                    disabled={paymentLoading}
+                  >
+                    {paymentLoading ? <FaSpinner className="spinner" /> : `Confirm Counter UPI`}
+                  </button>
+                  <p className="cash-note">💡 You will pay at the counter using UPI. Order will be pending until payment is confirmed.</p>
+                </div>
               )}
               
               {paymentMethod === 'cash' && (
@@ -1934,8 +1955,8 @@ const MyOrderPage = () => {
         </div>
       )}
 
-      {/* FAB: Add Items - Only show if not paid and not cash selected */}
-      {!isPaid && !isCashSelected && (
+      {/* FAB: Add Items - Only show if not paid and not cash/upi_counter selected */}
+      {!isPaid && !isCashSelected && !isUpiCounterSelected && (
         <button className="floating-add-btn" onClick={() => setShowAddItemsModal(true)} title="Add items" disabled={updatingOrder}>
           <FaPlus />
         </button>
@@ -1984,8 +2005,8 @@ const MyOrderPage = () => {
       {/* Main Bill Card */}
       <div className="bill-card">
         {/* Payment Status Badge */}
-        <div className={`payment-status-badge ${isPaid ? 'paid' : isCashSelected ? 'cash-pending' : 'pending'}`}>
-          {isPaid ? '✓ Payment Completed' : isCashSelected ? '⏳ Awaiting Cash Payment' : '⏳ Payment Pending'}
+        <div className={`payment-status-badge ${isPaid ? 'paid' : isCashSelected ? 'cash-pending' : isUpiCounterSelected ? 'upi-counter-pending' : 'pending'}`}>
+          {isPaid ? '✓ Payment Completed' : isCashSelected ? '⏳ Awaiting Cash Payment' : isUpiCounterSelected ? '⏳ Awaiting Counter UPI Payment' : '⏳ Payment Pending'}
         </div>
 
         {!isPaid && isCashSelected && (
@@ -1994,7 +2015,13 @@ const MyOrderPage = () => {
           </div>
         )}
 
-        {!isPaid && !isCashSelected && (
+        {!isPaid && isUpiCounterSelected && (
+          <div className="payment-warning upi-counter-warning">
+            <FaInfoCircle /> Counter UPI selected. Please pay at the counter to confirm your order.
+          </div>
+        )}
+
+        {!isPaid && !isCashSelected && !isUpiCounterSelected && (
           <div className="payment-warning">
             <FaInfoCircle /> Please complete payment for this order.
           </div>
@@ -2053,7 +2080,7 @@ const MyOrderPage = () => {
           )}
         </div>
 
-        {/* Items Table with Remove Button */}
+        {/* Items Table */}
         <div className="items-container">
           <table className="items-table">
             <thead>
@@ -2068,7 +2095,7 @@ const MyOrderPage = () => {
                     <td className="item-qty">{item.quantity}</td>
                     <td className="item-price">₹{formatCurrency(item.price)}</td>
                     <td className="item-total">₹{formatCurrency(itemTotal)}</td>
-                   
+                    
                   </tr>
                 );
               })}
@@ -2090,6 +2117,7 @@ const MyOrderPage = () => {
             <span>Payment Method:</span>
             <span className={`payment-method ${order?.paymentMethod}`}>
               {order?.paymentMethod === 'cash' && '💵 Cash (Pending Confirmation)'}
+              {order?.paymentMethod === 'upi_counter' && '💳 Counter UPI (Pending Confirmation)'}
               {order?.paymentMethod === 'upi' && '💳 UPI / Card (Paid)'}
               {(!order?.paymentMethod || order?.paymentMethod === 'pending') && '⏳ Not Selected'}
             </span>
@@ -2099,7 +2127,8 @@ const MyOrderPage = () => {
             <span className={`payment-status ${order?.paymentStatus}`}>
               {order?.paymentStatus === 'paid' && '✅ Paid'}
               {order?.paymentStatus === 'pending' && order?.paymentMethod === 'cash' && '⏳ Waiting for Cash Payment at Counter'}
-              {order?.paymentStatus === 'pending' && order?.paymentMethod !== 'cash' && '⏳ Pending'}
+              {order?.paymentStatus === 'pending' && order?.paymentMethod === 'upi_counter' && '⏳ Waiting for UPI Payment at Counter'}
+              {order?.paymentStatus === 'pending' && order?.paymentMethod !== 'cash' && order?.paymentMethod !== 'upi_counter' && '⏳ Pending'}
             </span>
           </div>
           {order?.paymentCompletedAt && (
@@ -2124,7 +2153,7 @@ const MyOrderPage = () => {
 
         {/* Actions */}
         <div className="action-buttons">
-          {!isPaid && !isCashSelected && (
+          {!isPaid && !isCashSelected && !isUpiCounterSelected && (
             <button className="action-btn pay-btn" onClick={() => setShowPaymentModal(true)} disabled={updatingOrder}>
               <FaWallet /> Pay Now ₹{formatCurrency(total)}
             </button>
@@ -2134,6 +2163,11 @@ const MyOrderPage = () => {
               <FaWallet /> Cash Payment Pending at Counter
             </button>
           )}
+          {!isPaid && isUpiCounterSelected && (
+            <button className="action-btn upi-counter-pending-btn" disabled>
+              <FaQrcode /> Counter UPI Pending at Counter
+            </button>
+          )}
           <button className="action-btn refresh-btn" onClick={refreshOrderData}>
             🔄 Refresh Status
           </button>
@@ -2141,7 +2175,7 @@ const MyOrderPage = () => {
             <FaDownload /> Download PDF
           </button>
           <button className="action-btn share-btn" onClick={() => {
-            const msg = `*${restaurant?.restaurantName || 'Restaurant'}*\nBill No: ${order.billNumber}\nDate: ${order.date} | Time: ${order.time}\nCustomer: ${order.customerName || 'Guest'} | Mobile: ${order.customerPhone || 'N/A'} | Table: ${order.tableNumber || 'Takeaway'}\n--------------------------------\n${order.items.map(i => `${i.name} x${i.quantity} = ₹${(i.price * i.quantity).toFixed(2)}`).join('\n')}\n--------------------------------\nSubtotal: ₹${formatCurrency(subtotal)}\nGST (${gstPercentage}%): ₹${formatCurrency(gst)}\n*Grand Total: ₹${formatCurrency(total)}*\n\nPayment: ${isPaid ? 'PAID' : isCashSelected ? 'CASH PENDING' : 'PENDING'}\n📍 ${getFullAddress()}`;
+            const msg = `*${restaurant?.restaurantName || 'Restaurant'}*\nBill No: ${order.billNumber}\nDate: ${order.date} | Time: ${order.time}\nCustomer: ${order.customerName || 'Guest'} | Mobile: ${order.customerPhone || 'N/A'} | Table: ${order.tableNumber || 'Takeaway'}\n--------------------------------\n${order.items.map(i => `${i.name} x${i.quantity} = ₹${(i.price * i.quantity).toFixed(2)}`).join('\n')}\n--------------------------------\nSubtotal: ₹${formatCurrency(subtotal)}\nGST (${gstPercentage}%): ₹${formatCurrency(gst)}\n*Grand Total: ₹${formatCurrency(total)}*\n\nPayment: ${isPaid ? 'PAID' : isCashSelected ? 'CASH PENDING' : isUpiCounterSelected ? 'UPI COUNTER PENDING' : 'PENDING'}\n📍 ${getFullAddress()}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
           }}>
             <FaWhatsapp /> Share
@@ -2158,14 +2192,14 @@ const MyOrderPage = () => {
               <button className="close-modal-btn-new" onClick={closeAddModal} disabled={addingItems}><FaTimes /></button>
             </div>
             <div className="modal-content-new">
-              {!isPaid && !isCashSelected && (
+              {!isPaid && !isCashSelected && !isUpiCounterSelected && (
                 <div className="add-items-warning">
                   <FaInfoCircle /> Adding items will update your bill total.
                 </div>
               )}
-              {isCashSelected && (
+              {(isCashSelected || isUpiCounterSelected) && (
                 <div className="add-items-warning cash-warning">
-                  <FaInfoCircle /> Cannot add items after selecting cash payment. Please contact staff.
+                  <FaInfoCircle /> Cannot add items after selecting payment. Please contact staff.
                 </div>
               )}
               <div className="search-container-new">
@@ -2197,9 +2231,9 @@ const MyOrderPage = () => {
                         <div className="item-header-new"><h3 className="item-name-new">{item.name}</h3><span className="item-price-new">₹{Number(item.price).toFixed(2)}</span></div>
                         <div className="item-category-new"><span className="category-badge-new">{item.category || 'Uncategorized'}</span></div>
                         <div className="item-actions-new">
-                          <button className="quantity-btn-new" onClick={() => removeMenuItemFromOrder(item._id)} disabled={qty === 0 || addingItems || isCashSelected}>−</button>
+                          <button className="quantity-btn-new" onClick={() => removeMenuItemFromOrder(item._id)} disabled={qty === 0 || addingItems || isCashSelected || isUpiCounterSelected}>−</button>
                           <span className="quantity-new">{qty}</span>
-                          <button className="quantity-btn-new" onClick={() => addMenuItemToOrder(item)} disabled={addingItems || isCashSelected}>+</button>
+                          <button className="quantity-btn-new" onClick={() => addMenuItemToOrder(item)} disabled={addingItems || isCashSelected || isUpiCounterSelected}>+</button>
                         </div>
                       </div>
                     </div>
@@ -2208,7 +2242,7 @@ const MyOrderPage = () => {
                   <div className="no-items-new"><p>No menu items found</p>{(searchTerm || activeCategory !== 'all') && <button className="clear-filters-btn-new" onClick={() => { setSearchTerm(''); setActiveCategory('all'); }}>Clear Filters</button>}</div>
                 )}
               </div>
-              {newItems.length > 0 && !isCashSelected && (
+              {newItems.length > 0 && !isCashSelected && !isUpiCounterSelected && (
                 <div className="new-items-summary-new">
                   <h4>Items to Add</h4>
                   {newItems.map((item, idx) => (
@@ -2230,7 +2264,7 @@ const MyOrderPage = () => {
               )}
               <div className="modal-actions-new">
                 <button className="modal-cancel-new" onClick={closeAddModal} disabled={addingItems}>Cancel</button>
-                {!isCashSelected && (
+                {!isCashSelected && !isUpiCounterSelected && (
                   <button className="modal-confirm-new" onClick={handleSaveNewItems} disabled={newItems.length === 0 || addingItems}>
                     {addingItems ? 'Adding…' : `Add ${newItems.length} Item${newItems.length !== 1 ? 's' : ''}`}
                   </button>

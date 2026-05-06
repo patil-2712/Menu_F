@@ -978,6 +978,7 @@ import {
   FaMicrophone,
   FaVolumeMute
 } from 'react-icons/fa';
+import BNavbar from './components/BNavbar';
 import './CustomerRequests.css';
 
 const CustomerRequests = () => {
@@ -993,7 +994,6 @@ const CustomerRequests = () => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showResponseModal, setShowResponseModal] = useState(false);
   const [staffResponse, setStaffResponse] = useState('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [restaurantData, setRestaurantData] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
@@ -1424,36 +1424,6 @@ const CustomerRequests = () => {
     showPopupNotification('Search cleared', 'info');
   };
 
-  const handleNavigateToBorder = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/border`);
-  };
-  
-  const handleNavigateToTotalBill = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/totalbill`);
-  };
-
-  const handleNavigateToCustomerRequests = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/customer-requests`);
-  };
-
-  const handleLogout = () => {
-    if (refreshInterval.current) {
-      clearInterval(refreshInterval.current);
-    }
-    if (speechSynthesisRef.current) {
-      speechSynthesisRef.current.cancel();
-    }
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 50);
-  };
-
   const getRequestIcon = (type) => {
     switch(type) {
       case 'water': return '💧';
@@ -1525,38 +1495,12 @@ const CustomerRequests = () => {
         </div>
       )}
 
-      {/* Sidebar Navigation - LEFT side */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaCommentDots className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Messages'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item" onClick={handleNavigateToBorder}>
-            <FaWallet /> Border
-          </button>
-          <button className="nav-item" onClick={handleNavigateToTotalBill}>
-            <FaReceipt /> Total Bill
-          </button>
-          <button className="nav-item active" onClick={handleNavigateToCustomerRequests}>
-            <FaCommentDots /> Customer Messages
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Billing Navbar */}
+      <BNavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName}
+        activePage="customer-requests"
+      />
 
       {/* Main Content */}
       <div className="main-content">

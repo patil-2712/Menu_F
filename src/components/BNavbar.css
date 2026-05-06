@@ -1,7 +1,8 @@
+/* components/BNavbar.css */
 /* ============================================
-   SHARED SIDEBAR NAVIGATION
+   BNAVBAR SIDEBAR STYLES
    ============================================ */
-.shared-sidebar {
+.bnavbar-sidebar {
   width: 280px;
   background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
   color: #fff;
@@ -11,15 +12,16 @@
   height: 100vh;
   z-index: 100;
   transition: transform 0.3s ease;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+  left: 0;
+  top: 0;
 }
 
-.shared-sidebar-header {
+.bnavbar-sidebar-header {
   padding: 28px 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.shared-logo {
+.bnavbar-logo {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -27,12 +29,12 @@
   font-weight: 700;
 }
 
-.shared-logo .logo-icon {
+.bnavbar-logo-icon {
   font-size: 28px;
   color: #818cf8;
 }
 
-.shared-sidebar-nav {
+.bnavbar-sidebar-nav {
   flex: 1;
   padding: 24px 20px;
   display: flex;
@@ -40,7 +42,7 @@
   gap: 8px;
 }
 
-.shared-nav-item {
+.bnavbar-nav-item {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -57,18 +59,18 @@
   text-align: left;
 }
 
-.shared-nav-item:hover {
+.bnavbar-nav-item:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
-.shared-nav-item.active {
+.bnavbar-nav-item.active {
   background: #4f46e5;
   color: #fff;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
-.shared-nav-item.logout {
+.bnavbar-nav-item.logout {
   margin-top: auto;
   color: rgba(255, 255, 255, 0.6);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -76,17 +78,54 @@
   margin-top: 20px;
 }
 
-.shared-nav-item.logout:hover {
+.bnavbar-nav-item.logout:hover {
   color: #f87171;
   background: rgba(248, 113, 113, 0.1);
 }
 
-.shared-sidebar-footer {
+/* User Info Section */
+.bnavbar-user-info {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0 0 16px 0;
+}
+
+.bnavbar-user-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bnavbar-user-icon {
+  font-size: 32px;
+  color: #818cf8;
+}
+
+.bnavbar-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bnavbar-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.bnavbar-user-role {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: capitalize;
+}
+
+.bnavbar-sidebar-footer {
   padding: 20px;
 }
 
 /* Mobile Menu Toggle */
-.shared-mobile-menu-toggle {
+.bnavbar-mobile-menu-toggle {
   display: none;
   position: fixed;
   bottom: 20px;
@@ -104,24 +143,42 @@
   transition: all 0.2s;
 }
 
-.shared-mobile-menu-toggle:hover {
+.bnavbar-mobile-menu-toggle:hover {
   background: #4338ca;
   transform: scale(1.05);
 }
 
-/* Mobile Responsive */
+/* Overlay for mobile */
+.bnavbar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
 @media (max-width: 768px) {
-  .shared-sidebar {
+  .bnavbar-sidebar {
     transform: translateX(-100%);
   }
   
-  .shared-sidebar.mobile-open {
+  .bnavbar-sidebar.mobile-open {
     transform: translateX(0);
   }
   
-  .shared-mobile-menu-toggle {
+  .bnavbar-mobile-menu-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  
+  .bnavbar-overlay {
+    display: block;
   }
 }

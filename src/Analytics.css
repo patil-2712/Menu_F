@@ -666,3 +666,16 @@ body {
     text-align: center;
   }
 }
+/* Add to Analytics.css */
+.payment-stat-card.upi-counter .payment-stat-amount {
+  color: #8b5cf6;
+}
+
+.upi-counter-amount {
+  color: #8b5cf6;
+  font-weight: 500;
+}
+
+.amount.upi-counter-amount {
+  color: #8b5cf6;
+}

@@ -1026,3 +1026,45 @@ body {
     text-align: center;
   }
 }
+/* Add to AllRecord.css */
+
+/* Counter UPI Payment Card */
+.payment-stat-card.upi-counter .payment-stat-amount {
+  color: #8b5cf6;
+}
+
+.payment-stat-card.upi-counter.active-filter {
+  border: 2px solid #8b5cf6;
+  background: #f3e8ff;
+}
+
+/* Counter UPI Payment Badge */
+.payment-badge.upi-counter-paid {
+  background: #f3e8ff;
+  color: #6b21a5;
+}
+
+.payment-badge.upi-counter-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Payment Statistics Container - 5 columns */
+.payment-stats-container {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+}
+
+/* Responsive for payment cards */
+@media (max-width: 1024px) {
+  .payment-stats-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .payment-stats-container {
+    grid-template-columns: 1fr;
+  }
+}

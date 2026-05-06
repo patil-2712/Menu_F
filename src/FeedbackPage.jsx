@@ -1370,6 +1370,7 @@ import {
   FaReceipt,
   FaCommentDots
 } from 'react-icons/fa';
+import ONavbar from './components/ONavbar';
 import './FeedbackPage.css';
 
 const FeedbackPage = () => {
@@ -1385,7 +1386,6 @@ const FeedbackPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [restaurantData, setRestaurantData] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // User info
   const [userRole, setUserRole] = useState('');
@@ -1481,16 +1481,6 @@ const FeedbackPage = () => {
     if (storedRestaurantSlug !== restaurantSlug && role !== 'admin') {
       navigate(`/${storedRestaurantSlug}/feedback`);
     }
-  };
-
-  const handleLogout = () => {
-    console.log("🔓 Logging out from FeedbackPage...");
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 50);
   };
 
   const fetchRestaurantData = async () => {
@@ -1992,32 +1982,6 @@ const FeedbackPage = () => {
     setSearchTerm('');
   };
 
-  // Navigation Functions
-  const handleNavigateToAdmin = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/admin`);
-  };
-  
-  const handleNavigateToAnalytics = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/analytics`);
-  };
-
-  const handleNavigateToRecords = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/records`);
-  };
-
-  
-
- 
-
-
-  const handleNavigateToFeedback = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/feedback`);
-  };
-
   const filteredFeedback = getFilteredFeedback();
 
   if (loading) {
@@ -2031,43 +1995,12 @@ const FeedbackPage = () => {
 
   return (
     <div className="feedback-container">
-      {/* Sidebar Navigation - LEFT SIDE */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaChartBar className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Feedback'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item" onClick={handleNavigateToAdmin}>
-            <FaBuilding /> Admin
-          </button>
-       
-         
-          <button className="nav-item" onClick={handleNavigateToAnalytics}>
-            <FaChartLine /> Analytics
-          </button>
-          <button className="nav-item" onClick={handleNavigateToRecords}>
-            <FaDatabase /> Records
-          </button>
-          <button className="nav-item active" onClick={handleNavigateToFeedback}>
-            <FaEye /> Feedback
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Owner Navbar */}
+      <ONavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName}
+        activePage="feedback"
+      />
 
       {/* Main Content */}
       <div className="main-content">
@@ -2379,7 +2312,7 @@ const FeedbackPage = () => {
                         </tr>
                       ))}
                     </tbody>
-                 </table>
+                  </table>
                 </div>
               ) : (
                 <div className="no-feedback">

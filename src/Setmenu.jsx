@@ -937,6 +937,7 @@ import {
   FaCalendarAlt,
   FaCommentDots
 } from 'react-icons/fa';
+import KNavbar from './components/KNavbar';
 import './Setmenu.css';
 
 function Setmenu() {
@@ -1228,17 +1229,6 @@ function Setmenu() {
     if (fileInput) fileInput.value = null;
   };
 
-  // Logout
-  const handleLogout = () => {
-    console.log("🔓 Logging out from Setmenu...");
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 50);
-  };
-
   // Retry backend connection
   const handleRetryConnection = async () => {
     setError('');
@@ -1261,19 +1251,6 @@ function Setmenu() {
       [section]: !prev[section]
     }));
   };
-
-  // Navigation functions
-  const handleNavigateToKorder = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/Korder`);
-  };
-
-  const handleNavigateToSetMenu = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/setmenu`);
-  };
-
- 
 
   // Initialize component
   useEffect(() => {
@@ -1335,36 +1312,12 @@ function Setmenu() {
 
   return (
     <div className="setmenu-container">
-      {/* Sidebar Navigation - LEFT SIDE */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaUtensils className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Menu'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item" onClick={handleNavigateToKorder}>
-            <FaClipboardList /> KOT
-          </button>
-          <button className="nav-item active" onClick={handleNavigateToSetMenu}>
-            <FaUtensils /> Set Menu
-          </button>
-         
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Use Shared Navbar */}
+      <KNavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName || restaurant?.restaurantName}
+        activePage="setmenu"
+      />
 
       {/* Main Content */}
       <div className="main-content">

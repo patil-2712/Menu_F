@@ -1176,8 +1176,10 @@ import {
   FaUtensils,
   FaClipboardList,
   FaReceipt,
-  FaCommentDots
+  FaCommentDots,
+  FaQrcode
 } from 'react-icons/fa';
+import ONavbar from './components/ONavbar';
 import './AllRecord.css';
 
 const AllRecord = () => {
@@ -1192,7 +1194,6 @@ const AllRecord = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [restaurantData, setRestaurantData] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // User info
   const [userRole, setUserRole] = useState('');
@@ -1236,6 +1237,7 @@ const AllRecord = () => {
     cancelledOrders: 0,
     upiPayments: { count: 0, amount: 0 },
     cashPayments: { count: 0, amount: 0 },
+    upiCounterPayments: { count: 0, amount: 0 },
     pendingPayments: { count: 0, amount: 0 }
   });
 
@@ -1289,16 +1291,6 @@ const AllRecord = () => {
     if (storedRestaurantSlug !== restaurantSlug) {
       navigate(`/${storedRestaurantSlug}/records`);
     }
-  };
-
-  const handleLogout = () => {
-    console.log("🔓 Logging out from AllRecord...");
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 50);
   };
 
   const fetchRestaurantData = async () => {
@@ -1391,6 +1383,7 @@ const AllRecord = () => {
         cancelledOrders: 0,
         upiPayments: { count: 0, amount: 0 },
         cashPayments: { count: 0, amount: 0 },
+        upiCounterPayments: { count: 0, amount: 0 },
         pendingPayments: { count: 0, amount: 0 }
       });
       return;
@@ -1408,6 +1401,7 @@ const AllRecord = () => {
     
     let upiCount = 0, upiAmount = 0;
     let cashCount = 0, cashAmount = 0;
+    let upiCounterCount = 0, upiCounterAmount = 0;
     let pendingCount = 0, pendingAmount = 0;
     
     ordersData.forEach(order => {
@@ -1421,6 +1415,9 @@ const AllRecord = () => {
       } else if (paymentMethod === 'cash' && paymentStatus === 'paid') {
         cashCount++;
         cashAmount += orderTotal;
+      } else if (paymentMethod === 'upi_counter' && paymentStatus === 'paid') {
+        upiCounterCount++;
+        upiCounterAmount += orderTotal;
       } else {
         pendingCount++;
         pendingAmount += orderTotal;
@@ -1438,6 +1435,7 @@ const AllRecord = () => {
       cancelledOrders,
       upiPayments: { count: upiCount, amount: upiAmount },
       cashPayments: { count: cashCount, amount: cashAmount },
+      upiCounterPayments: { count: upiCounterCount, amount: upiCounterAmount },
       pendingPayments: { count: pendingCount, amount: pendingAmount }
     });
   };
@@ -1450,7 +1448,6 @@ const AllRecord = () => {
       setPaymentFilter(filterType);
       setActivePaymentFilter(filterType);
     }
-    setMobileMenuOpen(false);
   };
 
   const getFilteredOrders = () => {
@@ -1469,6 +1466,8 @@ const AllRecord = () => {
           return paymentMethod === 'upi' && paymentStatus === 'paid';
         } else if (paymentFilter === 'cash') {
           return paymentMethod === 'cash' && paymentStatus === 'paid';
+        } else if (paymentFilter === 'upiCounter') {
+          return paymentMethod === 'upi_counter' && paymentStatus === 'paid';
         } else if (paymentFilter === 'pending') {
           return paymentStatus !== 'paid';
         }
@@ -1560,6 +1559,7 @@ const AllRecord = () => {
     const filteredOrders = getFilteredOrders();
     let upiCount = 0, upiAmount = 0;
     let cashCount = 0, cashAmount = 0;
+    let upiCounterCount = 0, upiCounterAmount = 0;
     let pendingCount = 0, pendingAmount = 0;
     
     filteredOrders.forEach(order => {
@@ -1573,6 +1573,9 @@ const AllRecord = () => {
       } else if (paymentMethod === 'cash' && paymentStatus === 'paid') {
         cashCount++;
         cashAmount += orderTotal;
+      } else if (paymentMethod === 'upi_counter' && paymentStatus === 'paid') {
+        upiCounterCount++;
+        upiCounterAmount += orderTotal;
       } else {
         pendingCount++;
         pendingAmount += orderTotal;
@@ -1582,8 +1585,9 @@ const AllRecord = () => {
     return {
       upiPayments: { count: upiCount, amount: upiAmount },
       cashPayments: { count: cashCount, amount: cashAmount },
+      upiCounterPayments: { count: upiCounterCount, amount: upiCounterAmount },
       pendingPayments: { count: pendingCount, amount: pendingAmount },
-      totalCollection: upiAmount + cashAmount
+      totalCollection: upiAmount + cashAmount + upiCounterAmount
     };
   };
 
@@ -1655,8 +1659,12 @@ const AllRecord = () => {
       return <span className="payment-badge upi-paid"><FaMobileAlt /> UPI Paid</span>;
     } else if (method === 'cash' && status === 'paid') {
       return <span className="payment-badge cash-paid"><FaMoneyBill /> Cash Paid</span>;
+    } else if (method === 'upi_counter' && status === 'paid') {
+      return <span className="payment-badge upi-counter-paid"><FaQrcode /> Counter UPI Paid</span>;
     } else if (method === 'cash') {
       return <span className="payment-badge cash-pending"><FaWallet /> Cash Pending</span>;
+    } else if (method === 'upi_counter') {
+      return <span className="payment-badge upi-counter-pending"><FaQrcode /> Counter UPI Pending</span>;
     } else {
       return <span className="payment-badge pending"><FaClock /> Payment Pending</span>;
     }
@@ -1706,33 +1714,6 @@ const AllRecord = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  // Navigation handlers - ALL REQUIRED FUNCTIONS
-  const handleNavigateToAdmin = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/admin`);
-  };
-
-  const handleNavigateToAnalytics = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/analytics`);
-  };
-
-  const handleNavigateToRecords = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/records`);
-  };
-
-  const handleNavigateToFeedback = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/feedback`);
-  };
-
- 
-
-  
-
- 
-
   const handleRefresh = () => {
     fetchAllOrders();
   };
@@ -1769,43 +1750,12 @@ const AllRecord = () => {
 
   return (
     <div className="records-container">
-      {/* Sidebar Navigation - LEFT SIDE */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaDatabase className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Records'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item" onClick={handleNavigateToAdmin}>
-            <FaBuilding /> Admin
-          </button>
-         
-        
-          <button className="nav-item" onClick={handleNavigateToAnalytics}>
-            <FaChartLine /> Analytics
-          </button>
-          <button className="nav-item active" onClick={handleNavigateToRecords}>
-            <FaDatabase /> Records
-          </button>
-          <button className="nav-item" onClick={handleNavigateToFeedback}>
-            <FaEye /> Feedback
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Owner Navbar */}
+      <ONavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName}
+        activePage="records"
+      />
 
       {/* Main Content */}
       <div className="main-content">
@@ -1835,7 +1785,7 @@ const AllRecord = () => {
             <span>Active Filters:</span>
             {paymentFilter !== 'all' && (
               <span className="filter-tag payment-filter">
-                {paymentFilter === 'upi' ? '💳 UPI Only' : paymentFilter === 'cash' ? '💵 Cash Only' : '⏳ Pending Only'}
+                {paymentFilter === 'upi' ? '💳 UPI Only' : paymentFilter === 'cash' ? '💵 Cash Only' : paymentFilter === 'upiCounter' ? '📱 Counter UPI Only' : '⏳ Pending Only'}
                 <button onClick={() => { setPaymentFilter('all'); setActivePaymentFilter(null); }}><FaTimes /></button>
               </span>
             )}
@@ -1943,13 +1893,13 @@ const AllRecord = () => {
           )}
         </div>
 
-        {/* Filterable Payment Statistics Section */}
+        {/* Filterable Payment Statistics Section with Counter UPI */}
         <div className="stats-section">
           <div className="section-header" onClick={() => toggleSection('paymentStats')}>
             <h2><FaCreditCard /> Payment Statistics</h2>
             <div className="header-actions">
               {paymentFilter !== 'all' && (
-                <span className="active-filter-badge">Filtered: {paymentFilter === 'upi' ? 'UPI Only' : paymentFilter === 'cash' ? 'Cash Only' : 'Pending Only'}</span>
+                <span className="active-filter-badge">Filtered: {paymentFilter === 'upi' ? 'UPI Only' : paymentFilter === 'cash' ? 'Cash Only' : paymentFilter === 'upiCounter' ? 'Counter UPI Only' : 'Pending Only'}</span>
               )}
               <button className="expand-toggle">
                 {expandedSections.paymentStats ? <FaChevronUp /> : <FaChevronDown />}
@@ -1990,6 +1940,21 @@ const AllRecord = () => {
               </div>
 
               <div 
+                className={`payment-stat-card upi-counter ${activePaymentFilter === 'upiCounter' ? 'active-filter' : ''}`}
+                onClick={() => applyPaymentFilter('upiCounter')}
+              >
+                <div className="payment-stat-icon"><FaQrcode /></div>
+                <div className="payment-stat-details">
+                  <h3>Counter UPI</h3>
+                  <div className="payment-stat-amount">₹{filteredPaymentStats.upiCounterPayments.amount.toFixed(2)}</div>
+                  <div className="payment-stat-count">{filteredPaymentStats.upiCounterPayments.count} orders</div>
+                </div>
+                {activePaymentFilter === 'upiCounter' && (
+                  <div className="filter-active-indicator">✓ Filter Active</div>
+                )}
+              </div>
+
+              <div 
                 className={`payment-stat-card pending-payment ${activePaymentFilter === 'pending' ? 'active-filter' : ''}`}
                 onClick={() => applyPaymentFilter('pending')}
               >
@@ -2010,7 +1975,7 @@ const AllRecord = () => {
                   <h3>Total Collection</h3>
                   <div className="payment-stat-amount">₹{filteredPaymentStats.totalCollection.toFixed(2)}</div>
                   <div className="payment-stat-count">
-                    {paymentFilter !== 'all' ? 'Filtered Results' : 'UPI + Cash'}
+                    {paymentFilter !== 'all' ? 'Filtered Results' : 'UPI + Cash + Counter UPI'}
                   </div>
                 </div>
               </div>
@@ -2074,6 +2039,7 @@ const AllRecord = () => {
                     <option value="all">All Payments</option>
                     <option value="upi">💳 UPI Paid</option>
                     <option value="cash">💵 Cash Paid</option>
+                    <option value="upiCounter">📱 Counter UPI Paid</option>
                     <option value="pending">⏳ Pending Payment</option>
                   </select>
                 </div>
@@ -2232,10 +2198,10 @@ const AllRecord = () => {
                                 <li className="more-items">+{order.items.length - 3} more</li>
                               )}
                             </ul>
-                          </td>
+                           </td>
                           <td className="amount-cell">₹{order.total?.toFixed(2)}</td>
                           <td>{getStatusBadge(order.status)}</td>
-                        </tr>
+                         </tr>
                       ))}
                     </tbody>
                     <tfoot>

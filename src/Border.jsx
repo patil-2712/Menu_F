@@ -1147,6 +1147,7 @@ import {
   FaCalendarAlt,
   FaBoxOpen
 } from 'react-icons/fa';
+import BNavbar from './components/BNavbar';
 import './Border.css';
 
 const Border = () => {
@@ -1161,7 +1162,6 @@ const Border = () => {
   const [editingOrder, setEditingOrder] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [restaurantData, setRestaurantData] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTable, setSearchTable] = useState('');
   const [searchBillNumber, setSearchBillNumber] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -1248,7 +1248,27 @@ const Border = () => {
           text: 'Cash Pending',
           class: 'payment-cash-pending',
           sortOrder: 1,
-          showConfirm: true
+          showConfirm: true,
+          confirmType: 'cash'
+        };
+      }
+    } else if (paymentMethod === 'upi_counter') {
+      if (paymentStatus === 'paid') {
+        return {
+          icon: '✅',
+          text: 'Counter UPI Paid',
+          class: 'payment-upi-paid',
+          sortOrder: 2,
+          showConfirm: false
+        };
+      } else {
+        return {
+          icon: '⏳',
+          text: 'Counter UPI Pending',
+          class: 'payment-cash-pending',
+          sortOrder: 1,
+          showConfirm: true,
+          confirmType: 'upi_counter'
         };
       }
     } else {
@@ -1265,6 +1285,7 @@ const Border = () => {
   const isPaymentPending = (order) => {
     if (order.paymentMethod === 'upi' && order.paymentStatus === 'paid') return false;
     if (order.paymentMethod === 'cash' && order.paymentStatus === 'paid') return false;
+    if (order.paymentMethod === 'upi_counter' && order.paymentStatus === 'paid') return false;
     return true;
   };
 
@@ -1275,6 +1296,7 @@ const Border = () => {
     const summary = {
       upi: { count: 0, amount: 0 },
       cash: { count: 0, amount: 0 },
+      upiCounter: { count: 0, amount: 0 },
       pending: { count: 0, amount: 0 }
     };
     
@@ -1291,6 +1313,14 @@ const Border = () => {
           summary.pending.count++;
           summary.pending.amount += amount;
         }
+      } else if (order.paymentMethod === 'upi_counter') {
+        if (order.paymentStatus === 'paid') {
+          summary.upiCounter.count++;
+          summary.upiCounter.amount += amount;
+        } else {
+          summary.pending.count++;
+          summary.pending.amount += amount;
+        }
       } else {
         summary.pending.count++;
         summary.pending.amount += amount;
@@ -1300,27 +1330,34 @@ const Border = () => {
     return summary;
   };
 
-  const handleConfirmCashPayment = async (orderId) => {
-    if (!window.confirm('Confirm cash payment received for this order?')) return;
+  const handleConfirmPayment = async (orderId, paymentType) => {
+    let confirmMessage = '';
+    if (paymentType === 'cash') {
+      confirmMessage = 'Confirm cash payment received for this order?';
+    } else if (paymentType === 'upi_counter') {
+      confirmMessage = 'Confirm Counter UPI payment received for this order?';
+    }
+    
+    if (!window.confirm(confirmMessage)) return;
     
     setConfirmingPayment(orderId);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        `${API_URL}/api/payments/cash-confirm/${orderId}`,
+        `${API_URL}/api/payments/${paymentType}-confirm/${orderId}`,
         {},
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
       if (response.data.success) {
-        showPopupNotification('✅ Cash payment confirmed!', 'success');
+        showPopupNotification(`✅ ${paymentType === 'cash' ? 'Cash' : 'Counter UPI'} payment confirmed!`, 'success');
         await fetchOrders();
       } else {
         showPopupNotification(response.data.error || 'Failed to confirm payment', 'error');
       }
     } catch (err) {
-      console.error('Error confirming cash payment:', err);
-      showPopupNotification(err.response?.data?.error || 'Failed to confirm cash payment', 'error');
+      console.error('Error confirming payment:', err);
+      showPopupNotification(err.response?.data?.error || 'Failed to confirm payment', 'error');
     } finally {
       setConfirmingPayment(null);
     }
@@ -1383,49 +1420,59 @@ const Border = () => {
     }
   };
 
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_URL}/api/order/billing/${restaurantSlug}`,
-        { headers: { 'Authorization': `Bearer ${token}` }, timeout: 10000 }
-      );
-      
-      if (response.data && response.data.success) {
-        const grouped = {};
-        response.data.orders.forEach(order => {
-          const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-          const gstAmount = order.gstAmount || order.items.reduce((sum, item) => {
-            return sum + (item.price * item.quantity * (item.gstPercentage || restaurantData?.gstPercentage || 18) / 100);
-          }, 0);
-          const total = subtotal + gstAmount;
-          const discount = order.discount || 0;
-          const discountType = order.discountType || 'amount';
-          const discountedTotal = calculateDiscountedTotal(total, discount, discountType);
-          
-          order.subtotal = parseFloat(subtotal.toFixed(2));
-          order.gstAmount = parseFloat(gstAmount.toFixed(2));
-          order.total = parseFloat(total.toFixed(2));
-          order.discount = parseFloat(discount);
-          order.discountType = discountType;
-          order.discountedTotal = parseFloat(discountedTotal);
-          
-          if (!grouped[order.date]) grouped[order.date] = [];
-          grouped[order.date].push(order);
-        });
+ const fetchOrders = async () => {
+  try {
+    setLoading(true);
+    const token = localStorage.getItem('token');
+    const response = await axios.get(
+      `${API_URL}/api/order/billing/${restaurantSlug}`,
+      { headers: { 'Authorization': `Bearer ${token}` }, timeout: 10000 }
+    );
+    
+    if (response.data && response.data.success) {
+      const grouped = {};
+      response.data.orders.forEach(order => {
+        // IMPORTANT: Map orderStatus to status for frontend
+        const orderStatus = order.orderStatus || order.status || 'pending';
         
-        setGroupedOrders(grouped);
-      } else {
-        setGroupedOrders({});
-      }
-    } catch (err) {
-      console.error('Error fetching orders:', err);
+        const subtotal = order.subtotal || order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const gstAmount = order.gstAmount || order.items.reduce((sum, item) => {
+          return sum + (item.price * item.quantity * (item.gstPercentage || restaurantData?.gstPercentage || 18) / 100);
+        }, 0);
+        const total = subtotal + gstAmount;
+        const discount = order.discount || 0;
+        const discountType = order.discountType || 'amount';
+        const discountedTotal = calculateDiscountedTotal(total, discount, discountType);
+        
+        // Create order object with both status and orderStatus
+        const processedOrder = {
+          ...order,
+          subtotal: parseFloat(subtotal.toFixed(2)),
+          gstAmount: parseFloat(gstAmount.toFixed(2)),
+          total: parseFloat(total.toFixed(2)),
+          discount: parseFloat(discount),
+          discountType: discountType,
+          discountedTotal: parseFloat(discountedTotal),
+          status: orderStatus,  // Add status field for frontend
+          orderStatus: orderStatus // Keep original
+        };
+        
+        if (!grouped[order.date]) grouped[order.date] = [];
+        grouped[order.date].push(processedOrder);
+      });
+      
+      setGroupedOrders(grouped);
+      console.log('✅ Orders fetched with status:', grouped);
+    } else {
       setGroupedOrders({});
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error('Error fetching orders:', err);
+    setGroupedOrders({});
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchMenuItems = async () => {
     try {
@@ -1655,6 +1702,12 @@ const Border = () => {
     const discount = order.discount || 0;
     const discountAmount = (order.total || 0) - (order.discountedTotal || order.total || 0);
     
+    let paymentText = '';
+    if (order.paymentMethod === 'upi') paymentText = 'UPI Paid';
+    else if (order.paymentMethod === 'cash') paymentText = order.paymentStatus === 'paid' ? 'Cash Paid' : 'Cash Pending';
+    else if (order.paymentMethod === 'upi_counter') paymentText = order.paymentStatus === 'paid' ? 'Counter UPI Paid' : 'Counter UPI Pending';
+    else paymentText = 'Not Selected';
+    
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -1720,7 +1773,7 @@ const Border = () => {
                     <td class="item-qty">${item.quantity}</td>
                     <td class="item-price">₹${item.price.toFixed(2)}</td>
                     <td class="item-total">₹${(item.price * item.quantity).toFixed(2)}</td>
-                  </table>
+                  </tr>
                 `).join('')}
               </tbody>
             </table>
@@ -1732,7 +1785,7 @@ const Border = () => {
             <div class="total-row final-total"><span>Grand Total:</span><span>₹${total.toFixed(2)}</span></div>
           </div>
           <div class="payment-info">
-            💳 Payment: ${order.paymentMethod === 'upi' ? 'UPI Paid' : order.paymentMethod === 'cash' ? (order.paymentStatus === 'paid' ? 'Cash Paid' : 'Cash Pending') : 'Not Selected'}
+            💳 Payment: ${paymentText}
           </div>
           <div class="status-badge">
             ${order.status === 'completed' ? '✅ ORDER COMPLETED' : order.status === 'preparing' ? '👨‍🍳 ORDER PREPARING' : '⏳ ORDER PENDING'}
@@ -1803,30 +1856,25 @@ const Border = () => {
   };
 
   const getStatusClass = (status) => {
-    switch (status) {
-      case 'pending': return 'status-pending';
-      case 'preparing': return 'status-preparing';
-      case 'completed': return 'status-completed';
-      default: return 'status-pending';
-    }
-  };
+  // Handle both status and orderStatus
+  const orderStatus = status || 'pending';
+  switch (orderStatus) {
+    case 'pending': return 'status-pending';
+    case 'preparing': return 'status-preparing';
+    case 'completed': return 'status-completed';
+    default: return 'status-pending';
+  }
+};
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending': return <FaHourglassHalf />;
-      case 'preparing': return <FaSpinner className="spinner" />;
-      case 'completed': return <FaCheckCircle />;
-      default: return <FaClock />;
-    }
-  };
-
-  const handleNavigateToBorder = () => navigate(`/${restaurantSlug}/border`);
-  const handleNavigateToTotalBill = () => navigate(`/${restaurantSlug}/totalbill`);
-  const handleNavigateToCustomerRequests = () => navigate(`/${restaurantSlug}/customer-requests`);
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/");
-  };
+const getStatusIcon = (status) => {
+  const orderStatus = status || 'pending';
+  switch (orderStatus) {
+    case 'pending': return <FaHourglassHalf />;
+    case 'preparing': return <FaSpinner className="spinner" />;
+    case 'completed': return <FaCheckCircle />;
+    default: return <FaClock />;
+  }
+};
 
   const filteredOrders = getFilteredAndSortedOrders();
   const allOrders = Object.values(groupedOrders).flat();
@@ -1838,6 +1886,8 @@ const Border = () => {
 
   // Helper function to render order card
   const renderOrderCard = (order) => {
+    const paymentDisplay = getPaymentStatusDisplay(order);
+    
     if (editingOrder === order._id) {
       return (
         <div className="order-card edit-mode-card">
@@ -1893,7 +1943,7 @@ const Border = () => {
                       </div>
                       <div className="edit-item-field edit-item-total">
                         <label>Total</label>
-                        <span>₹{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
+                        <span>₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}</span>
                       </div>
                       <div className="edit-item-field edit-item-action">
                         <button type="button" onClick={() => removeItemRow(index)} className="edit-remove-btn"><FaTrash /></button>
@@ -1970,11 +2020,15 @@ const Border = () => {
             <div className="total-row final-total"><span>Total:</span><span>₹{order.discountedTotal.toFixed(2)}</span></div>
           </div>
           <div className="payment-info-section">
-            <div className={`payment-detail-row ${getPaymentStatusDisplay(order).class}`}>
-              <span className="payment-icon">{getPaymentStatusDisplay(order).icon}</span>
-              <span className="payment-text">{getPaymentStatusDisplay(order).text}</span>
-              {getPaymentStatusDisplay(order).showConfirm && (
-                <button className="confirm-cash-payment-btn" onClick={() => handleConfirmCashPayment(order._id)} disabled={confirmingPayment === order._id}>
+            <div className={`payment-detail-row ${paymentDisplay.class}`}>
+              <span className="payment-icon">{paymentDisplay.icon}</span>
+              <span className="payment-text">{paymentDisplay.text}</span>
+              {paymentDisplay.showConfirm && (
+                <button 
+                  className="confirm-payment-btn" 
+                  onClick={() => handleConfirmPayment(order._id, paymentDisplay.confirmType)} 
+                  disabled={confirmingPayment === order._id}
+                >
                   {confirmingPayment === order._id ? <FaSpinner className="spinner" /> : '✅ Confirm Payment'}
                 </button>
               )}
@@ -2015,38 +2069,12 @@ const Border = () => {
         </div>
       )}
 
-      {/* Sidebar Navigation - LEFT side */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaWallet className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Border'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item active" onClick={handleNavigateToBorder}>
-            <FaWallet /> Border
-          </button>
-          <button className="nav-item" onClick={handleNavigateToTotalBill}>
-            <FaReceipt /> Total Bill
-          </button>
-          <button className="nav-item" onClick={handleNavigateToCustomerRequests}>
-            <FaCommentDots /> Customer Requests
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Billing Navbar */}
+      <BNavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName}
+        activePage="border"
+      />
 
       {/* Main Content */}
       <div className="main-content">
@@ -2100,41 +2128,49 @@ const Border = () => {
           </div>
 
           {/* Payment Summary */}
-          <div className="payment-summary-container">
-            <div className="section-title">
-              <FaMoneyBillWave /> Today's Payment Summary ({today})
-            </div>
-            <div className="payment-cards">
-              <div className="payment-card upi">
-                <div className="payment-icon">💳</div>
-                <div className="payment-details">
-                  <span className="payment-label">UPI Payments</span>
-                  <span className="payment-count">{paymentSummary.upi.count} orders</span>
-                  <span className="payment-amount">₹{paymentSummary.upi.amount.toFixed(2)}</span>
-                </div>
-              </div>
-              <div className="payment-card cash">
-                <div className="payment-icon">💵</div>
-                <div className="payment-details">
-                  <span className="payment-label">Cash Paid</span>
-                  <span className="payment-count">{paymentSummary.cash.count} orders</span>
-                  <span className="payment-amount">₹{paymentSummary.cash.amount.toFixed(2)}</span>
-                </div>
-              </div>
-              <div className="payment-card pending-payment">
-                <div className="payment-icon">⏳</div>
-                <div className="payment-details">
-                  <span className="payment-label">Pending Payment</span>
-                  <span className="payment-count">{paymentSummary.pending.count} orders</span>
-                  <span className="payment-amount">₹{paymentSummary.pending.amount.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-            <div className="payment-total">
-              <span>Total Collection Today:</span>
-              <strong>₹{(paymentSummary.upi.amount + paymentSummary.cash.amount).toFixed(2)}</strong>
-            </div>
-          </div>
+<div className="payment-summary-container">
+  <div className="section-title">
+    <FaMoneyBillWave /> Today's Payment Summary ({today})
+  </div>
+  <div className="payment-cards">
+    <div className="payment-card upi">
+      <div className="payment-icon">💳</div>
+      <div className="payment-details">
+        <span className="payment-label">UPI Payments</span>
+        <span className="payment-count">{paymentSummary.upi.count} orders</span>
+        <span className="payment-amount">₹{paymentSummary.upi.amount.toFixed(2)}</span>
+      </div>
+    </div>
+    <div className="payment-card cash">
+      <div className="payment-icon">💵</div>
+      <div className="payment-details">
+        <span className="payment-label">Cash Paid</span>
+        <span className="payment-count">{paymentSummary.cash.count} orders</span>
+        <span className="payment-amount">₹{paymentSummary.cash.amount.toFixed(2)}</span>
+      </div>
+    </div>
+    <div className="payment-card upi-counter">
+      <div className="payment-icon">📱</div>
+      <div className="payment-details">
+        <span className="payment-label">Counter UPI Paid</span>
+        <span className="payment-count">{paymentSummary.upiCounter.count} orders</span>
+        <span className="payment-amount">₹{paymentSummary.upiCounter.amount.toFixed(2)}</span>
+      </div>
+    </div>
+    <div className="payment-card pending-payment">
+      <div className="payment-icon">⏳</div>
+      <div className="payment-details">
+        <span className="payment-label">Pending Payment</span>
+        <span className="payment-count">{paymentSummary.pending.count} orders</span>
+        <span className="payment-amount">₹{paymentSummary.pending.amount.toFixed(2)}</span>
+      </div>
+    </div>
+  </div>
+  <div className="payment-total">
+    <span>Total Collection Today:</span>
+    <strong>₹{(paymentSummary.upi.amount + paymentSummary.cash.amount + paymentSummary.upiCounter.amount).toFixed(2)}</strong>
+  </div>
+</div>
         </div>
 
         {/* Filters Section */}

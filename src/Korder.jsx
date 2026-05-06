@@ -745,6 +745,7 @@ import {
   FaReceipt,
   FaCommentDots
 } from 'react-icons/fa';
+import KNavbar from './components/KNavbar';
 import './Korder.css';
 
 const Korder = () => {
@@ -952,41 +953,78 @@ const Korder = () => {
     setUpdatingItems(prev => ({ ...prev, [key]: true }));
     
     try {
-      const order = orders.find(o => o._id === orderId);
-      if (!order) {
-        setError('Order not found');
-        return;
-      }
-
-      const token = localStorage.getItem('token');
-      
-      await axios.patch(
-        `${API_URL}/api/order/${order.restaurantCode}/${order.billNumber}/item-status`,
-        {
-          itemId: itemId,
-          itemStatus: newItemStatus.toLowerCase()
-        },
-        { 
-          headers: { 'Authorization': `Bearer ${token}` },
-          timeout: 5000 
+        const order = orders.find(o => o._id === orderId);
+        if (!order) {
+            setError('Order not found');
+            return;
         }
-      );
 
-      await fetchKitchenOrders();
+        const token = localStorage.getItem('token');
+        
+        const response = await axios.patch(
+            `${API_URL}/api/order/${order.restaurantCode}/${order.billNumber}/item-status`,
+            {
+                itemId: itemId,
+                itemStatus: newItemStatus.toLowerCase()
+            },
+            { 
+                headers: { 'Authorization': `Bearer ${token}` },
+                timeout: 5000 
+            }
+        );
+
+        console.log('✅ Item status update response:', response.data);
+        
+        // Force a complete refresh of all orders
+        await fetchKitchenOrders();
+        
+        // Show success message when order is completed
+        if (response.data.orderStatus === 'completed') {
+            showPopupNotification('🎉 Order completed! All items are done.', 'success');
+        }
+        
     } catch (err) {
-      console.error('Error updating item status:', err);
-      let errorMessage = 'Failed to update item status: ';
-      if (err.response) {
-        errorMessage += err.response.data?.error || err.response.statusText;
-      } else {
-        errorMessage += err.message;
-      }
-      setError(errorMessage);
-      setTimeout(() => setError(null), 5000);
+        console.error('Error updating item status:', err);
+        let errorMessage = 'Failed to update item status: ';
+        if (err.response) {
+            errorMessage += err.response.data?.error || err.response.statusText;
+        } else {
+            errorMessage += err.message;
+        }
+        setError(errorMessage);
+        setTimeout(() => setError(null), 5000);
     } finally {
-      setUpdatingItems(prev => ({ ...prev, [key]: false }));
+        setUpdatingItems(prev => ({ ...prev, [key]: false }));
     }
-  };
+};
+
+// Add this popup notification function if not present
+const showPopupNotification = (message, type = 'success') => {
+    // Create a temporary div for notification
+    const notification = document.createElement('div');
+    notification.className = `popup-notification ${type}`;
+    notification.innerHTML = `
+        <div class="popup-content">
+            <span class="popup-icon">${type === 'success' ? '✅' : 'ℹ️'}</span>
+            <span>${message}</span>
+        </div>
+    `;
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+};
 
   const getStatusClass = (status) => {
     const statusLower = (status || '').toLowerCase();
@@ -1048,30 +1086,6 @@ const Korder = () => {
     }));
   };
 
-  const handleNavigateToSetMenu = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/setmenu`);
-  };
-
-  const handleNavigateToKorder = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/Korder`);
-  };
-
- 
-
-  const handleLogout = () => {
-    if (autoRefreshInterval) {
-      clearInterval(autoRefreshInterval);
-    }
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 50);
-  };
-
   const handleRefresh = () => {
     fetchKitchenOrders();
   };
@@ -1090,36 +1104,12 @@ const Korder = () => {
 
   return (
     <div className="korder-container">
-      {/* Sidebar Navigation - LEFT SIDE */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaClipboardList className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Kitchen'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item active" onClick={handleNavigateToKorder}>
-            <FaClipboardList /> KOT
-          </button>
-          <button className="nav-item" onClick={handleNavigateToSetMenu}>
-            <FaUtensils /> Set Menu
-          </button>
-        
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Use Shared Navbar */}
+      <KNavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName}
+        activePage="Korder"
+      />
 
       {/* Main Content */}
       <div className="main-content">

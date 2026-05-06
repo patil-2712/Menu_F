@@ -783,7 +783,6 @@
 //};
 //
 //export default TotalBill;
-
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -813,8 +812,10 @@ import {
   FaRupeeSign,
   FaPercent,
   FaMobileAlt,
-  FaMoneyBill
+  FaMoneyBill,
+  FaQrcode
 } from 'react-icons/fa';
+import BNavbar from './components/BNavbar';
 import './TotalBill.css';
 
 const TotalBill = () => {
@@ -825,7 +826,6 @@ const TotalBill = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [restaurantData, setRestaurantData] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     stats: true,
     payment: true,
@@ -994,6 +994,7 @@ const TotalBill = () => {
     // Payment method breakdown
     let upiPayments = { count: 0, amount: 0 };
     let cashPayments = { count: 0, amount: 0 };
+    let upiCounterPayments = { count: 0, amount: 0 };
     let pendingPayments = { count: 0, amount: 0 };
     
     // Order status breakdown
@@ -1037,6 +1038,9 @@ const TotalBill = () => {
       } else if (paymentMethod === 'cash' && paymentStatus === 'paid') {
         cashPayments.count++;
         cashPayments.amount += orderTotal;
+      } else if (paymentMethod === 'upi_counter' && paymentStatus === 'paid') {
+        upiCounterPayments.count++;
+        upiCounterPayments.amount += orderTotal;
       } else {
         pendingPayments.count++;
         pendingPayments.amount += orderTotal;
@@ -1074,6 +1078,7 @@ const TotalBill = () => {
       orderStatusCount,
       upiPayments,
       cashPayments,
+      upiCounterPayments,
       pendingPayments
     };
   };
@@ -1100,8 +1105,12 @@ const TotalBill = () => {
       return <span className="payment-method-badge upi-paid"><FaMobileAlt /> UPI Paid</span>;
     } else if (method === 'cash' && status === 'paid') {
       return <span className="payment-method-badge cash-paid"><FaMoneyBill /> Cash Paid</span>;
+    } else if (method === 'upi_counter' && status === 'paid') {
+      return <span className="payment-method-badge upi-counter-paid"><FaQrcode /> Counter UPI Paid</span>;
     } else if (method === 'cash') {
       return <span className="payment-method-badge cash-pending"><FaMoneyBillWave /> Cash Pending</span>;
+    } else if (method === 'upi_counter') {
+      return <span className="payment-method-badge upi-counter-pending"><FaQrcode /> Counter UPI Pending</span>;
     } else {
       return <span className="payment-method-badge pending"><FaClock /> Payment Pending</span>;
     }
@@ -1112,31 +1121,6 @@ const TotalBill = () => {
       ...prev,
       [section]: !prev[section]
     }));
-  };
-
-  const handleNavigateToBorder = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/border`);
-  };
-  
-  const handleNavigateToTotalBill = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/totalbill`);
-  };
-
-  const handleNavigateToCustomerRequests = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/customer-requests`);
-  };
-  
-  const handleLogout = () => {
-    console.log("🔓 Logging out from TotalBill...");
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 50);
   };
 
   const handleRefresh = () => {
@@ -1153,6 +1137,7 @@ const TotalBill = () => {
     pendingOrders,
     upiPayments,
     cashPayments,
+    upiCounterPayments,
     pendingPayments
   } = calculateFullSummary(orders);
   const today = getTodayDate();
@@ -1173,41 +1158,12 @@ const TotalBill = () => {
 
   return (
     <div className="totalbill-container">
-      {/* Sidebar Navigation - LEFT side */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaReceipt className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Bill'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item" onClick={handleNavigateToBorder}>
-            <FaWallet /> Border
-          </button>
-          <button className="nav-item active" onClick={handleNavigateToTotalBill}>
-            <FaReceipt /> Total Bill
-          </button>
-          <button className="nav-item" onClick={handleNavigateToCustomerRequests}>
-            <FaCommentDots /> Customer Requests
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button 
-        className="mobile-menu-toggle"
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-      >
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Billing Navbar */}
+      <BNavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName}
+        activePage="totalbill"
+      />
 
       {/* Main Content */}
       <div className="main-content">
@@ -1296,7 +1252,7 @@ const TotalBill = () => {
               )}
             </div>
 
-            {/* Payment Method Breakdown Section */}
+            {/* Payment Method Breakdown Section - 4 Cards */}
             <div className="stats-section">
               <div className="section-header" onClick={() => toggleSection('payment')}>
                 <h2><FaCreditCard /> Payment Method Breakdown</h2>
@@ -1324,6 +1280,14 @@ const TotalBill = () => {
                         <div className="payment-count">{cashPayments.count} orders</div>
                       </div>
                     </div>
+                    <div className="payment-card upi-counter-card">
+                      <div className="payment-icon"><FaQrcode /></div>
+                      <div className="payment-details">
+                        <h3>Counter UPI</h3>
+                        <div className="payment-amount">₹{upiCounterPayments.amount.toFixed(2)}</div>
+                        <div className="payment-count">{upiCounterPayments.count} orders</div>
+                      </div>
+                    </div>
                     <div className="payment-card pending-payment-card">
                       <div className="payment-icon"><FaClock /></div>
                       <div className="payment-details">
@@ -1337,11 +1301,12 @@ const TotalBill = () => {
                   <div className="collection-summary">
                     <div className="collection-total">
                       <span>Total Collection Today:</span>
-                      <strong>₹{(upiPayments.amount + cashPayments.amount).toFixed(2)}</strong>
+                      <strong>₹{(upiPayments.amount + cashPayments.amount + upiCounterPayments.amount).toFixed(2)}</strong>
                     </div>
                     <div className="collection-breakdown">
                       <span>💳 UPI: ₹{upiPayments.amount.toFixed(2)}</span>
                       <span>💵 Cash: ₹{cashPayments.amount.toFixed(2)}</span>
+                      <span>📱 Counter UPI: ₹{upiCounterPayments.amount.toFixed(2)}</span>
                     </div>
                   </div>
                 </>
@@ -1523,6 +1488,13 @@ const TotalBill = () => {
                     <div className="revenue-content">
                       <h3>{cashPayments.count}</h3>
                       <p>Cash Transactions</p>
+                    </div>
+                  </div>
+                  <div className="revenue-card">
+                    <div className="revenue-icon"><FaQrcode /></div>
+                    <div className="revenue-content">
+                      <h3>{upiCounterPayments.count}</h3>
+                      <p>Counter UPI Transactions</p>
                     </div>
                   </div>
                 </div>

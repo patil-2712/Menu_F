@@ -851,3 +851,39 @@ body {
     gap: 8px;
   }
 }
+/* Update the payment-cards section in TotalBill.css */
+.payment-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* Add Counter UPI card styling */
+.payment-card.upi-counter-card .payment-amount {
+  color: #8b5cf6;
+}
+
+/* Add payment method badges for Counter UPI */
+.payment-method-badge.upi-counter-paid {
+  background: #e9d5ff;
+  color: #6b21a5;
+}
+
+.payment-method-badge.upi-counter-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Mobile responsive for 4 cards */
+@media (max-width: 1024px) {
+  .payment-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .payment-cards {
+    grid-template-columns: 1fr;
+  }
+}

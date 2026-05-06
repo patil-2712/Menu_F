@@ -1135,8 +1135,10 @@ import {
   FaMobileAlt,
   FaChartPie,
   FaReceipt,
-  FaCommentDots
+  FaCommentDots,
+  FaQrcode
 } from 'react-icons/fa';
+import ONavbar from './components/ONavbar';
 import "./Analytics.css";
 
 const Analytics = () => {
@@ -1157,7 +1159,6 @@ const Analytics = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState('');
   const [userName, setUserName] = useState('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     summary: true,
     payment: true,
@@ -1296,20 +1297,10 @@ const Analytics = () => {
     setOrders([]);
   };
 
-  const handleLogout = () => {
-    console.log("🔓 Logging out from Analytics...");
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 50);
-  };
-
   // Get available years from orders
   const availableYears = [...new Set(orders.map(order => new Date(order.date).getFullYear()))].sort((a, b) => b - a);
 
-  // Process data for charts with payment tracking
+  // Process data for charts with payment tracking (including Counter UPI)
   const processChartData = () => {
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.date);
@@ -1335,10 +1326,11 @@ const Analytics = () => {
       cancelled: 0
     };
     
-    // Payment tracking
+    // Payment tracking with Counter UPI
     const paymentStats = {
       upi: { count: 0, amount: 0, orders: [] },
       cash: { count: 0, amount: 0, orders: [] },
+      upiCounter: { count: 0, amount: 0, orders: [] },
       pending: { count: 0, amount: 0, orders: [] }
     };
     
@@ -1379,6 +1371,7 @@ const Analytics = () => {
           cancelled: 0,
           upiAmount: 0,
           cashAmount: 0,
+          upiCounterAmount: 0,
           pendingPaymentAmount: 0,
           date: orderDate
         };
@@ -1398,7 +1391,7 @@ const Analytics = () => {
         statusCounts[status] += 1;
       }
 
-      // Payment tracking
+      // Payment tracking with Counter UPI
       const paymentMethod = order.paymentMethod?.toLowerCase() || 'pending';
       const paymentStatus = order.paymentStatus?.toLowerCase() || 'pending';
       
@@ -1412,6 +1405,11 @@ const Analytics = () => {
         paymentStats.cash.amount += orderTotal;
         paymentStats.cash.orders.push(order);
         salesByPeriod[periodKey].cashAmount += orderTotal;
+      } else if (paymentMethod === 'upi_counter' && paymentStatus === 'paid') {
+        paymentStats.upiCounter.count++;
+        paymentStats.upiCounter.amount += orderTotal;
+        paymentStats.upiCounter.orders.push(order);
+        salesByPeriod[periodKey].upiCounterAmount += orderTotal;
       } else {
         paymentStats.pending.count++;
         paymentStats.pending.amount += orderTotal;
@@ -1425,6 +1423,7 @@ const Analytics = () => {
           period: periodKey,
           upi: 0,
           cash: 0,
+          upiCounter: 0,
           pending: 0
         };
       }
@@ -1432,6 +1431,8 @@ const Analytics = () => {
         paymentTrends[periodKey].upi += orderTotal;
       } else if (paymentMethod === 'cash' && paymentStatus === 'paid') {
         paymentTrends[periodKey].cash += orderTotal;
+      } else if (paymentMethod === 'upi_counter' && paymentStatus === 'paid') {
+        paymentTrends[periodKey].upiCounter += orderTotal;
       } else {
         paymentTrends[periodKey].pending += orderTotal;
       }
@@ -1445,7 +1446,7 @@ const Analytics = () => {
               quantity: 0,
               totalSales: 0,
               gstAmount: 0,
-              paymentMethodDistribution: { upi: 0, cash: 0 }
+              paymentMethodDistribution: { upi: 0, cash: 0, upiCounter: 0 }
             };
           }
           itemSales[item.name].quantity += item.quantity || 0;
@@ -1457,6 +1458,8 @@ const Analytics = () => {
             itemSales[item.name].paymentMethodDistribution.upi += itemTotal;
           } else if (paymentMethod === 'cash' && paymentStatus === 'paid') {
             itemSales[item.name].paymentMethodDistribution.cash += itemTotal;
+          } else if (paymentMethod === 'upi_counter' && paymentStatus === 'paid') {
+            itemSales[item.name].paymentMethodDistribution.upiCounter += itemTotal;
           }
         });
       }
@@ -1489,6 +1492,7 @@ const Analytics = () => {
   const PAYMENT_COLORS = {
     upi: "#22c55e",
     cash: "#f59e0b",
+    upiCounter: "#8b5cf6",
     pending: "#ef4444"
   };
   const STATUS_COLORS = {
@@ -1499,27 +1503,6 @@ const Analytics = () => {
   };
 
   const { salesData, topItems, filteredOrders, statusCounts, paymentStats, paymentTrendsData } = processChartData();
-
-  // Navigation handlers
-  const handleNavigateToAdmin = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/admin`);
-  };
-
-  const handleNavigateToRecords = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/records`);
-  };
-
-  const handleNavigateToFeedback = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/feedback`);
-  };
-
-  
-
-
-
 
   const handleRefresh = () => {
     const token = localStorage.getItem("token");
@@ -1541,10 +1524,11 @@ const Analytics = () => {
     color: STATUS_COLORS[status]
   }));
 
-  // Payment status data for pie chart
+  // Payment status data for pie chart (4 categories)
   const paymentData = [
     { name: "UPI Payments", value: paymentStats.upi.amount, count: paymentStats.upi.count, color: PAYMENT_COLORS.upi },
     { name: "Cash Payments", value: paymentStats.cash.amount, count: paymentStats.cash.count, color: PAYMENT_COLORS.cash },
+    { name: "Counter UPI", value: paymentStats.upiCounter.amount, count: paymentStats.upiCounter.count, color: PAYMENT_COLORS.upiCounter },
     { name: "Pending Payments", value: paymentStats.pending.amount, count: paymentStats.pending.count, color: PAYMENT_COLORS.pending }
   ];
 
@@ -1560,7 +1544,7 @@ const Analytics = () => {
 
   const getSalesByDayOfWeek = () => {
     const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const salesByDay = days.map(day => ({ day, sales: 0, upi: 0, cash: 0, pending: 0 }));
+    const salesByDay = days.map(day => ({ day, sales: 0, upi: 0, cash: 0, upiCounter: 0, pending: 0 }));
     
     filteredOrders.forEach(order => {
       const dayIndex = new Date(order.date).getDay();
@@ -1574,6 +1558,8 @@ const Analytics = () => {
         salesByDay[dayIndex].upi += orderTotal;
       } else if (paymentMethod === 'cash' && paymentStatus === 'paid') {
         salesByDay[dayIndex].cash += orderTotal;
+      } else if (paymentMethod === 'upi_counter' && paymentStatus === 'paid') {
+        salesByDay[dayIndex].upiCounter += orderTotal;
       } else {
         salesByDay[dayIndex].pending += orderTotal;
       }
@@ -1587,6 +1573,7 @@ const Analytics = () => {
       name: item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name,
       upi: item.paymentMethodDistribution?.upi || 0,
       cash: item.paymentMethodDistribution?.cash || 0,
+      upiCounter: item.paymentMethodDistribution?.upiCounter || 0,
       total: item.totalSales
     }));
   };
@@ -1619,42 +1606,12 @@ const Analytics = () => {
 
   return (
     <div className="analytics-container">
-      {/* Sidebar Navigation - LEFT SIDE */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaChartLine className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Analytics'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item" onClick={handleNavigateToAdmin}>
-            <FaBuilding /> Admin
-          </button>
-        
-          <button className="nav-item active" onClick={handleRefresh}>
-            <FaChartLine /> Analytics
-          </button>
-          <button className="nav-item" onClick={handleNavigateToRecords}>
-            <FaDatabase /> Records
-          </button>
-          <button className="nav-item" onClick={handleNavigateToFeedback}>
-            <FaEye /> Feedback
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Owner Navbar */}
+      <ONavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName}
+        activePage="analytics"
+      />
 
       {/* Main Content */}
       <div className="main-content">
@@ -1774,7 +1731,7 @@ const Analytics = () => {
           )}
         </div>
 
-        {/* Payment Statistics Section */}
+        {/* Payment Statistics Section with Counter UPI */}
         <div className="stats-section">
           <div className="section-header" onClick={() => toggleSection('payment')}>
             <h2><FaCreditCard /> Payment Analytics</h2>
@@ -1785,7 +1742,7 @@ const Analytics = () => {
           
           {expandedSections.payment && (
             <>
-              {/* Payment Summary Cards */}
+              {/* Payment Summary Cards - 5 Cards */}
               <div className="payment-summary-cards">
                 <div className="payment-stat-card upi">
                   <div className="payment-stat-icon"><FaMobileAlt /></div>
@@ -1803,6 +1760,14 @@ const Analytics = () => {
                     <div className="payment-stat-count">{paymentStats.cash.count} orders</div>
                   </div>
                 </div>
+                <div className="payment-stat-card upi-counter">
+                  <div className="payment-stat-icon"><FaQrcode /></div>
+                  <div className="payment-stat-details">
+                    <h3>Counter UPI</h3>
+                    <div className="payment-stat-amount">{formatCurrency(paymentStats.upiCounter.amount)}</div>
+                    <div className="payment-stat-count">{paymentStats.upiCounter.count} orders</div>
+                  </div>
+                </div>
                 <div className="payment-stat-card pending-payment">
                   <div className="payment-stat-icon"><FaClock /></div>
                   <div className="payment-stat-details">
@@ -1815,15 +1780,15 @@ const Analytics = () => {
                   <div className="payment-stat-icon"><FaWallet /></div>
                   <div className="payment-stat-details">
                     <h3>Total Collection</h3>
-                    <div className="payment-stat-amount">{formatCurrency(paymentStats.upi.amount + paymentStats.cash.amount)}</div>
-                    <div className="payment-stat-count">UPI + Cash</div>
+                    <div className="payment-stat-amount">{formatCurrency(paymentStats.upi.amount + paymentStats.cash.amount + paymentStats.upiCounter.amount)}</div>
+                    <div className="payment-stat-count">UPI + Cash + Counter UPI</div>
                   </div>
                 </div>
               </div>
 
               {/* Payment Charts Grid */}
               <div className="charts-grid">
-                {/* Payment Distribution Pie Chart */}
+                {/* Payment Distribution Pie Chart - 4 categories */}
                 <div className="chart-container">
                   <h3>Payment Method Distribution</h3>
                   <ResponsiveContainer width="100%" height={300}>
@@ -1851,7 +1816,7 @@ const Analytics = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Payment Trends Over Time */}
+                {/* Payment Trends Over Time with Counter UPI */}
                 <div className="chart-container">
                   <h3>Payment Trends Over Time</h3>
                   <ResponsiveContainer width="100%" height={300}>
@@ -1866,6 +1831,7 @@ const Analytics = () => {
                       <Legend />
                       <Area type="monotone" dataKey="upi" stackId="1" stroke={PAYMENT_COLORS.upi} fill={PAYMENT_COLORS.upi} name="UPI" fillOpacity={0.6} />
                       <Area type="monotone" dataKey="cash" stackId="1" stroke={PAYMENT_COLORS.cash} fill={PAYMENT_COLORS.cash} name="Cash" fillOpacity={0.6} />
+                      <Area type="monotone" dataKey="upiCounter" stackId="1" stroke={PAYMENT_COLORS.upiCounter} fill={PAYMENT_COLORS.upiCounter} name="Counter UPI" fillOpacity={0.6} />
                       <Area type="monotone" dataKey="pending" stackId="1" stroke={PAYMENT_COLORS.pending} fill={PAYMENT_COLORS.pending} name="Pending" fillOpacity={0.6} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -1938,6 +1904,7 @@ const Analytics = () => {
                       <Line type="monotone" dataKey="totalSales" stroke="#2563eb" name="Total Sales" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="upiAmount" stroke="#22c55e" name="UPI Sales" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="cashAmount" stroke="#f59e0b" name="Cash Sales" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="upiCounterAmount" stroke="#8b5cf6" name="Counter UPI" strokeWidth={2} dot={false} />
                       <Line type="monotone" dataKey="totalGST" stroke="#10b981" name="Total GST" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -1988,7 +1955,7 @@ const Analytics = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Sales by Day of Week with Payment Split */}
+                {/* Sales by Day of Week with Payment Split (including Counter UPI) */}
                 <div className="chart-container">
                   <h3>Sales by Day of Week</h3>
                   <ResponsiveContainer width="100%" height={300}>
@@ -2004,6 +1971,7 @@ const Analytics = () => {
                       <Bar dataKey="sales" fill="#2563eb" name="Total Sales" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="upi" fill="#22c55e" name="UPI" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="cash" fill="#f59e0b" name="Cash" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="upiCounter" fill="#8b5cf6" name="Counter UPI" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -2102,6 +2070,7 @@ const Analytics = () => {
                     <th>Cancelled</th>
                     <th>UPI Sales</th>
                     <th>Cash Sales</th>
+                    <th>Counter UPI</th>
                     <th>Total Sales</th>
                     <th>GST</th>
                     <th>Avg Value</th>
@@ -2134,6 +2103,7 @@ const Analytics = () => {
                       </td>
                       <td className="amount upi-amount">{formatCurrency(period.upiAmount)}</td>
                       <td className="amount cash-amount">{formatCurrency(period.cashAmount)}</td>
+                      <td className="amount upi-counter-amount">{formatCurrency(period.upiCounterAmount)}</td>
                       <td className="amount">{formatCurrency(period.totalSales)}</td>
                       <td className="amount">{formatCurrency(period.totalGST)}</td>
                       <td className="amount">{formatCurrency(period.totalSales / period.totalOrders)}</td>
@@ -2145,6 +2115,7 @@ const Analytics = () => {
                     <td colSpan="6" className="footer-label">Total:</td>
                     <td className="amount upi-amount">{formatCurrency(salesData.reduce((sum, p) => sum + p.upiAmount, 0))}</td>
                     <td className="amount cash-amount">{formatCurrency(salesData.reduce((sum, p) => sum + p.cashAmount, 0))}</td>
+                    <td className="amount upi-counter-amount">{formatCurrency(salesData.reduce((sum, p) => sum + p.upiCounterAmount, 0))}</td>
                     <td className="amount">{formatCurrency(salesData.reduce((sum, p) => sum + p.totalSales, 0))}</td>
                     <td className="amount">{formatCurrency(salesData.reduce((sum, p) => sum + p.totalGST, 0))}</td>
                     <td className="amount">-</td>

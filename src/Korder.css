@@ -824,3 +824,32 @@ body {
     flex-direction: column;
   }
 }
+/* Add at the top of both CSS files */
+.main-content {
+  flex: 1;
+  margin-left: 280px;
+  padding: 24px 32px;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
+/* Popup Notification Animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.popup-notification {
+    animation: slideIn 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-weight: 500;
+}

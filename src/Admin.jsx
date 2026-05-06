@@ -1548,6 +1548,7 @@ import {
   FaClipboardList,
   FaUtensils
 } from 'react-icons/fa';
+import ONavbar from './components/ONavbar';
 import "./Admin.css";
 
 const Admin = () => {
@@ -1566,7 +1567,6 @@ const Admin = () => {
   const [saving, setSaving] = useState(false);
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
@@ -1944,20 +1944,6 @@ const Admin = () => {
     });
   };
 
-  const handleBackToDashboard = () => {
-    navigate(`/${restaurantSlug}/dashboard`);
-  };
-
-  const handleLogout = () => {
-    console.log("🔓 Logging out from Admin...");
-    localStorage.clear();
-    sessionStorage.clear();
-    navigate("/", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/";
-    }, 50);
-  };
-
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     setCopySuccess('Copied!');
@@ -1976,31 +1962,6 @@ const Admin = () => {
       [type]: password
     });
   };
-
-  // Navigation handlers
-  const handleNavigateToAdmin = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/admin`);
-  };
-  
-  const handleNavigateToAnalytics = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/analytics`);
-  };
-
-  const handleNavigateToRecords = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/records`);
-  };
-
-  const handleNavigateToFeedback = () => {
-    setMobileMenuOpen(false);
-    navigate(`/${restaurantSlug}/feedback`);
-  };
-
- 
-
- 
 
   const getStatusBadgeClass = (status) => {
     if (!status) return 'status-badge unknown';
@@ -2037,42 +1998,12 @@ const Admin = () => {
 
   return (
     <div className="admin-container">
-      {/* Sidebar Navigation - LEFT SIDE */}
-      <div className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <FaBuilding className="logo-icon" />
-            <span>{restaurantData?.restaurantName?.split(' ')[0] || 'Admin'}</span>
-          </div>
-        </div>
-        
-        <nav className="sidebar-nav">
-          <button className="nav-item active" onClick={handleNavigateToAdmin}>
-            <FaBuilding /> Admin
-          </button>
-         
-          <button className="nav-item" onClick={handleNavigateToAnalytics}>
-            <FaAnalytics /> Analytics
-          </button>
-          <button className="nav-item" onClick={handleNavigateToRecords}>
-            <FaDatabase /> Records
-          </button>
-          <button className="nav-item" onClick={handleNavigateToFeedback}>
-            <FaCommentDots /> Feedback
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="nav-item logout" onClick={handleLogout}>
-            <FaSignOutAlt /> Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu Toggle */}
-      <button className="mobile-menu-toggle" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-        {mobileMenuOpen ? <FaTimes /> : <FaBars />}
-      </button>
+      {/* Owner Navbar */}
+      <ONavbar 
+        restaurantSlug={restaurantSlug}
+        restaurantName={restaurantData?.restaurantName}
+        activePage="admin"
+      />
 
       {/* Main Content */}
       <div className="main-content">

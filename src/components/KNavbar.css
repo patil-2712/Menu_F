@@ -1,0 +1,184 @@
+/* components/KNavbar.css */
+/* ============================================
+   KNAVBAR SIDEBAR STYLES
+   ============================================ */
+.knavbar-sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  z-index: 100;
+  transition: transform 0.3s ease;
+  left: 0;
+  top: 0;
+}
+
+.knavbar-sidebar-header {
+  padding: 28px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.knavbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.knavbar-logo-icon {
+  font-size: 28px;
+  color: #818cf8;
+}
+
+.knavbar-sidebar-nav {
+  flex: 1;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.knavbar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.knavbar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.knavbar-nav-item.active {
+  background: #4f46e5;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.knavbar-nav-item.logout {
+  margin-top: auto;
+  color: rgba(255, 255, 255, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+
+.knavbar-nav-item.logout:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* User Info Section */
+.knavbar-user-info {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0 0 16px 0;
+}
+
+.knavbar-user-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.knavbar-user-icon {
+  font-size: 32px;
+  color: #818cf8;
+}
+
+.knavbar-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.knavbar-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.knavbar-user-role {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: capitalize;
+}
+
+.knavbar-sidebar-footer {
+  padding: 20px;
+}
+
+/* Mobile Menu Toggle */
+.knavbar-mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 200;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s;
+}
+
+.knavbar-mobile-menu-toggle:hover {
+  background: #4338ca;
+  transform: scale(1.05);
+}
+
+/* Overlay for mobile */
+.knavbar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .knavbar-sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .knavbar-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .knavbar-mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .knavbar-overlay {
+    display: block;
+  }
+}
