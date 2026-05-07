@@ -53,9 +53,9 @@ body {
    ============================================ */
 .menu-header {
   position: relative;
-  height: 150px;
+  height: 130px;
   background: linear-gradient(135deg, #000000 0%, #1a1a2e 100%);
-  border-radius: 0 0 0 0;
+  border-radius: 0 0 15px 15px;
   overflow: hidden;
   box-shadow: var(--shadow-lg);
 }
