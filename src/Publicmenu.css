@@ -1,4 +1,4 @@
-/* Publicmenu.css - Mobile-First Design with Enhanced Popup Styles */
+/* Publicmenu.css - Consistent Colors Across All Devices */
 
 * {
   margin: 0;
@@ -33,13 +33,13 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background: var(--bg-light);
+  background: #f7fafc;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Container */
+/* Container - Consistent gradient for all devices */
 .luxury-menu {
   max-width: 100%;
   min-height: 100vh;
@@ -48,7 +48,7 @@ body {
   padding-bottom: 80px;
 }
 
-/* Header */
+/* Header - Consistent colors */
 .menu-header {
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   padding: 24px 20px 32px;
@@ -1257,6 +1257,7 @@ body {
 .location-popup-content h3 {
   font-size: 20px;
   margin-bottom: 12px;
+  color: var(--text-primary);
 }
 
 .location-popup-content p {
@@ -1395,51 +1396,6 @@ body {
   }
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #1a1a2e;
-  }
-  
-  .luxury-menu {
-    background: linear-gradient(135deg, #1e1e2a 0%, #2d1f1f 100%);
-  }
-  
-  .menu-item, .search-input, .type-filter-btn, .category-btn,
-  .order-summary, .location-popup, .success-popup, .request-menu {
-    background: #2d2d3d;
-  }
-  
-  .item-header h3, .summary-header h2, .request-menu-header h3,
-  .item-name, .request-title {
-    color: #e0e0e0;
-  }
-  
-  .price, .item-subtotal, .grand-total span:last-child {
-    color: #f87171;
-  }
-  
-  .order-totals, .customer-info-section-order input,
-  .form-group input, .request-option {
-    background: #3d3d4d;
-    border-color: #4d4d5d;
-    color: #e0e0e0;
-  }
-  
-  .total-row span:last-child, .item-subtotal {
-    color: #c0c0d0;
-  }
-  
-  .order-item {
-    background: #3d3d4d;
-  }
-  
-  .item-quantity-label {
-    background: rgba(226, 55, 68, 0.2);
-  }
-  
-  .close-btn, .close-request-menu {
-    background: #3d3d4d;
-    color: #a0a0b0;
-  }
-}
+/* ============================================ */
+/* REMOVED DARK MODE - Using consistent colors */
+/* ============================================ */
