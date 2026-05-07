@@ -1019,23 +1019,9 @@ const MyOrderPage = () => {
           {isPaid ? '✓ Payment Completed' : isCashSelected ? '⏳ Awaiting Cash Payment' : isUpiCounterSelected ? '⏳ Awaiting Counter UPI Payment' : '⏳ Payment Pending'}
         </div>
 
-        {!isPaid && isCashSelected && (
-          <div className="payment-warning cash-warning">
-            <FaInfoCircle /> Cash payment selected. Please pay at the counter to confirm your order.
-          </div>
-        )}
+       
 
-        {!isPaid && isUpiCounterSelected && (
-          <div className="payment-warning upi-counter-warning">
-            <FaInfoCircle /> Counter UPI selected. Please pay at the counter to confirm your order.
-          </div>
-        )}
-
-        {!isPaid && !isCashSelected && !isUpiCounterSelected && (
-          <div className="payment-warning">
-            <FaInfoCircle /> Please complete payment for this order.
-          </div>
-        )}
+       
 
         {/* Restaurant Header */}
         <div className="restaurant-header">
