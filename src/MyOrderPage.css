@@ -1,4 +1,4 @@
-/* MyOrderPage.css - Complete CSS with Feedback Styles */
+/* MyOrderPage.css - Consistent Colors Across All Devices */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');
 
@@ -194,16 +194,18 @@ body {
   margin-bottom: 4px;
 }
 
-/* ─── Items Table ─── */
+/* ─── Items Table with Proper Alignment ─── */
 .items-container {
   padding: 0 20px;
   background: var(--surface);
+  overflow-x: auto;
 }
 
 .items-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  min-width: 280px;
 }
 
 .items-table thead tr {
@@ -211,7 +213,7 @@ body {
 }
 
 .items-table thead th {
-  padding: 10px 4px;
+  padding: 10px 8px;
   text-align: left;
   font-size: 10.5px;
   font-weight: 600;
@@ -220,50 +222,54 @@ body {
   color: var(--ink-3);
 }
 
-.items-table thead th:not(:first-child) { text-align: right; }
+.items-table thead th:first-child { text-align: left; padding-left: 0; }
+.items-table thead th:nth-child(2) { text-align: center; }
+.items-table thead th:nth-child(3) { text-align: right; }
+.items-table thead th:nth-child(4) { text-align: right; }
+.items-table thead th:last-child { text-align: center; width: 50px; }
 
 .items-table tbody tr {
   border-bottom: 0.5px solid var(--border);
   transition: background 0.15s;
 }
 .items-table tbody tr:last-child { border-bottom: none; }
+.items-table tbody tr:hover { background: var(--surface-2); }
 
 .item-name {
-  padding: 10px 4px;
+  padding: 10px 8px;
   color: var(--ink);
   font-weight: 500;
-  max-width: 150px;
   line-height: 1.4;
+  text-align: left;
+  padding-left: 0;
 }
 
 .item-qty {
-  padding: 10px 4px;
-  text-align: right;
+  padding: 10px 8px;
+  text-align: center;
   color: var(--ink-2);
   font-family: 'JetBrains Mono', monospace;
 }
 
 .item-price {
-  padding: 10px 4px;
+  padding: 10px 8px;
   text-align: right;
   color: var(--ink-2);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12.5px;
 }
 
 .item-total {
-  padding: 10px 4px;
+  padding: 10px 8px;
   text-align: right;
   color: var(--ink);
   font-weight: 600;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12.5px;
 }
 
 .item-remove {
   text-align: center;
-  width: 50px;
-  padding: 10px 4px;
+  padding: 10px 8px;
+  white-space: nowrap;
 }
 
 .remove-item-btn {
@@ -271,16 +277,22 @@ body {
   border: none;
   color: #dc3545;
   cursor: pointer;
-  font-size: 0.9rem;
-  padding: 5px 8px;
+  font-size: 14px;
+  padding: 6px 8px;
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .remove-item-btn:hover {
   background: #dc3545;
   color: white;
-  transform: scale(1.05);
+}
+
+.remove-item-btn:active {
+  transform: scale(0.95);
 }
 
 .remove-item-btn:disabled {
@@ -308,7 +320,6 @@ body {
 
 .total-row span:last-child {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
 }
 
 .grand-total {
@@ -345,6 +356,8 @@ body {
   justify-content: space-between;
   padding: 6px 0;
   font-size: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .payment-method.upi {
@@ -354,6 +367,11 @@ body {
 
 .payment-method.cash {
   color: var(--green);
+  font-weight: 500;
+}
+
+.payment-method.upi_counter {
+  color: #8b5cf6;
   font-weight: 500;
 }
 
@@ -400,6 +418,11 @@ body {
   color: #856404;
 }
 
+.payment-status-badge.upi-counter-pending {
+  background: #f3e8ff;
+  color: #6b21a5;
+}
+
 /* ─── Payment Warning ─── */
 .payment-warning {
   background: #fff3cd;
@@ -418,6 +441,12 @@ body {
   background: #d1ecf1;
   border-left-color: #17a2b8;
   color: #0c5460;
+}
+
+.payment-warning.upi-counter-warning {
+  background: #f3e8ff;
+  border-left-color: #8b5cf6;
+  color: #6b21a5;
 }
 
 /* ─── Thank You ─── */
@@ -487,14 +516,14 @@ body {
 }
 .refresh-btn:hover { background: var(--border-strong); }
 
-.cash-pending-btn {
+.cash-pending-btn, .upi-counter-pending-btn {
   background: #ffc107;
   color: var(--ink);
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-/* ─── FEEDBACK SECTION (IMPORTANT) ─── */
+/* ─── FEEDBACK SECTION ─── */
 .feedback-section {
   background: var(--surface);
   border-radius: var(--radius);
@@ -543,6 +572,8 @@ body {
   margin-bottom: 14px;
   padding-bottom: 14px;
   border-bottom: 0.5px solid var(--border);
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .rating-group:last-of-type {
@@ -1463,6 +1494,17 @@ body {
   .bill-container { padding: 12px 8px 100px; }
   .items-table { font-size: 12px; }
   .item-name { font-size: 12px; }
+  .action-buttons {
+    grid-template-columns: 1fr;
+  }
+  .payment-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .rating-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Safe area for notch phones */
@@ -1472,37 +1514,4 @@ body {
   .add-items-modal-new .modal-actions-new { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
   .request-fab { bottom: calc(26px + env(safe-area-inset-bottom)); }
   .floating-add-btn { bottom: calc(90px + env(safe-area-inset-bottom)); }
-}
-
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1a1a2e;
-    --surface: #2d2d3d;
-    --surface-2: #3d3d4d;
-    --ink: #e0e0e0;
-    --ink-2: #b0b0c0;
-    --ink-3: #808090;
-    --border: rgba(255,255,255,0.08);
-    --border-strong: rgba(255,255,255,0.12);
-  }
-  
-  .action-btn.print-btn {
-    background: #4a5568;
-  }
-  
-  .feedback-form textarea,
-  .search-input-new,
-  .payment-option-btn {
-    background: #3d3d4d;
-    color: #e0e0e0;
-  }
-  
-  .payment-modal {
-    background: #2d2d3d;
-  }
-  
-  .order-summary-preview {
-    background: #3d3d4d;
-  }
 }
