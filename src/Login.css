@@ -1,6 +1,6 @@
 /* ============================================
    LOGIN PAGE - MODERN RESTAURANT STYLE
-   FULLY VISIBLE ON MOBILE
+   BRANDING HIDDEN ON MOBILE
    ============================================ */
 
 * {
@@ -34,12 +34,12 @@ body {
   border-radius: 32px;
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 /* ============================================
    LEFT SIDE - BRANDING SECTION
-   ALWAYS VISIBLE ON ALL DEVICES
+   VISIBLE ON DESKTOP, HIDDEN ON MOBILE
    ============================================ */
 .login-branding {
   flex: 1;
@@ -102,7 +102,6 @@ body {
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* Features Grid - Always visible */
 .brand-features {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -605,114 +604,47 @@ body {
 }
 
 /* ============================================
-   RESPONSIVE DESIGN - ALL CONTENT VISIBLE
+   RESPONSIVE DESIGN
+   BRANDING HIDDEN ON MOBILE (<= 768px)
    ============================================ */
 
-/* Tablet View */
-@media (max-width: 1024px) {
+/* Desktop and Tablet - Show both sections */
+@media (min-width: 769px) {
   .login-container {
-    flex-direction: column;
-    max-width: 550px;
+    flex-direction: row;
   }
   
   .login-branding {
-    padding: 32px 28px;
+    display: block;
   }
   
   .login-form-container {
-    padding: 32px 28px;
-  }
-  
-  .brand-features {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-  
-  .feature-item {
-    padding: 10px 12px;
-  }
-  
-  .feature-icon {
-    font-size: 20px;
-  }
-  
-  .feature-item span:last-child {
-    font-size: 13px;
+    width: 50%;
   }
 }
 
-/* Mobile View - ALL CONTENT VISIBLE */
+/* Mobile - Hide branding, show only login form */
 @media (max-width: 768px) {
   .login-wrapper {
-    padding: 12px;
+    padding: 16px;
   }
   
   .login-container {
-    max-width: 100%;
+    flex-direction: column;
+    max-width: 450px;
+    margin: 0 auto;
     border-radius: 24px;
   }
   
+  /* Hide branding section on mobile */
   .login-branding {
-    padding: 24px 20px;
+    display: none;
   }
   
-  .brand-logo {
-    margin-bottom: 20px;
-  }
-  
-  .logo-icon {
-    width: 55px;
-    height: 55px;
-    font-size: 32px;
-  }
-  
-  .brand-name {
-    font-size: 24px;
-  }
-  
-  .brand-tagline {
-    margin-bottom: 20px;
-  }
-  
-  .brand-tagline p {
-    font-size: 13px;
-  }
-  
-  /* Features - 2 columns, visible */
-  .brand-features {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 24px;
-  }
-  
-  .feature-item {
-    padding: 10px 12px;
-    gap: 10px;
-  }
-  
-  .feature-icon {
-    font-size: 20px;
-  }
-  
-  .feature-item span:last-child {
-    font-size: 12px;
-  }
-  
-  .brand-quote {
-    padding-top: 20px;
-  }
-  
-  .brand-quote p {
-    font-size: 12px;
-  }
-  
-  /* Form section */
+  /* Login form takes full width on mobile */
   .login-form-container {
-    padding: 24px 20px;
-  }
-  
-  .form-header {
-    margin-bottom: 24px;
+    width: 100%;
+    padding: 32px 24px;
   }
   
   .form-header h2 {
@@ -723,19 +655,9 @@ body {
     font-size: 13px;
   }
   
-  /* Form fields */
   .form-select, .form-input {
     padding: 12px 40px 12px 45px;
     font-size: 14px;
-  }
-  
-  .select-icon {
-    font-size: 16px;
-    left: 12px;
-  }
-  
-  .select-arrow {
-    right: 12px;
   }
   
   .login-submit-btn {
@@ -744,54 +666,10 @@ body {
   }
 }
 
-/* Small Mobile View */
-@media (max-width: 550px) {
-  .login-branding {
-    padding: 20px 16px;
-  }
-  
-  .brand-logo {
-    margin-bottom: 16px;
-  }
-  
-  .logo-icon {
-    width: 48px;
-    height: 48px;
-    font-size: 28px;
-  }
-  
-  .brand-name {
-    font-size: 20px;
-  }
-  
-  .brand-tagline p {
-    font-size: 12px;
-  }
-  
-  /* Features remain 2 columns */
-  .brand-features {
-    gap: 8px;
-  }
-  
-  .feature-item {
-    padding: 8px 10px;
-    gap: 8px;
-  }
-  
-  .feature-icon {
-    font-size: 18px;
-  }
-  
-  .feature-item span:last-child {
-    font-size: 11px;
-  }
-  
-  .brand-quote p {
-    font-size: 11px;
-  }
-  
+/* Small Mobile (below 480px) */
+@media (max-width: 480px) {
   .login-form-container {
-    padding: 20px 16px;
+    padding: 24px 20px;
   }
   
   .form-header h2 {
@@ -808,18 +686,9 @@ body {
     left: 10px;
   }
   
-  .select-arrow {
-    right: 10px;
-    font-size: 10px;
-  }
-  
   .form-options {
     flex-direction: column;
     align-items: flex-start;
-  }
-  
-  .checkbox-label, .forgot-password-link {
-    font-size: 12px;
   }
   
   .login-submit-btn {
@@ -829,39 +698,6 @@ body {
   
   .register-prompt {
     font-size: 12px;
-  }
-}
-
-/* Extra Small Devices (below 400px) - Still 2 columns */
-@media (max-width: 400px) {
-  .brand-features {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-  }
-  
-  .feature-item {
-    padding: 6px 8px;
-    gap: 6px;
-  }
-  
-  .feature-icon {
-    font-size: 16px;
-  }
-  
-  .feature-item span:last-child {
-    font-size: 10px;
-  }
-  
-  .login-branding {
-    padding: 16px 12px;
-  }
-  
-  .brand-logo {
-    justify-content: center;
-  }
-  
-  .brand-name {
-    font-size: 18px;
   }
 }
 
