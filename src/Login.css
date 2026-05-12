@@ -726,16 +726,18 @@ body {
     color: #cbd5e1;
   }
   
+  .form-input,
   .form-select,
-  .form-input {
-    background: #334155;
-    border-color: #475569;
-    color: #f1f5f9;
+  input.form-input,
+  select.form-select {
+    background: #334155 !important;
+    border-color: #475569 !important;
+    color: #f1f5f9 !important;  /* Force light text */
   }
   
-  .form-select option {
-    background: #334155;
-    color: #f1f5f9;
+  /* Also handle placeholder text */
+  .form-input::placeholder {
+    color: #94a3b8 !important;
   }
   
   .preview-card {
