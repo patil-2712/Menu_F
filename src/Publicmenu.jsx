@@ -744,11 +744,35 @@ const Publicmenu = () => {
             {searchTerm && <button className="clear-search" onClick={() => setSearchTerm('')}><FaTimes /></button>}
           </div>
 
-          <div className="type-filter-container">
+          {/*<div className="type-filter-container">
             <button className={`type-filter-btn ${activeTypeFilter === 'all' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('all')}>All</button>
             <button className={`type-filter-btn veg-btn ${activeTypeFilter === 'veg' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('veg')}>🟢 Veg</button>
             <button className={`type-filter-btn nonveg-btn ${activeTypeFilter === 'non-veg' ? 'active' : ''}`} onClick={() => setActiveTypeFilter('non-veg')}>🔴 Non-Veg</button>
-          </div>
+          </div>*/}
+<div className="type-filter-container">
+  <div className="triple-slider">
+    <button 
+      className={`slider-option all-option ${activeTypeFilter === 'all' ? 'active' : ''}`} 
+      onClick={() => setActiveTypeFilter('all')}
+    >
+      All
+    </button>
+    <button 
+      className={`slider-option veg-option ${activeTypeFilter === 'veg' ? 'active' : ''}`} 
+      onClick={() => setActiveTypeFilter('veg')}
+    >
+      🟢 
+    </button>
+    <button 
+      className={`slider-option nonveg-option ${activeTypeFilter === 'non-veg' ? 'active' : ''}`} 
+      onClick={() => setActiveTypeFilter('non-veg')}
+    >
+      🔴 
+    </button>
+    <div className={`slider-indicator ${activeTypeFilter === 'all' ? 'all-position' : activeTypeFilter === 'veg' ? 'veg-position' : 'nonveg-position'}`}></div>
+  </div>
+</div>
+
 
           <nav className="menu-categories">
             {allCategories.map(category => (

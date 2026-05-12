@@ -1,4 +1,4 @@
-/* Publicmenu.css - Enhanced with Hero Image Header (Fixed Size) */
+/* Publicmenu.css - Enhanced with Hero Image Header & 3-Button Slider */
 
 * {
   margin: 0;
@@ -199,50 +199,185 @@ body {
   font-size: 14px;
 }
 
-/* Type Filter */
+/* ============================================
+   TYPE FILTER - 3 BUTTON SLIDER (ALL, VEG, NON-VEG)
+   ============================================ */
 .type-filter-container {
-  display: flex;
-  gap: 10px;
   padding: 0 16px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-.type-filter-btn {
+/* Triple Slider Container */
+.triple-slider {
+  position: relative;
+  display: flex;
+  background: var(--bg-white);
+  border-radius: 40px;
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
+  gap: 2px;
+}
+
+/* Slider Options - Same size as category buttons */
+.slider-option {
   flex: 1;
-  padding: 10px;
+  padding: 8px 12px;
   border: none;
   border-radius: 40px;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
-  background: var(--bg-white);
-  color: var(--text-secondary);
+  background: transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+  z-index: 2;
+  position: relative;
+  text-align: center;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
 }
 
-.type-filter-btn.active {
-  background: var(--primary-color);
+/* Individual option colors */
+.slider-option.all-option {
+  color: #4a5568;
+}
+
+.slider-option.veg-option {
+  color: #2e7d32;
+}
+
+.slider-option.nonveg-option {
+  color: #c62828;
+}
+
+/* Active state - text becomes white */
+.slider-option.active {
   color: white;
+}
+
+/* Slider Indicator - matches category size */
+.slider-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: calc(33.33% - 3px);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  border-radius: 40px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+
+/* Position for All button */
+.slider-indicator.all-position {
+  transform: translateX(0);
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+/* Position for Veg button */
+.slider-indicator.veg-position {
+  transform: translateX(calc(100% + 2px));
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+}
+
+/* Position for Non-Veg button */
+.slider-indicator.nonveg-position {
+  transform: translateX(calc(200% + 4px));
+  background: linear-gradient(135deg, #c62828 0%, #b71c1c 100%);
+}
+
+/* Hover effects */
+.slider-option:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.05);
   transform: scale(0.98);
 }
 
-.veg-btn.active {
-  background: #2e7d32;
+/* Responsive - Mobile specific sizing */
+@media (max-width: 768px) {
+  .slider-option {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+  
+  .triple-slider {
+    padding: 3px;
+    gap: 2px;
+    border-radius: 35px;
+  }
+  
+  .slider-indicator {
+    top: 3px;
+    bottom: 3px;
+    width: calc(33.33% - 2px);
+    border-radius: 35px;
+  }
+  
+  .slider-indicator.veg-position {
+    transform: translateX(calc(100% + 2px));
+  }
+  
+  .slider-indicator.nonveg-position {
+    transform: translateX(calc(200% + 4px));
+  }
 }
 
-.nonveg-btn.active {
-  background: #c62828;
+/* Very small phones */
+@media (max-width: 480px) {
+  .slider-option {
+    padding: 5px 8px;
+    font-size: 9px;
+  }
+  
+  .triple-slider {
+    padding: 3px;
+    gap: 2px;
+    border-radius: 30px;
+  }
+  
+  .slider-indicator {
+    top: 3px;
+    bottom: 3px;
+    width: calc(33.33% - 2px);
+    border-radius: 30px;
+  }
+  
+  .slider-indicator.veg-position {
+    transform: translateX(calc(100% + 2px));
+  }
+  
+  .slider-indicator.nonveg-position {
+    transform: translateX(calc(200% + 4px));
+  }
 }
 
-/* Categories Navigation */
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .triple-slider {
+    background: #1e293b;
+  }
+  
+  .slider-option.all-option {
+    color: #94a3b8;
+  }
+  
+  .slider-option.veg-option {
+    color: #4caf50;
+  }
+  
+  .slider-option.nonveg-option {
+    color: #ef5350;
+  }
+}
+
+/* ============================================
+   CATEGORIES NAVIGATION (HORIZONTAL SCROLL)
+   ============================================ */
 .menu-categories {
   display: flex;
   overflow-x: auto;
-  gap: 8px;
-  padding: 0 16px 12px;
+  gap: 10px;
+  padding: 0 16px 16px;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
+  margin-bottom: 8px;
 }
 
 .menu-categories::-webkit-scrollbar {
@@ -261,7 +396,7 @@ body {
 
 .category-btn {
   flex-shrink: 0;
-  padding: 8px 18px;
+  padding: 8px 20px;
   border: none;
   border-radius: 40px;
   font-size: 13px;
@@ -278,6 +413,11 @@ body {
   background: var(--primary-color);
   color: white;
   transform: scale(0.96);
+  box-shadow: var(--shadow-md);
+}
+
+.category-btn:active {
+  transform: scale(0.95);
 }
 
 /* Menu Items Container */
@@ -872,7 +1012,7 @@ body {
 }
 
 /* ============================================
-   REQUEST MENU POPUP (SIMPLIFIED)
+   REQUEST MENU POPUP
    ============================================ */
 .request-menu-overlay {
   position: fixed;
@@ -1296,14 +1436,32 @@ body {
     font-size: 10px;
   }
   
-  .type-filter-btn {
-    padding: 8px;
-    font-size: 11px;
+  .slider-option {
+    padding: 8px 8px;
+    font-size: 12px;
+  }
+  
+  .triple-slider {
+    padding: 3px;
+  }
+  
+  .slider-indicator {
+    top: 3px;
+    bottom: 3px;
+    width: calc(33.33% - 2px);
+  }
+  
+  .slider-indicator.veg-position {
+    transform: translateX(calc(100% + 1px));
+  }
+  
+  .slider-indicator.nonveg-position {
+    transform: translateX(calc(200% + 2px));
   }
   
   .category-btn {
-    padding: 6px 14px;
-    font-size: 11px;
+    padding: 6px 16px;
+    font-size: 12px;
   }
   
   .item-image-wrapper {
@@ -1317,5 +1475,112 @@ body {
   
   .price {
     font-size: 13px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a2e;
+  }
+  
+  .luxury-menu {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  }
+  
+  .triple-slider {
+    background: #1e293b;
+  }
+  
+  .slider-option.all-option {
+    color: #94a3b8;
+  }
+  
+  .slider-option.veg-option {
+    color: #4caf50;
+  }
+  
+  .slider-option.nonveg-option {
+    color: #ef5350;
+  }
+  
+  .menu-item {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  
+  .item-header h3 {
+    color: #f1f5f9;
+  }
+  
+  .category {
+    background: #334155;
+    color: #94a3b8;
+  }
+  
+  .item-actions {
+    background: #334155;
+  }
+  
+  .order-summary {
+    background: #1e293b;
+  }
+  
+  .summary-header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+  }
+  
+  .order-item {
+    background: #334155;
+  }
+  
+  .item-name {
+    color: #f1f5f9;
+  }
+  
+  .order-totals {
+    background: #334155;
+    border-color: #475569;
+  }
+  
+  .customer-info-section-order input {
+    background: #334155;
+    border-color: #475569;
+    color: #f1f5f9;
+  }
+  
+  .request-menu {
+    background: #1e293b;
+  }
+  
+  .request-menu-header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+  }
+  
+  .request-option {
+    background: #334155;
+    border-color: #475569;
+  }
+  
+  .request-title {
+    color: #f1f5f9;
+  }
+  
+  .location-popup {
+    background: #1e293b;
+  }
+  
+  .location-popup-content h3 {
+    color: #f1f5f9;
+  }
+  
+  .success-popup {
+    background: #1e293b;
+  }
+  
+  .popup-message {
+    color: #f1f5f9;
   }
 }
