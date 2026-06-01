@@ -67,45 +67,45 @@ const UpiAppSelector = ({ onSelectApp, loading, selectedApp, totalAmount, proces
     );
   }
 
-  // return (
-  //   <div className="upi-apps-grid">
-  //     <p className="upi-instruction">Select your UPI app to pay securely via Razorpay:</p>
-  //     <div className="apps-grid">
-  //       {upiApps.map((app) => (
-  //         <button
-  //           key={app.name}
-  //           className={`upi-app-button ${selectedApp?.name === app.name ? 'selected' : ''}`}
-  //           onClick={() => onSelectApp(app)}
-  //           disabled={loading}
-  //           style={{ borderColor: selectedApp?.name === app.name ? app.color : '#e0e0e0' }}
-  //         >
-  //           <img 
-  //             src={app.icon} 
-  //             alt={app.name} 
-  //             className="upi-app-icon"
-  //             onError={(e) => {
-  //               e.target.onerror = null;
-  //               e.target.src = `https://via.placeholder.com/50?text=${app.name.charAt(0)}`;
-  //             }}
-  //           />
-  //           <span>{app.name}</span>
-  //         </button>
-  //       ))}
-  //     </div>
+  return (
+    <div className="upi-apps-grid">
+      {/* <p className="upi-instruction">Select your UPI app to pay securely via Razorpay:</p>
+      <div className="apps-grid">
+        {upiApps.map((app) => (
+          <button
+            key={app.name}
+            className={`upi-app-button ${selectedApp?.name === app.name ? 'selected' : ''}`}
+            onClick={() => onSelectApp(app)}
+            disabled={loading}
+            style={{ borderColor: selectedApp?.name === app.name ? app.color : '#e0e0e0' }}
+          >
+            <img 
+              src={app.icon} 
+              alt={app.name} 
+              className="upi-app-icon"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = `https://via.placeholder.com/50?text=${app.name.charAt(0)}`;
+              }}
+            />
+            <span>{app.name}</span>
+          </button>
+        ))}
+      </div>
+       */}
+      <div className="payment-modal-actions">
+        <button 
+          className="confirm-payment-btn alternative-btn"
+          onClick={processPayment}
+          disabled={loading}
+        >
+          {loading ? <FaSpinner className="spinner" /> : `Pay ₹${totalAmount} Dayrect`}
+        </button>
+      </div>
       
-  //     <div className="payment-modal-actions">
-  //       <button 
-  //         className="confirm-payment-btn alternative-btn"
-  //         onClick={processPayment}
-  //         disabled={loading}
-  //       >
-  //         {loading ? <FaSpinner className="spinner" /> : `Pay ₹${totalAmount} Dayrect`}
-  //       </button>
-  //     </div>
-      
-  //     <p className="upi-note">You'll be redirected to Razorpay secure payment gateway</p>
-  //   </div>
-  // );
+      <p className="upi-note">You'll be redirected to Razorpay secure payment gateway</p>
+    </div>
+  );
 };
 
 const MyOrderPage = () => {
