@@ -473,10 +473,90 @@ const MyOrderPage = () => {
   };
 
   // =========== HANDLE UPI APP SELECT ===========
-  const handleUpiAppSelect = (app) => {
-    setSelectedUpiApp(app);
-    processStandardCheckout();
-  };
+ // Add this function to generate UPI intent URLs
+const generateUpiIntentUrl = (app, amount, orderId, customerName, restaurantName) => {
+  const upiId = restaurant?.upiId || 'your-restaurant-upi@okhdfcbank'; // Get from restaurant data
+  const payeeName = restaurantName || 'Restaurant';
+  const transactionNote = `Order_${orderId}`;
+  
+  // Encode parameters
+  const encodedUpiId = encodeURIComponent(upiId);
+  const encodedPayeeName = encodeURIComponent(payeeName);
+  const encodedAmount = encodeURIComponent(amount.toString());
+  const encodedNote = encodeURIComponent(transactionNote);
+  
+  // Base UPI URL
+  let upiUrl = `upi://pay?pa=${encodedUpiId}&pn=${encodedPayeeName}&am=${encodedAmount}&cu=INR&tn=${encodedNote}`;
+  
+  // Add app-specific package for Android
+  if (app && app.package) {
+    upiUrl += `&app=${app.package}`;
+  }
+  
+  return upiUrl;
+};
+
+// Updated handleUpiAppSelect function
+const handleUpiAppSelect = async (app) => {
+  setSelectedUpiApp(app);
+  
+  // Check if we're on Android
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  
+  if (isAndroid && app.package) {
+    // Direct UPI Intent - opens the selected app directly
+    const upiIntentUrl = generateUpiIntentUrl(
+      app, 
+      total, 
+      order.billNumber, 
+      order.customerName, 
+      restaurant?.restaurantName
+    );
+    
+    // Create a hidden iframe or try to launch the intent
+    const startActivity = (url) => {
+      window.location.href = url;
+    };
+    
+    // Try to launch the UPI app
+    startActivity(upiIntentUrl);
+    
+    // After 3 seconds, show a manual payment confirmation option
+    setTimeout(async () => {
+      const userPaid = window.confirm(
+        `Did you complete the payment in ${app.name}?\n\n` +
+        `If yes, click OK to confirm. The order will be marked as paid after verification.`
+      );
+      
+      if (userPaid) {
+        // Mark order as pending verification
+        try {
+          await axios.post(`${API_URL}/api/payments/upi-pending/${order._id}`, {
+            amount: total,
+            upiApp: app.name
+          });
+          showPopup(`Payment with ${app.name} initiated. Your order will be confirmed after payment verification.`, 'success');
+          setShowPaymentModal(false);
+          
+          // Refresh order status
+          const freshOrder = await axios.get(`${API_URL}/api/order/id/${order._id}`);
+          if (freshOrder.data) {
+            setOrder(freshOrder.data);
+            localStorage.setItem(`currentOrder_${restaurantSlug}`, JSON.stringify(freshOrder.data));
+          }
+        } catch (error) {
+          showPopup('Payment verification failed. Please contact restaurant.', 'error');
+        }
+      } else {
+        showPopup('Payment cancelled. You can try again.', 'warning');
+      }
+    }, 3000);
+    
+  } else {
+    // Fallback to Razorpay for non-Android or if no app package
+    await processStandardCheckout();
+  }
+};
 
   
 
